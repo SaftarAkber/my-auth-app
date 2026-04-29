@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return NextResponse.json(
-        { error: "Kullanıcı bulunamadı veya şifre yanlış" },
+        { error: "İstifadəçi tapılmadı və ya şifrə yanlış" },
         { status: 401 }
       );
     }
