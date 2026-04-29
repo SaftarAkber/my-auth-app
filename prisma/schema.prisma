@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?  @unique
+  email     String?  @unique
+  password  String
+  role      Role     @default(STUDENT)
+  bio       String?
+  photo     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otpCodes         OtpCode[]
+  groups           Group[]
+  groupMembers     GroupMember[]
+  enrollmentReqs   EnrollmentRequest[] @relation("StudentRequests")
+  teacherReqs      EnrollmentRequest[] @relation("TeacherRequests")
+  collections      Collection[]
+  videos           Video[]
+  attempts         StudentAttempt[]
+  groupPosts       GroupPost[]
+  videoComments    VideoComment[]
+
+  @@map("users")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  code      String
+  phone     String
+  type      OtpType  @default(RESET_PASSWORD)
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("otp_codes")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  schedule    String?
+  photo       String?
+  coverPhoto  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  members          GroupMember[]
+  enrollmentReqs   EnrollmentRequest[]
+  posts            GroupPost[]
+  videoPackages    VideoPackage[]
+  testPackages     TestPackage[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  groupId   String
+  studentId String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, studentId])
+  @@map("group_members")
+}
+
+model EnrollmentRequest {
+  id            String                @id @default(cuid())
+  message       String?
+  teacherReply  String?
+  status        EnrollmentStatus      @default(PENDING)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  studentId     String
+  teacherId     String
+  groupId       String
+  student       User                  @relation("StudentRequests", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher       User                  @relation("TeacherRequests", fields: [teacherId], references: [id], onDelete: Cascade)
+  group         Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, groupId])
+  @@map("enrollment_requests")
+}
+
+model GroupPost {
+  id        String      @id @default(cuid())
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  groupId   String
+  teacherId String
+  visibility PostVisibility @default(GROUP)
+  group     Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher   User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  images    GroupPostImage[]
+
+  @@map("group_posts")
+}
+
+model GroupPostImage {
+  id        String    @id @default(cuid())
+  url       String
+  postId    String
+  post      GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@map("group_post_images")
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  teacherId   String
+  teacher     User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  packages    TestPackage[]
+  videoPackages VideoPackage[]
+
+  @@map("collections")
+}
+
+model VideoPackage {
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  isPublished  Boolean     @default(false)
+  visibility   ContentVisibility @default(PUBLIC)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  collectionId String?
+  groupId      String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  videos       Video[]
+
+  @@map("video_packages")
+}
+
+model Video {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  url          String
+  publicId     String?
+  isActive     Boolean      @default(true)
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  teacherId    String
+  packageId    String?
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  package      VideoPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  comments     VideoComment[]
+
+  @@map("videos")
+}
+
+model VideoComment {
+  id         String           @id @default(cuid())
+  content    String
+  createdAt  DateTime         @default(now())
+  visibility CommentVisibility @default(PUBLIC)
+  videoId    String
+  userId     String
+  video      Video            @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("video_comments")
+}
+
+model TestPackage {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  isPublished  Boolean   @default(false)
+  isTimed      Boolean   @default(false)
+  duration     Int?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  visibility   ContentVisibility @default(PUBLIC)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  collectionId String?
+  groupId      String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  questions    Question[]
+  attempts     StudentAttempt[]
+
+  @@map("test_packages")
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  text          String
+  type          QuestionType @default(MULTIPLE_CHOICE)
+  options       Json?
+  correctAnswer String?
+  isActive      Boolean      @default(true)
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  packageId     String
+  package       TestPackage  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  answers       StudentAnswer[]
+
+  @@map("questions")
+}
+
+model StudentAttempt {
+  id          String        @id @default(cuid())
+  startedAt   DateTime      @default(now())
+  finishedAt  DateTime?
+  score       Int?
+  totalScore  Int?
+  createdAt   DateTime      @default(now())
+  studentId   String
+  packageId   String
+  student     User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  package     TestPackage   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  answers     StudentAnswer[]
+
+  @@unique([studentId, packageId])
+  @@map("student_attempts")
+}
+
+model StudentAnswer {
+  id             String        @id @default(cuid())
+  answer         String
+  isCorrect      Boolean?
+  teacherComment String?
+  status         AnswerStatus  @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  attemptId      String
+  questionId     String
+  attempt        StudentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@map("student_answers")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum OtpType {
+  RESET_PASSWORD
+  PHONE_VERIFY
+  EMAIL_VERIFY
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  OPEN_ENDED
+}
+
+enum AnswerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContentVisibility {
+  PUBLIC
+  GROUP_ONLY
+}
+
+enum PostVisibility {
+  PUBLIC
+  GROUP
+}
+
+enum CommentVisibility {
+  PUBLIC
+  GROUP_ONLY
+}
