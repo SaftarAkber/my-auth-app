@@ -31,6 +31,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       },
     });
 
+    
     if (!teacher) return NextResponse.json({ error: "Bulunamadı" }, { status: 404 });
     return NextResponse.json({ teacher });
   } catch (error) {
