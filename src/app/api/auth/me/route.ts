@@ -12,7 +12,7 @@ export async function GET() {
     where: { id: currentUser.id },
     select: {
       id: true, name: true, phone: true,
-      email: true, role: true, bio: true, photo: true,
+      email: true, role: true, bio: true, photo: true, coverPhoto: true
     },
   });
 
@@ -26,7 +26,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    const { name, bio, photo } = await req.json();
+    const { name, bio, photo, coverPhoto } = await req.json();
 
     const user = await prisma.user.update({
       where: { id: currentUser.id },
@@ -34,6 +34,7 @@ export async function PATCH(req: Request) {
         ...(name && { name }),
         ...(bio !== undefined && { bio }),
         ...(photo !== undefined && { photo }),
+        ...(coverPhoto !== undefined && { coverPhoto }),
       },
       select: {
         id: true, name: true, phone: true,

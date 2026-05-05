@@ -45,8 +45,7 @@ export async function POST(req: NextRequest) {
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: otpRecord.userId! },
-        data: { password: hashedPassword },
-        select: { id: true, name: true, phone: true, email: true },
+        data: { password: hashedPassword },select: { id: true, name: true, phone: true, email: true, role: true },
       }),
       prisma.otpCode.update({
         where: { id: otpRecord.id },

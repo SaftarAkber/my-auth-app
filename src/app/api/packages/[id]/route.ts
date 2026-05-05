@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { name, description, isPublished, isTimed, duration, startsAt, endsAt } = await req.json();
+    const { name, description, isPublished, isTimed, duration, startsAt, endsAt, visibility, groupId } = await req.json();
 
     const pkg = await prisma.testPackage.update({
       where: { id },
@@ -40,15 +40,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(isPublished !== undefined && { isPublished }),
         ...(isTimed !== undefined && { isTimed }),
         ...(duration !== undefined && { duration }),
-        ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
-        ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
+        ...(startsAt !== undefined && { startsAt }),
+        ...(endsAt !== undefined && { endsAt }),
+        ...(visibility !== undefined && { visibility }),
+        ...(groupId !== undefined && { groupId: groupId || null }),
       },
     });
 
     return NextResponse.json({ package: pkg });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 

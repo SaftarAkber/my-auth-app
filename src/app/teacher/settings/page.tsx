@@ -1,235 +1,272 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 
-type ContactStep = "idle" | "input" | "otp" | "done";
+type Section = "profile" | "contact";
 
-export default function SettingsPage() {
+export default function TeacherSettingsPage() {
   const { user, refreshUser } = useAuth();
+  const [activeSection, setActiveSection] = useState<Section>("profile");
+  const [profileForm, setProfileForm] = useState({ name: "", bio: "", photo: "", coverPhoto: "" });
+  const [contactForm, setContactForm] = useState({ phone: "", email: "" });
+  const [otpForm, setOtpForm] = useState({ type: "", contact: "", code: "" });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Profil formu
-  const [name, setName] = useState(user?.name || "");
-  const [bio, setBio] = useState(user?.bio || "");
-  const [photo, setPhoto] = useState(user?.photo || "");
-  const [profileMsg, setProfileMsg] = useState("");
-  const [profileLoading, setProfileLoading] = useState(false);
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name,
+        bio: user.bio || "",
+        photo: user.photo || "",
+        coverPhoto: (user as any).coverPhoto || "",
+      });
+      setContactForm({
+        phone: user.phone || "",
+        email: user.email || "",
+      });
+    }
+  }, [user]);
 
-  // İletişim güncelleme
-  const [contactType, setContactType] = useState<"phone" | "email">("phone");
-  const [contactValue, setContactValue] = useState("");
-  const [contactCode, setContactCode] = useState("");
-  const [contactStep, setContactStep] = useState<ContactStep>("idle");
-  const [contactMsg, setContactMsg] = useState("");
-  const [contactLoading, setContactLoading] = useState(false);
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "image");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.url) setProfileForm(f => ({ ...f, photo: data.url }));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "image");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.url) setProfileForm(f => ({ ...f, coverPhoto: data.url }));
+    } finally {
+      setUploadingCover(false);
+    }
+  }
 
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault();
-    setProfileLoading(true);
-    setProfileMsg("");
+    setSaving(true);
+    setMsg("");
     try {
       const res = await fetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, bio, photo }),
+        body: JSON.stringify(profileForm),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error("Xəta");
+      setMsg("✅ Profil yeniləndi");
       await refreshUser();
-      setProfileMsg("✅ Profil güncellendi");
-    } catch (err: unknown) {
-      setProfileMsg("❌ " + (err instanceof Error ? err.message : "Hata"));
+    } catch {
+      setMsg("❌ Xəta baş verdi");
     } finally {
-      setProfileLoading(false);
+      setSaving(false);
     }
   }
 
-  async function handleSendContactOtp(e: React.FormEvent) {
+  async function handleContactUpdate(e: React.FormEvent) {
     e.preventDefault();
-    setContactLoading(true);
-    setContactMsg("");
+    setSaving(true);
+    setMsg("");
     try {
+      const type = contactForm.phone !== user?.phone ? "phone" : "email";
+      const contact = type === "phone" ? contactForm.phone : contactForm.email;
       const res = await fetch("/api/auth/update-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: contactType, value: contactValue }),
+        body: JSON.stringify({ type, contact }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setContactStep("otp");
-      setContactMsg("Kod gönderildi");
-    } catch (err: unknown) {
-      setContactMsg("❌ " + (err instanceof Error ? err.message : "Hata"));
+      setOtpForm({ type, contact, code: "" });
+      setStep("otp");
+      setMsg("✅ OTP göndərildi");
+    } catch (err: any) {
+      setMsg("❌ " + err.message);
     } finally {
-      setContactLoading(false);
+      setSaving(false);
     }
   }
 
-  async function handleVerifyContact(e: React.FormEvent) {
+  async function handleOtpVerify(e: React.FormEvent) {
     e.preventDefault();
-    setContactLoading(true);
-    setContactMsg("");
+    setSaving(true);
+    setMsg("");
     try {
       const res = await fetch("/api/auth/verify-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: contactType, value: contactValue, code: contactCode }),
+        body: JSON.stringify(otpForm),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      setMsg("✅ Əlaqə yeniləndi");
+      setStep("form");
       await refreshUser();
-      setContactStep("done");
-      setContactMsg("✅ Bilgi güncellendi");
-      setContactValue("");
-      setContactCode("");
-    } catch (err: unknown) {
-      setContactMsg("❌ " + (err instanceof Error ? err.message : "Hata"));
+    } catch (err: any) {
+      setMsg("❌ " + err.message);
     } finally {
-      setContactLoading(false);
+      setSaving(false);
     }
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Settings</h1>
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-8">Tənzimləmələr</h1>
 
-      {/* Profil bilgileri */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Profil Bilgileri</h2>
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: "profile" as const, label: "Profil", icon: "👤" },
+          { key: "contact" as const, label: "Əlaqə", icon: "📞" },
+        ].map(t => (
+          <button key={t.key} onClick={() => setActiveSection(t.key)}
+            className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+              activeSection === t.key
+                ? "bg-blue-900 text-white"
+                : "bg-white border border-gray-200 text-gray-600"
+            }`}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Foto önizleme */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-3xl font-bold text-blue-900 overflow-hidden border-2 border-blue-200">
-            {photo ? (
-              <img src={photo} alt="Profil" className="w-full h-full object-cover" onError={() => setPhoto("")} />
-            ) : (
-              user?.name.charAt(0).toUpperCase()
-            )}
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Profil Fotoğrafı URL</label>
-            <input type="url" value={photo} onChange={(e) => setPhoto(e.target.value)}
-              placeholder="https://example.com/photo.jpg"
-              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-            />
-          </div>
-        </div>
+      {msg && (
+        <div className={`mb-4 px-4 py-3 rounded-xl text-sm ${
+          msg.startsWith("✅") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+        }`}>{msg}</div>
+      )}
 
-        <form onSubmit={handleProfileSave} className="space-y-4">
+      {/* Profil */}
+      {activeSection === "profile" && (
+        <form onSubmit={handleProfileSave} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
-              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Arka plan şəkli</label>
+            <div className="relative h-32 rounded-xl overflow-hidden bg-gradient-to-br from-blue-800 to-blue-600 mb-2">
+              {profileForm.coverPhoto && (
+                <img src={profileForm.coverPhoto} alt="" className="w-full h-full object-cover" />
+              )}
+              <button type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploadingCover}
+                className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-gray-700 font-medium px-3 py-1.5 rounded-lg text-xs transition-all">
+                {uploadingCover ? "Yüklənir..." : "Dəyişdir"}
+              </button>
+            </div>
+            <input ref={coverInputRef} type="file" accept="image/*"
+              onChange={handleCoverUpload} className="hidden" />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hakkımda</label>
-            <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4}
-              placeholder="Kendiniz hakkında kısa bir yazı..."
-              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all resize-none"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Profil şəkli</label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-900 overflow-hidden border-2 border-blue-200">
+                {profileForm.photo ? (
+                  <img src={profileForm.photo} alt="" className="w-full h-full object-cover" />
+                ) : user?.name.charAt(0).toUpperCase()}
+              </div>
+              <button type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-xl text-sm transition-all">
+                {uploadingPhoto ? "Yüklənir..." : "Şəkil yüklə"}
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*"
+                onChange={handlePhotoUpload} className="hidden" />
+            </div>
           </div>
 
-          {profileMsg && (
-            <p className={`text-sm ${profileMsg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
-              {profileMsg}
-            </p>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ad</label>
+            <input type="text" value={profileForm.name}
+              onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))} required
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+          </div>
 
-          <button type="submit" disabled={profileLoading}
-            className="bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium px-6 py-2.5 rounded-xl transition-all text-sm">
-            {profileLoading ? "Kaydediliyor..." : "Kaydet"}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea value={profileForm.bio}
+              onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
+              rows={4} placeholder="Özünüz haqqında qısa məlumat..."
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 resize-none" />
+          </div>
+
+          <button type="submit" disabled={saving}
+            className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-3 rounded-xl transition-all">
+            {saving ? "Saxlanılır..." : "Yadda saxla"}
           </button>
         </form>
-      </div>
+      )}
 
-      {/* İletişim bilgileri */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">İletişim Bilgileri</h2>
-        <p className="text-gray-500 text-sm mb-6">Telefon veya email ekleyip değiştirebilirsiniz. OTP kodu ile doğrulama gereklidir.</p>
-
-        {/* Mevcut bilgiler */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">WhatsApp</p>
-            <p className="text-sm font-medium text-gray-900">{user?.phone || "Eklenmedi"}</p>
+      {/* Əlaqə */}
+      {activeSection === "contact" && step === "form" && (
+        <form onSubmit={handleContactUpdate} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <input type="tel" value={contactForm.phone}
+              onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))}
+              placeholder="+994XXXXXXXXX"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
           </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">Email</p>
-            <p className="text-sm font-medium text-gray-900">{user?.email || "Eklenmedi"}</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" value={contactForm.email}
+              onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="email@example.com"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
           </div>
-        </div>
+          <button type="submit" disabled={saving}
+            className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-3 rounded-xl transition-all">
+            {saving ? "Göndərilir..." : "Yenilə"}
+          </button>
+        </form>
+      )}
 
-        {/* Tür seçimi */}
-        <div className="flex gap-3 mb-4">
-          {(["phone", "email"] as const).map((t) => (
-            <button key={t} type="button"
-              onClick={() => { setContactType(t); setContactStep("input"); setContactMsg(""); setContactValue(""); setContactCode(""); }}
-              className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                contactType === t && contactStep !== "idle"
-                  ? "border-blue-900 bg-blue-50 text-blue-900"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300"
-              }`}>
-              {t === "phone" ? "📱 Telefon Güncelle" : "✉️ Email Güncelle"}
+      {activeSection === "contact" && step === "otp" && (
+        <form onSubmit={handleOtpVerify} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <p className="text-sm text-gray-600">
+            {otpForm.type === "phone" ? otpForm.contact : otpForm.contact} ünvanına OTP göndərildi.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">OTP kodu</label>
+            <input type="text" value={otpForm.code}
+              onChange={e => setOtpForm(f => ({ ...f, code: e.target.value }))} required
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setStep("form")}
+              className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
+              Geri
             </button>
-          ))}
-        </div>
-
-        {/* Input adımı */}
-        {(contactStep === "input" || contactStep === "otp") && (
-          <div className="space-y-4">
-            {contactStep === "input" && (
-              <form onSubmit={handleSendContactOtp} className="space-y-3">
-                <input
-                  type={contactType === "phone" ? "tel" : "email"}
-                  value={contactValue}
-                  onChange={(e) => setContactValue(e.target.value)}
-                  placeholder={contactType === "phone" ? "+994501234567" : "ornek@gmail.com"}
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all text-sm"
-                />
-                <button type="submit" disabled={contactLoading}
-                  className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-2.5 rounded-xl transition-all text-sm">
-                  {contactLoading ? "Gönderiliyor..." : "Kod Gönder"}
-                </button>
-              </form>
-            )}
-
-            {contactStep === "otp" && (
-              <form onSubmit={handleVerifyContact} className="space-y-3">
-                <p className="text-sm text-gray-600">
-                  {contactType === "phone" ? `📱 ${contactValue}` : `✉️ ${contactValue}`} adresine kod gönderildi
-                </p>
-                <input
-                  type="text"
-                  value={contactCode}
-                  onChange={(e) => setContactCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="123456"
-                  maxLength={6}
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-xl tracking-[0.5em] font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-                />
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setContactStep("input")}
-                    className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-all">
-                    ← Geri
-                  </button>
-                  <button type="submit" disabled={contactLoading}
-                    className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-2.5 rounded-xl transition-all text-sm">
-                    {contactLoading ? "Doğrulanıyor..." : "Onayla"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {contactMsg && (
-              <p className={`text-sm ${contactMsg.startsWith("✅") ? "text-green-600" : contactMsg === "Kod gönderildi" ? "text-blue-600" : "text-red-600"}`}>
-                {contactMsg}
-              </p>
-            )}
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-2.5 rounded-xl text-sm">
+              {saving ? "Yoxlanılır..." : "Təsdiqlə"}
+            </button>
           </div>
-        )}
-      </div>
+        </form>
+      )}
     </div>
   );
 }

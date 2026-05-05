@@ -18,7 +18,18 @@ interface Package {
   id: string;
   name: string;
   questions: Question[];
-  collection: { name: string; teacherId: string };
+  collection: { name: string };
+}
+
+interface QForm {
+  text: string;
+  type: "MULTIPLE_CHOICE" | "OPEN_ENDED";
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  optionE: string;
+  correctAnswer: string;
 }
 
 export default function PackageQuestionsPage() {
@@ -30,14 +41,15 @@ export default function PackageQuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editQ, setEditQ] = useState<Question | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<QForm>({
     text: "",
-    type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "OPEN_ENDED",
+    type: "MULTIPLE_CHOICE",
     optionA: "", optionB: "", optionC: "", optionD: "", optionE: "",
     correctAnswer: "A",
   });
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [allToggling, setAllToggling] = useState(false);
 
   useEffect(() => { fetchPackage(); }, [packageId]);
 
@@ -50,7 +62,11 @@ export default function PackageQuestionsPage() {
 
   function openAdd() {
     setEditQ(null);
-    setForm({ text: "", type: "MULTIPLE_CHOICE", optionA: "", optionB: "", optionC: "", optionD: "", optionE: "", correctAnswer: "A" });
+    setForm({
+      text: "", type: "MULTIPLE_CHOICE",
+      optionA: "", optionB: "", optionC: "", optionD: "", optionE: "",
+      correctAnswer: "A",
+    });
     setShowForm(true);
   }
 
@@ -69,6 +85,16 @@ export default function PackageQuestionsPage() {
     setShowForm(true);
   }
 
+  function getOptionValue(opt: string): string {
+    const key = `option${opt}` as keyof QForm;
+    return form[key] as string;
+  }
+
+  function setOptionValue(opt: string, value: string) {
+    const key = `option${opt}` as keyof QForm;
+    setForm(f => ({ ...f, [key]: value }));
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -81,7 +107,6 @@ export default function PackageQuestionsPage() {
           D: form.optionD, E: form.optionE,
         } : null,
         correctAnswer: form.type === "MULTIPLE_CHOICE" ? form.correctAnswer : null,
-        packageId,
       };
 
       if (editQ) {
@@ -106,31 +131,39 @@ export default function PackageQuestionsPage() {
 
   async function toggleQuestion(q: Question) {
     setToggling(q.id);
-    await fetch(`/api/questions/${q.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !q.isActive }),
-    });
-    await fetchPackage();
-    setToggling(null);
+    try {
+      await fetch(`/api/questions/${q.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !q.isActive }),
+      });
+      await fetchPackage();
+    } finally {
+      setToggling(null);
+    }
   }
 
   async function toggleAll(active: boolean) {
     if (!pkg) return;
-    await Promise.all(
-      pkg.questions.map(q =>
-        fetch(`/api/questions/${q.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: active }),
-        })
-      )
-    );
-    await fetchPackage();
+    setAllToggling(true);
+    try {
+      await Promise.all(
+        pkg.questions.map(q =>
+          fetch(`/api/questions/${q.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isActive: active }),
+          })
+        )
+      );
+      await fetchPackage();
+    } finally {
+      setAllToggling(false);
+    }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Bu soruyu silmek istediğinizden emin misiniz?")) return;
+    if (!confirm("Bu sualı silmək istədiyinizdən əminsiniz?")) return;
     await fetch(`/api/questions/${id}`, { method: "DELETE" });
     await fetchPackage();
   }
@@ -138,18 +171,21 @@ export default function PackageQuestionsPage() {
   if (loading) return (
     <div className="flex justify-center py-20">
       <div className="flex gap-2">
-        {[0,1,2].map(i => <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+        {[0,1,2].map(i => (
+          <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce"
+            style={{ animationDelay: `${i*0.15}s` }} />
+        ))}
       </div>
     </div>
   );
 
-  if (!pkg) return <div className="text-center py-20 text-gray-400">Paket bulunamadı</div>;
+  if (!pkg) return <div className="text-center py-20 text-gray-400">Paket tapılmadı</div>;
 
   return (
     <div>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-sm">
-        <Link href="/teacher/tests" className="text-gray-400 hover:text-gray-600">Testler</Link>
+        <Link href="/teacher/tests" className="text-gray-400 hover:text-gray-600">Testlər</Link>
         <span className="text-gray-300">/</span>
         <Link href={`/teacher/tests/${collectionId}`} className="text-gray-400 hover:text-gray-600">
           {pkg.collection.name}
@@ -161,87 +197,92 @@ export default function PackageQuestionsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{pkg.name}</h1>
-          <p className="text-gray-500 text-sm mt-1">{pkg.questions.length} soru</p>
+          <p className="text-gray-500 text-sm mt-1">{pkg.questions.length} sual</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => toggleAll(true)}
-            className="px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl text-xs font-medium transition-all">
-            Hepsini Aktif
+          <button onClick={() => toggleAll(true)} disabled={allToggling}
+            className="px-3 py-2 bg-green-50 hover:bg-green-100 disabled:opacity-50 text-green-700 rounded-xl text-xs font-medium transition-all">
+            {allToggling ? "..." : "Hepsini Aktif"}
           </button>
-          <button onClick={() => toggleAll(false)}
-            className="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-medium transition-all">
-            Hepsini Pasif
+          <button onClick={() => toggleAll(false)} disabled={allToggling}
+            className="px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-600 rounded-xl text-xs font-medium transition-all">
+            {allToggling ? "..." : "Hepsini Pasif"}
           </button>
           <button onClick={openAdd}
             className="bg-blue-900 hover:bg-blue-800 text-white font-medium px-5 py-2 rounded-xl text-sm transition-all">
-            + Soru Ekle
+            + Sual Əlavə et
           </button>
         </div>
       </div>
 
-      {/* Soru formu modal */}
+      {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-gray-900 mb-5">
-              {editQ ? "Soruyu Düzenle" : "Yeni Soru Ekle"}
+              {editQ ? "Sualı düzənlə" : "Yeni sual əlavə et"}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
-              {/* Soru tipi */}
+              {/* Tip seçimi */}
               <div className="flex gap-3">
                 {(["MULTIPLE_CHOICE", "OPEN_ENDED"] as const).map(t => (
                   <button key={t} type="button"
-                    onClick={() => setForm(f => ({...f, type: t}))}
+                    onClick={() => setForm(f => ({ ...f, type: t }))}
                     className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      form.type === t ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
+                      form.type === t
+                        ? "border-blue-900 bg-blue-50 text-blue-900"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
                     }`}>
-                    {t === "MULTIPLE_CHOICE" ? "🔤 Çoktan Seçmeli" : "✏️ Açık Uçlu"}
+                    {t === "MULTIPLE_CHOICE" ? "🔤 Çoxseçimli" : "✏️ Açıq uçlu"}
                   </button>
                 ))}
               </div>
 
-              {/* Soru metni */}
+              {/* Sual mətni */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Soru</label>
-                <textarea value={form.text} onChange={e => setForm(f => ({...f, text: e.target.value}))}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sual mətni</label>
+                <textarea value={form.text}
+                  onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
                   rows={3} required
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 resize-none" />
               </div>
 
               {/* Şıklar */}
               {form.type === "MULTIPLE_CHOICE" && (
-                <>
-                  <div className="space-y-2">
-                    {(["A", "B", "C", "D", "E"] as const).map(opt => (
-                      <div key={opt} className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                          form.correctAnswer === opt ? "bg-green-500 text-white" : "bg-gray-100 text-gray-600"
-                        }`}>{opt}</span>
-                        <input type="text"
-                          value={form[`option${opt}` as keyof typeof form] as string}
-                          onChange={e => setForm(f => ({...f, [`option${opt}`]: e.target.value}))}
-                          placeholder={`${opt} şıkkı`}
-                          className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900" />
-                        <button type="button" onClick={() => setForm(f => ({...f, correctAnswer: opt}))}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                            form.correctAnswer === opt ? "bg-green-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-green-50"
-                          }`}>
-                          {form.correctAnswer === opt ? "✓ Doğru" : "Doğru"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Cavab variantları</label>
+                  {["A", "B", "C", "D", "E"].map(opt => (
+                    <div key={opt} className="flex items-center gap-3">
+                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                        form.correctAnswer === opt ? "bg-green-500 text-white" : "bg-gray-100 text-gray-600"
+                      }`}>{opt}</span>
+                      <input type="text"
+                        value={getOptionValue(opt)}
+                        onChange={e => setOptionValue(opt, e.target.value)}
+                        placeholder={`${opt} variantı`}
+                        className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900" />
+                      <button type="button"
+                        onClick={() => setForm(f => ({ ...f, correctAnswer: opt }))}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          form.correctAnswer === opt
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-green-50"
+                        }`}>
+                        {form.correctAnswer === opt ? "✓ Doğru" : "Doğru"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50">
-                  İptal
+                  Ləğv et
                 </button>
                 <button type="submit" disabled={saving}
                   className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-2.5 rounded-xl text-sm">
-                  {saving ? "Kaydediliyor..." : "Kaydet"}
+                  {saving ? "Saxlanılır..." : "Saxla"}
                 </button>
               </div>
             </form>
@@ -249,11 +290,11 @@ export default function PackageQuestionsPage() {
         </div>
       )}
 
-      {/* Soru listesi */}
+      {/* Sual listesi */}
       {pkg.questions.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
           <div className="text-4xl mb-3">❓</div>
-          <p>Bu pakette henüz soru yok</p>
+          <p>Hələ sual yoxdur</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -266,31 +307,37 @@ export default function PackageQuestionsPage() {
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      q.type === "MULTIPLE_CHOICE"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-purple-100 text-purple-700"
+                    }`}>
+                      {q.type === "MULTIPLE_CHOICE" ? "Çoxseçimli" : "Açıq uçlu"}
+                    </span>
+                  </div>
                   <p className="text-gray-900 text-sm font-medium">{q.text}</p>
                   {q.type === "MULTIPLE_CHOICE" && q.options && (
                     <div className="grid grid-cols-2 gap-1 mt-2">
                       {Object.entries(q.options).map(([k, v]) => v && (
                         <span key={k} className={`text-xs px-2 py-1 rounded-lg ${
-                          q.correctAnswer === k ? "bg-green-100 text-green-700 font-medium" : "bg-gray-50 text-gray-600"
+                          q.correctAnswer === k
+                            ? "bg-green-100 text-green-700 font-medium"
+                            : "bg-gray-50 text-gray-600"
                         }`}>
-                          {k}: {v}
+                          {k}: {v} {q.correctAnswer === k && "✓"}
                         </span>
                       ))}
                     </div>
                   )}
-                  {q.type === "OPEN_ENDED" && (
-                    <span className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-lg mt-2 inline-block">
-                      Açık uçlu — öğretmen onayı gerekli
-                    </span>
-                  )}
                 </div>
 
-                {/* Toggle + aksiyonlar */}
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Toggle switch */}
                   <button
                     onClick={() => toggleQuestion(q)}
                     disabled={toggling === q.id}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
                       q.isActive ? "bg-green-500" : "bg-gray-300"
                     }`}>
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

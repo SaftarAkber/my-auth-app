@@ -7,11 +7,13 @@ import { useAuth } from "@/context/AuthContext";
 
 const menuItems = [
   { href: "/teacher", label: "Ana Səhifə", icon: "🏠" },
+  { href: "/teacher/profile", label: "Profil", icon: "👤" },
   { href: "/teacher/groups", label: "Qruplarım", icon: "🏫" },
   { href: "/teacher/lessons", label: "Dərs Videoları", icon: "🎬" },
   { href: "/teacher/tests", label: "Testlər", icon: "📝" },
+  { href: "/teacher/attempts", label: "Həll edilən testlər", icon: "✅" },
   { href: "/teacher/students", label: "Tələbələrim", icon: "👥" },
-  { href: "/teacher/about", label: "Haqqımda", icon: "👤" },
+  { href: "/teacher/requests", label: "Gələn istəklər", icon: "📩" },
   { href: "/teacher/settings", label: "Tənzimləmələr", icon: "⚙️" },
 ];
 

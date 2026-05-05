@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
+export async function GET() {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "TEACHER") {
+      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    }
+
+    const packages = await prisma.testPackage.findMany({
+      where: { collection: { teacherId: currentUser.id } },
+      include: {
+        _count: { select: { questions: true, attempts: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ packages });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();

@@ -14,6 +14,7 @@ export async function GET(
         packages: {
           include: {
             _count: { select: { questions: true, attempts: true } },
+            group: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "desc" },
         },

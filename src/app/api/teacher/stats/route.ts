@@ -9,42 +9,55 @@ export async function GET() {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    const [students, videos, packages, attempts, pendingRequests, groups] = await Promise.all([
-      prisma.groupMember.count({
-        where: { group: { teacherId: currentUser.id } },
-      }),
-      prisma.video.count({
-        where: { teacherId: currentUser.id, isActive: true },
-      }),
-      prisma.testPackage.count({
-        where: {
-          isPublished: true,
-          OR: [
-            { collection: { teacherId: currentUser.id } },
-            { group: { teacherId: currentUser.id } },
-          ],
-        },
-      }),
-      prisma.studentAttempt.count({
-        where: {
-          package: {
+    const [students, videos, packages, attempts, pendingRequests, groups] =
+      await Promise.all([
+        prisma.user.count({
+          where: {
+            role: "STUDENT",
+            groupMembers: {
+              some: { group: { teacherId: currentUser.id } },
+            },
+          },
+        }),
+        prisma.video.count({
+          where: { teacherId: currentUser.id, isActive: true },
+        }),
+        prisma.testPackage.count({
+          where: {
+            isPublished: true,
             OR: [
               { collection: { teacherId: currentUser.id } },
               { group: { teacherId: currentUser.id } },
             ],
           },
-          finishedAt: { not: null },
-        },
-      }),
-      prisma.enrollmentRequest.count({
-        where: { teacherId: currentUser.id, status: "PENDING" },
-      }),
-      prisma.group.count({
-        where: { teacherId: currentUser.id },
-      }),
-    ]);
+        }),
+        prisma.studentAttempt.count({
+          where: {
+            package: {
+              OR: [
+                { collection: { teacherId: currentUser.id } },
+                { group: { teacherId: currentUser.id } },
+              ],
+            },
+            finishedAt: { not: null },
+          },
+        }),
+        prisma.enrollmentRequest.count({
+          where: { teacherId: currentUser.id, status: "PENDING" },
+        }),
+        prisma.group.count({
+          where: { teacherId: currentUser.id },
+        }),
+      ]);
 
-    return NextResponse.json({ students, videos, packages, attempts, pendingRequests, groups });
+    return NextResponse.json({
+      students,
+      videos,
+      packages,
+      attempts,
+      pendingRequests,
+      groups,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Server xətası" }, { status: 500 });

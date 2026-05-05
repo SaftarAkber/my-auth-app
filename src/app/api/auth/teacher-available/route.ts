@@ -5,5 +5,5 @@ export async function GET() {
   const teacherCount = await prisma.user.count({
     where: { role: "TEACHER" },
   });
-  return NextResponse.json({ available: teacherCount === 0 });
+  return NextResponse.json({ available: teacherCount === 2 });
 }
