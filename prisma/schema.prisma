@@ -19,7 +19,7 @@ model User {
   photo     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  videoPackages VideoPackage[]
   otpCodes         OtpCode[]
   groups           Group[]
   groupMembers     GroupMember[]
@@ -65,7 +65,7 @@ model Group {
   posts            GroupPost[]
   videoPackages    VideoPackage[]
   testPackages     TestPackage[]
-
+  ideoGroups VideoGroup[]
   @@map("groups")
 }
 
@@ -146,8 +146,10 @@ model VideoPackage {
   updatedAt    DateTime    @updatedAt
   collectionId String?
   groupId      String?
+  teacherId    String?     
   collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  teacher      User?       @relation(fields: [teacherId], references: [id], onDelete: SetNull) // ← ekle
   videos       Video[]
 
   @@map("video_packages")
@@ -160,6 +162,7 @@ model Video {
   url          String
   publicId     String?
   isActive     Boolean      @default(true)
+  visibility   ContentVisibility @default(PUBLIC)
   order        Int          @default(0)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -168,8 +171,20 @@ model Video {
   teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   package      VideoPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   comments     VideoComment[]
+  videoGroups  VideoGroup[]
 
   @@map("videos")
+}
+
+model VideoGroup {
+  id      String @id @default(cuid())
+  videoId String
+  groupId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, groupId])
+  @@map("video_groups")
 }
 
 model VideoComment {

@@ -2,9 +2,17 @@
 
 import { useEffect, useState } from "react";
 
+interface Group {
+  id: string;
+  name: string;
+}
+
 interface VideoPackage {
   id: string;
   name: string;
+  visibility: string;
+  groupId: string | null;
+  group: { id: string; name: string } | null;
   videos: Video[];
 }
 
@@ -20,24 +28,35 @@ interface Video {
 
 export default function TeacherLessonsPage() {
   const [packages, setPackages] = useState<VideoPackage[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showPkgForm, setShowPkgForm] = useState(false);
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   const [activePackage, setActivePackage] = useState<string | null>(null);
   const [watchVideo, setWatchVideo] = useState<Video | null>(null);
-  const [form, setForm] = useState<{ title: string; description: string; url: string; packageId: string }>({
-    title: "", description: "", url: "", packageId: "",
-  });
-  const [pkgName, setPkgName] = useState("");
+
+  const [form, setForm] = useState<{
+    title: string; description: string; url: string; packageId: string;
+  }>({ title: "", description: "", url: "", packageId: "" });
+
+  const [pkgForm, setPkgForm] = useState<{
+    name: string; description: string; groupId: string; visibility: string;
+  }>({ name: "", description: "", groupId: "", visibility: "PUBLIC" });
+
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
   async function fetchData() {
-    const res = await fetch("/api/video-packages");
-    const data = await res.json();
-    setPackages(data.packages || []);
+    const [pkgRes, grpRes] = await Promise.all([
+      fetch("/api/video-packages"),
+      fetch("/api/groups"),
+    ]);
+    const pkgData = await pkgRes.json();
+    const grpData = await grpRes.json();
+    setPackages(pkgData.packages || []);
+    setGroups(grpData.groups || []);
     setLoading(false);
   }
 
@@ -67,13 +86,19 @@ export default function TeacherLessonsPage() {
         await fetch(`/api/videos/${editVideo.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: form.title, description: form.description, url: form.url, packageId: form.packageId || null }),
+          body: JSON.stringify({
+            title: form.title, description: form.description,
+            url: form.url, packageId: form.packageId || null,
+          }),
         });
       } else {
         await fetch("/api/videos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: form.title, description: form.description, url: form.url, packageId: form.packageId || null }),
+          body: JSON.stringify({
+            title: form.title, description: form.description,
+            url: form.url, packageId: form.packageId || null,
+          }),
         });
       }
       setShowForm(false);
@@ -90,14 +115,28 @@ export default function TeacherLessonsPage() {
       await fetch("/api/video-packages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: pkgName }),
+        body: JSON.stringify({
+          name: pkgForm.name,
+          description: pkgForm.description || null,
+          groupId: pkgForm.groupId || null,
+          visibility: pkgForm.visibility,
+        }),
       });
-      setPkgName("");
+      setPkgForm({ name: "", description: "", groupId: "", visibility: "PUBLIC" });
       setShowPkgForm(false);
       await fetchData();
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleUpdatePkgVisibility(pkgId: string, groupId: string | null, visibility: string) {
+    await fetch(`/api/video-packages/${pkgId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupId: groupId || null, visibility }),
+    });
+    await fetchData();
   }
 
   async function handleDelete(id: string) {
@@ -140,21 +179,15 @@ export default function TeacherLessonsPage() {
         </div>
       </div>
 
-      {/* Video izleme modal — tam ekran */}
+      {/* Video izleme modal */}
       {watchVideo && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col"
-          onClick={() => setWatchVideo(null)}>
+        <div className="fixed inset-0 z-50 bg-black flex flex-col" onClick={() => setWatchVideo(null)}>
           <div className="flex items-center justify-between px-6 py-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-white font-semibold">{watchVideo.title}</h3>
             <button onClick={() => setWatchVideo(null)} className="text-white text-2xl hover:text-gray-300">✕</button>
           </div>
           <div className="flex-1" onClick={e => e.stopPropagation()}>
-            <iframe
-              src={getYoutubeEmbed(watchVideo.url) || ""}
-              className="w-full h-full"
-              allowFullScreen
-              allow="autoplay; fullscreen"
-            />
+            <iframe src={getYoutubeEmbed(watchVideo.url) || ""} className="w-full h-full" allowFullScreen allow="autoplay; fullscreen" />
           </div>
         </div>
       )}
@@ -165,9 +198,52 @@ export default function TeacherLessonsPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <h2 className="text-lg font-bold text-gray-900 mb-5">Yeni video paketi</h2>
             <form onSubmit={handleCreatePkg} className="space-y-4">
-              <input type="text" value={pkgName} onChange={e => setPkgName(e.target.value)}
-                placeholder="Paket adı (məs: Fizika 9. sinif)" required
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Paket adı</label>
+                <input type="text" value={pkgForm.name}
+                  onChange={e => setPkgForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="məs: Fizika 9. sinif" required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Açıqlama</label>
+                <textarea value={pkgForm.description}
+                  onChange={e => setPkgForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 resize-none" />
+              </div>
+              {/* Görünürlük */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Kimə görünsün?</label>
+                <div className="flex gap-3">
+                  <button type="button"
+                    onClick={() => setPkgForm(f => ({ ...f, visibility: "PUBLIC", groupId: "" }))}
+                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                      pkgForm.visibility === "PUBLIC" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
+                    }`}>
+                    🌍 Herkese açıq
+                  </button>
+                  <button type="button"
+                    onClick={() => setPkgForm(f => ({ ...f, visibility: "GROUP_ONLY" }))}
+                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                      pkgForm.visibility === "GROUP_ONLY" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
+                    }`}>
+                    🏫 Qrupa xas
+                  </button>
+                </div>
+              </div>
+              {/* Grup seçimi */}
+              {pkgForm.visibility === "GROUP_ONLY" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Qrup seç</label>
+                  <select value={pkgForm.groupId}
+                    onChange={e => setPkgForm(f => ({ ...f, groupId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30">
+                    <option value="">Qrup seçin</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="flex gap-3">
                 <button type="button" onClick={() => setShowPkgForm(false)}
                   className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
@@ -249,18 +325,43 @@ export default function TeacherLessonsPage() {
         <div className="space-y-6">
           {packages.map(pkg => (
             <div key={pkg.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
-                onClick={() => setActivePackage(activePackage === pkg.id ? null : pkg.id)}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div>
                   <h2 className="font-bold text-gray-900">{pkg.name}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{pkg.videos.length} video</p>
+                  <div className="flex gap-2 mt-1 items-center">
+                    <p className="text-xs text-gray-500">{pkg.videos.length} video</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      pkg.visibility === "PUBLIC" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {pkg.visibility === "PUBLIC" ? "🌍 Herkese açıq" : `🏫 ${pkg.group?.name || "Qrupa xas"}`}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={e => { e.stopPropagation(); openAdd(pkg.id); }}
+                <div className="flex items-center gap-2">
+                  {/* Görünürlük değiştir */}
+                  <select
+                    value={pkg.groupId || pkg.visibility}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === "PUBLIC") {
+                        handleUpdatePkgVisibility(pkg.id, null, "PUBLIC");
+                      } else {
+                        handleUpdatePkgVisibility(pkg.id, val, "GROUP_ONLY");
+                      }
+                    }}
+                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-900/30"
+                    onClick={e => e.stopPropagation()}>
+                    <option value="PUBLIC">🌍 Herkese açıq</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>🏫 {g.name}</option>)}
+                  </select>
+                  <button onClick={() => openAdd(pkg.id)}
                     className="bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
                     + Video əlavə et
                   </button>
-                  <span className="text-gray-400">{activePackage === pkg.id ? "▲" : "▼"}</span>
+                  <button onClick={() => setActivePackage(activePackage === pkg.id ? null : pkg.id)}
+                    className="text-gray-400 px-2">
+                    {activePackage === pkg.id ? "▲" : "▼"}
+                  </button>
                 </div>
               </div>
 
@@ -274,8 +375,7 @@ export default function TeacherLessonsPage() {
                         const thumb = getYoutubeThumb(v.url);
                         return (
                           <div key={v.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
-                            <div className="relative h-36 bg-gray-200 cursor-pointer"
-                              onClick={() => setWatchVideo(v)}>
+                            <div className="relative h-36 bg-gray-200 cursor-pointer" onClick={() => setWatchVideo(v)}>
                               {thumb ? (
                                 <img src={thumb} alt={v.title} className="w-full h-full object-cover" />
                               ) : (
