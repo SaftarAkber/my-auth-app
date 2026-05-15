@@ -10,13 +10,30 @@ export async function GET() {
     }
 
     const packages = await prisma.videoPackage.findMany({
-      where: { teacherId: currentUser.id },
+      where: {
+        OR: [
+          { collection: { teacherId: currentUser.id } },
+          { group: { teacherId: currentUser.id } },
+          { collectionId: null, groupId: null },
+        ],
+      },
       include: {
         videos: {
-          select: { id: true, title: true, url: true },
+          where: { isActive: true, teacherId: currentUser.id },
+          include: {
+            videoGroups: {
+              include: {
+                group: { select: { id: true, name: true } },
+              },
+            },
+          },
           orderBy: { order: "asc" },
         },
-        group: { select: { id: true, name: true } },
+        videoPackageGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -35,16 +52,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    const { name, description, groupId, visibility } = await req.json();
-    if (!name) return NextResponse.json({ error: "Ad məcburidir" }, { status: 400 });
+    const { name, description, visibility, groupIds } = await req.json();
+
+    if (!name) {
+      return NextResponse.json({ error: "Ad məcburidir" }, { status: 400 });
+    }
 
     const pkg = await prisma.videoPackage.create({
       data: {
         name,
         description: description || null,
-        groupId: groupId || null,
         visibility: visibility || "PUBLIC",
-        teacherId: currentUser.id, // ✅ teacherId ekle
+        videoPackageGroups: visibility === "GROUP_ONLY" && groupIds?.length
+          ? {
+              create: groupIds.map((groupId: string) => ({ groupId })),
+            }
+          : undefined,
+      },
+      include: {
+        videoPackageGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 

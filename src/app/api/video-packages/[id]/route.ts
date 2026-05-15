@@ -10,7 +10,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { name, description, isPublished, visibility } = await req.json();
+    const { name, description, isPublished, visibility, groupIds } = await req.json();
+
+    // Önce mevcut groups'u sil
+    await prisma.videoPackageGroup.deleteMany({
+      where: { packageId: id },
+    });
 
     const pkg = await prisma.videoPackage.update({
       where: { id },
@@ -19,6 +24,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(description !== undefined && { description }),
         ...(isPublished !== undefined && { isPublished }),
         ...(visibility !== undefined && { visibility }),
+        videoPackageGroups: visibility === "GROUP_ONLY" && groupIds?.length
+          ? {
+              create: groupIds.map((groupId: string) => ({ groupId })),
+            }
+          : undefined,
+      },
+      include: {
+        videoPackageGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 

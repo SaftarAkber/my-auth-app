@@ -12,10 +12,10 @@ export async function GET() {
     const videos = await prisma.video.findMany({
       where: { teacherId: currentUser.id },
       include: {
-        package: {
-          select: {
-            name: true,
-            collection: { select: { name: true } },
+        package: { select: { id: true, name: true } },
+        videoGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
           },
         },
       },
@@ -25,7 +25,7 @@ export async function GET() {
     return NextResponse.json({ videos });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 
@@ -36,27 +36,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    // collectionId → packageId olarak değişti
-    const { title, description, url, packageId, order } = await req.json();
+    const { title, description, url, visibility, groupIds, packageId } = await req.json();
 
     if (!title || !url) {
-      return NextResponse.json({ error: "Başlık ve URL zorunludur" }, { status: 400 });
+      return NextResponse.json({ error: "Başlıq və URL məcburidir" }, { status: 400 });
     }
 
     const video = await prisma.video.create({
       data: {
         title,
-        description,
+        description: description || null,
         url,
-        packageId: packageId || null, // collectionId → packageId
-        order: order || 0,
+        visibility: visibility || "PUBLIC",
         teacherId: currentUser.id,
+        packageId: packageId || null,
+        videoGroups: visibility === "GROUP_ONLY" && groupIds?.length
+          ? {
+              create: groupIds.map((groupId: string) => ({ groupId })),
+            }
+          : undefined,
       },
       include: {
-        package: {
-          select: {
-            name: true,
-            collection: { select: { name: true } },
+        videoGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
           },
         },
       },
@@ -65,6 +68,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ video }, { status: 201 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

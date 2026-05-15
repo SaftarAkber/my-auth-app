@@ -10,7 +10,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { title, description, url, isActive, collectionId, order } = await req.json();
+    const { title, description, url, visibility, groupIds, packageId, isActive } = await req.json();
+
+    // Önce mevcut videoGroups'u sil
+    await prisma.videoGroup.deleteMany({
+      where: { videoId: id },
+    });
 
     const video = await prisma.video.update({
       where: { id, teacherId: currentUser.id },
@@ -18,16 +23,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(url && { url }),
+        ...(visibility && { visibility }),
+        ...(packageId !== undefined && { packageId: packageId || null }),
         ...(isActive !== undefined && { isActive }),
-        ...(collectionId !== undefined && { collectionId }),
-        ...(order !== undefined && { order }),
+        videoGroups: visibility === "GROUP_ONLY" && groupIds?.length
+          ? {
+              create: groupIds.map((groupId: string) => ({ groupId })),
+            }
+          : undefined,
+      },
+      include: {
+        videoGroups: {
+          include: {
+            group: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 
     return NextResponse.json({ video });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 
@@ -43,6 +60,6 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

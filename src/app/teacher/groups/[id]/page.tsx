@@ -85,10 +85,16 @@ export default function GroupDetailPage() {
   const [vPkgForm, setVPkgForm] = useState({ name: "", description: "" });
   const [vPkgSaving, setVPkgSaving] = useState(false);
 
-  // Video upload
-  const [uploadingVideo, setUploadingVideo] = useState<string | null>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  // ✅ Video form — yeni
+  const [showVideoForm, setShowVideoForm] = useState(false);
+  const [activeVideoPkgId, setActiveVideoPkgId] = useState<string | null>(null);
+  const [videoForm, setVideoForm] = useState({ title: "", url: "", description: "" });
+  const [videoSaving, setVideoSaving] = useState(false);
+
   const [activeVPkg, setActiveVPkg] = useState<string | null>(null);
+
+  // ✅ Watch video
+  const [watchVideo, setWatchVideo] = useState<Video | null>(null);
 
   useEffect(() => { fetchGroup(); }, [id]);
 
@@ -156,32 +162,44 @@ export default function GroupDetailPage() {
     }
   }
 
-  async function handleUploadVideo(e: React.ChangeEvent<HTMLInputElement>, packageId: string) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingVideo(packageId);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", "video");
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      const uploadData = await uploadRes.json();
+  // ✅ Yeni — form açar
+  function openVideoForm(packageId: string) {
+    setActiveVideoPkgId(packageId);
+    setVideoForm({ title: "", url: "", description: "" });
+    setShowVideoForm(true);
+  }
 
-      if (uploadData.url) {
-        await fetch(`/api/video-packages/${packageId}/videos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: file.name.replace(/\.[^/.]+$/, ""),
-            url: uploadData.url,
-            publicId: uploadData.publicId,
-          }),
-        });
-        await fetchGroup();
-      }
+  // ✅ Yeni — video kaydeder
+  async function handleSaveVideo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!videoForm.url || !activeVideoPkgId) return;
+    setVideoSaving(true);
+    try {
+      await fetch(`/api/video-packages/${activeVideoPkgId}/videos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: videoForm.title,
+          url: videoForm.url,
+          description: videoForm.description || null,
+        }),
+      });
+      setShowVideoForm(false);
+      await fetchGroup();
     } finally {
-      setUploadingVideo(null);
+      setVideoSaving(false);
     }
+  }
+
+  // ✅ YouTube embed helper
+  function getYoutubeEmbed(url: string) {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1` : null;
+  }
+
+  function getYoutubeThumb(url: string) {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
   }
 
   if (loading) return (
@@ -211,6 +229,65 @@ export default function GroupDetailPage() {
         <span className="text-gray-300">/</span>
         <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
       </div>
+
+      {/* ✅ Video izleme modal */}
+      {watchVideo && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col" onClick={() => setWatchVideo(null)}>
+          <div className="flex items-center justify-between px-6 py-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-semibold">{watchVideo.title}</h3>
+            <button onClick={() => setWatchVideo(null)} className="text-white text-2xl hover:text-gray-300">✕</button>
+          </div>
+          <div className="flex-1" onClick={e => e.stopPropagation()}>
+            <iframe
+              src={getYoutubeEmbed(watchVideo.url) || ""}
+              className="w-full h-full"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Video əlavə et modal */}
+      {showVideoForm && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-5">Video əlavə et</h2>
+            <form onSubmit={handleSaveVideo} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Başlıq</label>
+                <input type="text" value={videoForm.title}
+                  onChange={e => setVideoForm(f => ({ ...f, title: e.target.value }))} required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">YouTube URL</label>
+                <input type="url" value={videoForm.url}
+                  onChange={e => setVideoForm(f => ({ ...f, url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=..." required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Açıqlama</label>
+                <textarea value={videoForm.description}
+                  onChange={e => setVideoForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 resize-none" />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowVideoForm(false)}
+                  className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
+                  Ləğv et
+                </button>
+                <button type="submit" disabled={videoSaving}
+                  className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-medium py-2.5 rounded-xl text-sm">
+                  {videoSaving ? "Saxlanılır..." : "Saxla"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Qrup header */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
@@ -245,9 +322,7 @@ export default function GroupDetailPage() {
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-              activeTab === t.key
-                ? "bg-blue-900 text-white"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+              activeTab === t.key ? "bg-blue-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
             }`}>
             {t.icon} {t.label}
           </button>
@@ -257,17 +332,12 @@ export default function GroupDetailPage() {
       {/* PAYLAŞIMLAR */}
       {activeTab === "posts" && (
         <div className="space-y-5">
-          {/* Yeni paylaşım formu */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 mb-4">Yeni paylaşım</h3>
             <form onSubmit={handlePostSubmit} className="space-y-3">
-              <textarea
-                value={postContent}
-                onChange={e => setPostContent(e.target.value)}
-                rows={4}
-                placeholder="Qrupa nə paylaşmaq istəyirsiniz?"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 resize-none"
-              />
+              <textarea value={postContent} onChange={e => setPostContent(e.target.value)}
+                rows={4} placeholder="Qrupa nə paylaşmaq istəyirsiniz?"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 resize-none" />
               {postImages.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {postImages.map((img, i) => (
@@ -288,8 +358,7 @@ export default function GroupDetailPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm transition-all">
                   {uploadingImage ? "Yüklənir..." : "🖼️ Şəkil əlavə et"}
                 </button>
-                <input ref={imageInputRef} type="file" accept="image/*"
-                  onChange={handleUploadImage} className="hidden" />
+                <input ref={imageInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" />
                 <button type="submit" disabled={postSaving || !postContent.trim()}
                   className="ml-auto bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium px-5 py-2 rounded-xl text-sm transition-all">
                   {postSaving ? "Paylaşılır..." : "Paylaş"}
@@ -298,7 +367,6 @@ export default function GroupDetailPage() {
             </form>
           </div>
 
-          {/* Paylaşımlar listesi */}
           {group.posts.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
               <div className="text-4xl mb-3">📌</div>
@@ -308,22 +376,17 @@ export default function GroupDetailPage() {
             <div key={post.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-gray-900 text-sm leading-relaxed flex-1">{post.content}</p>
-                <button onClick={() => handleDeletePost(post.id)}
-                  className="text-red-400 hover:text-red-600 flex-shrink-0">🗑️</button>
+                <button onClick={() => handleDeletePost(post.id)} className="text-red-400 hover:text-red-600 flex-shrink-0">🗑️</button>
               </div>
               {post.images.length > 0 && (
                 <div className="flex gap-2 mt-3 flex-wrap">
                   {post.images.map(img => (
-                    <img key={img.id} src={img.url} alt=""
-                      className="w-32 h-24 object-cover rounded-xl border border-gray-100" />
+                    <img key={img.id} src={img.url} alt="" className="w-32 h-24 object-cover rounded-xl border border-gray-100" />
                   ))}
                 </div>
               )}
               <p className="text-xs text-gray-400 mt-3">
-                {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                  day: "numeric", month: "long", year: "numeric",
-                  hour: "2-digit", minute: "2-digit",
-                })}
+                {new Date(post.createdAt).toLocaleDateString("az-AZ", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
             </div>
           ))}
@@ -382,45 +445,48 @@ export default function GroupDetailPage() {
             <div className="space-y-4">
               {group.videoPackages.map(pkg => (
                 <div key={pkg.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div
-                    className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50"
+                  <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50"
                     onClick={() => setActiveVPkg(activeVPkg === pkg.id ? null : pkg.id)}>
                     <div>
                       <h3 className="font-semibold text-gray-900">{pkg.name}</h3>
                       <p className="text-xs text-gray-500 mt-0.5">{pkg.videos.length} video</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-2 cursor-pointer" onClick={e => e.stopPropagation()}>
-                        <input type="file" accept="video/*"
-                          ref={videoInputRef}
-                          onChange={e => handleUploadVideo(e, pkg.id)}
-                          className="hidden" />
-                        <button
-                          onClick={e => { e.stopPropagation(); videoInputRef.current?.click(); }}
-                          disabled={uploadingVideo === pkg.id}
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
-                          {uploadingVideo === pkg.id ? "Yüklənir..." : "+ Video əlavə et"}
-                        </button>
-                      </label>
+                      {/* ✅ Dosya seçimi yerine form açıyor */}
+                      <button
+                        onClick={e => { e.stopPropagation(); openVideoForm(pkg.id); }}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
+                        + Video əlavə et
+                      </button>
                       <span className="text-gray-400">{activeVPkg === pkg.id ? "▲" : "▼"}</span>
                     </div>
                   </div>
 
                   {activeVPkg === pkg.id && pkg.videos.length > 0 && (
                     <div className="border-t border-gray-100 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {pkg.videos.map(v => (
-                        <div key={v.id} className="border border-gray-100 rounded-xl overflow-hidden">
-                          <video
-                            src={v.url}
-                            controls
-                            controlsList="nodownload"
-                            className="w-full aspect-video bg-black"
-                          />
-                          <div className="p-3">
-                            <p className="text-sm font-medium text-gray-900">{v.title}</p>
+                      {pkg.videos.map(v => {
+                        const thumb = getYoutubeThumb(v.url);
+                        return (
+                          <div key={v.id} className="border border-gray-100 rounded-xl overflow-hidden">
+                            {/* ✅ YouTube thumbnail + izleme */}
+                            <div className="relative h-36 bg-gray-200 cursor-pointer" onClick={() => setWatchVideo(v)}>
+                              {thumb ? (
+                                <img src={thumb} alt={v.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-4xl">🎬</div>
+                              )}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xl ml-1">▶</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-3">
+                              <p className="text-sm font-medium text-gray-900">{v.title}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -502,7 +568,7 @@ export default function GroupDetailPage() {
                         {m.student.email || m.student.phone || "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-400">
-                        {new Date(m.student.email || Date.now()).toLocaleDateString("az-AZ")}
+                        {new Date().toLocaleDateString("az-AZ")}
                       </td>
                     </tr>
                   ))}

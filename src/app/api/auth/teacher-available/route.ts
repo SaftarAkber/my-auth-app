@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const TEACHER_LIMIT = 3;
+const TEACHER_LIMIT = 1;
 
 export async function GET() {
   try {

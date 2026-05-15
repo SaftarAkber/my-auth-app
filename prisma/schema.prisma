@@ -65,8 +65,20 @@ model Group {
   posts            GroupPost[]
   videoPackages    VideoPackage[]
   testPackages     TestPackage[]
-  ideoGroups VideoGroup[]
+  videoPackageGroups VideoPackageGroup[]
+  videoGroups VideoGroup[]
   @@map("groups")
+}
+
+model VideoPackageGroup {
+  id        String       @id @default(cuid())
+  packageId String
+  groupId   String
+  package   VideoPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group     Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, groupId])
+  @@map("video_package_groups")
 }
 
 model GroupMember {
@@ -146,11 +158,12 @@ model VideoPackage {
   updatedAt    DateTime    @updatedAt
   collectionId String?
   groupId      String?
-  teacherId    String?     
+  teacherId    String?                                                          // ← ekle
   collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
   teacher      User?       @relation(fields: [teacherId], references: [id], onDelete: SetNull) // ← ekle
   videos       Video[]
+  videoPackageGroups VideoPackageGroup[]
 
   @@map("video_packages")
 }
