@@ -10,21 +10,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { name, description, isPublished, visibility, groupIds } = await req.json();
+    const { name, description, isPublished, isPublic, visibility, groupIds } = await req.json();
 
-    // Önce mevcut groups'u sil
-    await prisma.videoPackageGroup.deleteMany({
-      where: { packageId: id },
-    });
+    // Əvvəlki qrup bağlantılarını sil
+    await prisma.videoPackageGroup.deleteMany({ where: { packageId: id } });
 
     const pkg = await prisma.videoPackage.update({
       where: { id },
       data: {
-        ...(name && { name }),
+        ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
         ...(isPublished !== undefined && { isPublished }),
+        ...(isPublic !== undefined && { isPublic }),
         ...(visibility !== undefined && { visibility }),
-        videoPackageGroups: visibility === "GROUP_ONLY" && groupIds?.length
+        // Multi-group bağlantılar
+        videoPackageGroups: groupIds?.length
           ? {
               create: groupIds.map((groupId: string) => ({ groupId })),
             }
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({ package: pkg });
   } catch (error) {
-    console.error(error);
+    console.error("video-packages PATCH error:", error);
     return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

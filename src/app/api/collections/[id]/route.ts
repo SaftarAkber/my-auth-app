@@ -15,6 +15,12 @@ export async function GET(
           include: {
             _count: { select: { questions: true, attempts: true } },
             group: { select: { id: true, name: true } },
+            // ✅ ƏLAVƏ EDİLDİ: qrup bağlantıları və isPublic üçün lazımdır
+            testPackageGroups: {
+              include: {
+                group: { select: { id: true, name: true } },
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         },

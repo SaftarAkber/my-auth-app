@@ -10,6 +10,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       include: {
         questions: { orderBy: { order: "asc" } },
         collection: { select: { name: true, teacherId: true } },
+        testPackageGroups: {
+          include: { group: { select: { id: true, name: true } } },
+        },
         _count: { select: { attempts: true } },
       },
     });
@@ -30,7 +33,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { id } = await params;
-    const { name, description, isPublished, isTimed, duration, startsAt, endsAt, visibility, groupId } = await req.json();
+    const {
+      name, description, isPublished, isPublic,
+      isTimed, duration, startsAt, endsAt,
+      visibility, groupIds, allowRetry,
+    } = await req.json();
+
+    // Əvvəlki qrup bağlantılarını sil
+    await prisma.testPackageGroup.deleteMany({ where: { packageId: id } });
 
     const pkg = await prisma.testPackage.update({
       where: { id },
@@ -38,12 +48,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(isPublished !== undefined && { isPublished }),
+        ...(isPublic !== undefined && { isPublic }),
         ...(isTimed !== undefined && { isTimed }),
         ...(duration !== undefined && { duration }),
-        ...(startsAt !== undefined && { startsAt }),
-        ...(endsAt !== undefined && { endsAt }),
+        ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
+        ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
         ...(visibility !== undefined && { visibility }),
-        ...(groupId !== undefined && { groupId: groupId || null }),
+        ...(allowRetry !== undefined && { allowRetry }),
+        // Multi-group bağlantılar
+        testPackageGroups: groupIds?.length
+          ? {
+              create: groupIds.map((groupId: string) => ({ groupId })),
+            }
+          : undefined,
+      },
+      include: {
+        testPackageGroups: {
+          include: { group: { select: { id: true, name: true } } },
+        },
       },
     });
 

@@ -25,6 +25,7 @@ export async function GET() {
         },
         package: {
           select: {
+            id: true,
             name: true,
             collection: { select: { name: true } },
             group: { select: { name: true } },
@@ -32,7 +33,14 @@ export async function GET() {
         },
         answers: {
           include: {
-            question: { select: { text: true, type: true } },
+            question: {
+              select: {
+                text: true,
+                type: true,
+                options: true,
+                correctAnswer: true,
+              },
+            },
           },
         },
       },

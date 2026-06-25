@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 interface Teacher {
@@ -8,8 +9,8 @@ interface Teacher {
   name: string;
   bio: string | null;
   photo: string | null;
-  email: string | null;
-  phone: string | null;
+  coverPhoto: string | null;
+  _count: { groups: number };
 }
 
 interface Group {
@@ -30,7 +31,8 @@ interface EnrollmentRequest {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const router = useRouter();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [requests, setRequests] = useState<EnrollmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,9 @@ export default function StudentDashboard() {
       const groupsData = await groupsRes.json();
       const reqData = await reqRes.json();
 
-      setTeacher(teacherData.teacher);
+      setTeachers(teacherData.teachers || (teacherData.teacher ? [teacherData.teacher] : []));
       setGroups(groupsData.groups || []);
-      setRequests(reqData.requests || []);
+      setRequests(reqData.enrollments || reqData.requests || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -117,29 +119,54 @@ export default function StudentDashboard() {
         <p className="text-gray-500 mt-1">EduFlow tələbə panelinizə xoş gəldiniz.</p>
       </div>
 
-      {teacher ? (
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-5">Müəllim</h2>
-          <div className="flex items-start gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-blue-100 flex items-center justify-center text-3xl font-bold text-blue-900 overflow-hidden flex-shrink-0 border-2 border-blue-200">
-              {teacher.photo ? (
-                <img src={teacher.photo} alt={teacher.name} className="w-full h-full object-cover" />
-              ) : teacher.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-gray-900">{teacher.name}</h3>
-              {teacher.bio && <p className="text-gray-600 text-sm mt-2">{teacher.bio}</p>}
-              <div className="flex flex-wrap gap-3 mt-3">
-                {teacher.phone && <span className="text-sm text-gray-500">📱 {teacher.phone}</span>}
-                {teacher.email && <span className="text-sm text-gray-500">✉️ {teacher.email}</span>}
-              </div>
-            </div>
+      {/* Müəllimlər siyahısı */}
+      {teachers.length > 0 ? (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Müəllimlər</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {teachers.map(teacher => (
+              <button
+                key={teacher.id}
+                // ✅ DÜZƏLDİLDİ: /student/teachers → /student/teacher
+                onClick={() => router.push(`/student/teacher/${teacher.id}`)}
+                className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all text-left group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-900 overflow-hidden flex-shrink-0 border-2 border-blue-200">
+                    {teacher.photo ? (
+                      <img src={teacher.photo} alt={teacher.name} className="w-full h-full object-cover" />
+                    ) : teacher.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
+                      {teacher.name}
+                    </h3>
+                    {teacher.bio && (
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{teacher.bio}</p>
+                    )}
+                    <p className="text-xs text-blue-700 mt-2 font-medium">
+                      🏫 {teacher._count.groups} qrup · Profilə bax →
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center text-gray-400 mb-8">
+          <div className="text-4xl mb-3">👨‍🏫</div>
+          <p>Hələ qeydiyyatda olan müəllim yoxdur</p>
+        </div>
+      )}
 
-          {/* Mövcud müraciətlər */}
+      {/* Müraciətlər */}
+      {teachers.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-5">Müraciətlərim</h2>
+
           {requests.length > 0 && (
-            <div className="mt-5 pt-5 border-t border-gray-100 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-700">Müraciətlərim</h3>
+            <div className="space-y-3 mb-5">
               {requests.map(r => (
                 <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
                   <div>
@@ -156,17 +183,15 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* Müəllim səhifəsi linki */}
           {hasAcceptedRequest && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <a href="/student/teacher"
                 className="inline-flex items-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-all">
-                👨‍🏫 Müəllim səhifəsinə keç →
+                👨‍🏫 Dərslər və testlər →
               </a>
             </div>
           )}
 
-          {/* Yeni müraciət */}
           {!hasAcceptedRequest && (
             <div className="mt-5 pt-5 border-t border-gray-100">
               {groups.length === 0 ? (
@@ -241,11 +266,6 @@ export default function StudentDashboard() {
               )}
             </div>
           )}
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center text-gray-400">
-          <div className="text-4xl mb-3">👨‍🏫</div>
-          <p>Hələ qeydiyyatda olan müəllim yoxdur</p>
         </div>
       )}
     </div>

@@ -41,6 +41,7 @@ type AcceptedStudent = { student: Student; enrollments: Enrollment[] };
 
 export default function TeacherStudentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reviewAnswer, setReviewAnswer] = useState<Answer | null>(null);
@@ -48,8 +49,9 @@ export default function TeacherStudentsPage() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filtered, setFiltered] = useState<AcceptedStudent[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => { fetchEnrollments(); }, []);
+  useEffect(() => { fetchEnrollments(); fetchPendingCount(); }, []);
 
   async function fetchEnrollments() {
     try {
@@ -63,7 +65,18 @@ export default function TeacherStudentsPage() {
     }
   }
 
-  const pending = enrollments.filter(e => e.status === "PENDING");
+  async function fetchPendingCount() {
+    try {
+      const res = await fetch("/api/teacher/requests/count");
+      const data = await res.json();
+      setPendingCount(data.count ?? 0);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ❗ Bu səhifədə YALNIZ qəbul edilmiş (ACCEPTED) tələbələr göstərilir.
+  // PENDING istəklər "Gələn istəklər" səhifəsindədir (yuxarıdaki düymə vasitəsilə).
   const declined = enrollments.filter(e => e.status === "DECLINED");
 
   const acceptedMap = new Map<string, AcceptedStudent>();
@@ -86,13 +99,22 @@ export default function TeacherStudentsPage() {
 
   async function handleRespond(enrollmentId: string, action: "ACCEPTED" | "DECLINED") {
     setActionLoading(enrollmentId);
+    setErrorMsg("");
     try {
       const res = await fetch("/api/enrollment/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enrollmentId, action }),
       });
-      if (res.ok) await fetchEnrollments();
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Xəta baş verdi");
+        return;
+      }
+      await fetchEnrollments();
+      await fetchPendingCount();
+    } catch {
+      setErrorMsg("Server xətası");
     } finally {
       setActionLoading(null);
     }
@@ -128,7 +150,26 @@ export default function TeacherStudentsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Tələbələrim</h1>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-gray-900">Tələbələrim</h1>
+
+        {/* ❗ Gələn istəklər düyməsi — gözləyən istəklərin sayı ilə */}
+        <Link href="/teacher/requests"
+          className="relative inline-flex items-center gap-2 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 text-yellow-800 font-medium px-4 py-2.5 rounded-xl text-sm transition-all">
+          📩 Gələn istəklər
+          {pendingCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              {pendingCount > 9 ? "9+" : pendingCount}
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm mb-4">
+          ⚠️ {errorMsg}
+        </div>
+      )}
 
       {/* Arama */}
       <div className="relative mb-6">
@@ -179,48 +220,7 @@ export default function TeacherStudentsPage() {
         </div>
       )}
 
-      {/* Gözləyən müraciətlər */}
-      {pending.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-            Gözləyən Müraciətlər
-            <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">{pending.length}</span>
-          </h2>
-          <div className="space-y-3">
-            {pending.map(e => (
-              <div key={e.id} className="bg-white rounded-2xl p-5 border border-yellow-200 shadow-sm flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Link href={`/teacher/students/${e.student.id}`}>
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-xl font-bold text-blue-900 overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-900 transition-all">
-                      {e.student.photo ? <img src={e.student.photo} alt={e.student.name} className="w-full h-full object-cover" /> : e.student.name.charAt(0).toUpperCase()}
-                    </div>
-                  </Link>
-                  <div>
-                    <Link href={`/teacher/students/${e.student.id}`}>
-                      <p className="font-semibold text-gray-900 hover:text-blue-900 cursor-pointer">{e.student.name}</p>
-                    </Link>
-                    <p className="text-sm text-gray-500">{e.student.email || e.student.phone || "—"}</p>
-                    {e.group && <p className="text-xs text-blue-700 mt-0.5">🏫 {e.group.name}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => handleRespond(e.id, "ACCEPTED")} disabled={actionLoading === e.id}
-                    className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all">
-                    ✓ Qəbul et
-                  </button>
-                  <button onClick={() => handleRespond(e.id, "DECLINED")} disabled={actionLoading === e.id}
-                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all">
-                    ✗ Rədd et
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Qəbul edilmiş tələbələr */}
+      {/* ❗ Qəbul edilmiş tələbələr — bu səhifənin əsas hissəsi (PENDING burada yoxdur) */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
           <span className="w-2 h-2 bg-green-400 rounded-full"></span>
@@ -232,6 +232,11 @@ export default function TeacherStudentsPage() {
           <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center text-gray-400">
             <div className="text-4xl mb-3">👥</div>
             <p>Hələ tələbəniz yoxdur</p>
+            {pendingCount > 0 && (
+              <Link href="/teacher/requests" className="mt-3 inline-block text-blue-900 text-sm font-medium hover:underline">
+                {pendingCount} gözləyən istəyə bax →
+              </Link>
+            )}
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center text-gray-400">
@@ -262,11 +267,11 @@ export default function TeacherStudentsPage() {
                       </div>
                     </div>
                   </div>
-                  {/* ✅ Sadece Çıxar butonu — Testlərə Bax kaldırıldı */}
+                  {/* Sadece Çıxar butonu */}
                   <button onClick={() => handleRespond(studentEnrollments[0].id, "DECLINED")}
                     disabled={actionLoading === studentEnrollments[0].id}
                     className="text-red-400 hover:text-red-600 text-sm transition-all px-3 py-2">
-                    Çıxar
+                    {actionLoading === studentEnrollments[0].id ? "..." : "Çıxar"}
                   </button>
                 </div>
               </div>
@@ -297,7 +302,7 @@ export default function TeacherStudentsPage() {
                 </div>
                 <button onClick={() => handleRespond(e.id, "ACCEPTED")} disabled={actionLoading === e.id}
                   className="bg-green-500 hover:bg-green-600 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all">
-                  Qəbul et
+                  {actionLoading === e.id ? "..." : "Qəbul et"}
                 </button>
               </div>
             ))}

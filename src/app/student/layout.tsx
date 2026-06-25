@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+
 const menuItems = [
   { href: "/student", label: "Ana Səhifə", icon: "🏠" },
+  { href: "/student/profil", label: "Profilim", icon: "👤" },
   { href: "/student/teacher", label: "Müəllim Səhifəsi", icon: "👨‍🏫" },
   { href: "/student/my-tests", label: "Testlərim", icon: "📝" },
   { href: "/student/settings", label: "Tənzimləmələr", icon: "⚙️" },
@@ -45,19 +47,21 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           </div>
 
           <div className="px-6 py-4 border-b border-blue-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
-                {user.photo ? (
-                  <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  user.name.charAt(0).toUpperCase()
-                )}
+            <Link href="/student/profil" onClick={() => setSidebarOpen(false)}>
+              <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                  {user.photo ? (
+                    <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">{user.name}</p>
+                  <p className="text-blue-300 text-xs">Tələbə · Profilə bax →</p>
+                </div>
               </div>
-              <div>
-                <p className="text-white font-medium text-sm">{user.name}</p>
-                <p className="text-blue-300 text-xs">Tələbə</p>
-              </div>
-            </div>
+            </Link>
           </div>
 
           <nav className="flex-1 px-4 py-4 space-y-1">
@@ -65,7 +69,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               <Link key={item.href} href={item.href}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  pathname === item.href
+                  pathname === item.href || (pathname.startsWith(item.href + "/") && item.href !== "/student")
                     ? "bg-white/20 text-white"
                     : "text-blue-200 hover:bg-white/10 hover:text-white"
                 }`}>

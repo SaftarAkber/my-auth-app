@@ -60,13 +60,15 @@ model Group {
   teacherId   String
   teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  members          GroupMember[]
-  enrollmentReqs   EnrollmentRequest[]
-  posts            GroupPost[]
-  videoPackages    VideoPackage[]
-  testPackages     TestPackage[]
-  videoPackageGroups VideoPackageGroup[]
-  videoGroups VideoGroup[]
+  members              GroupMember[]
+  enrollmentReqs       EnrollmentRequest[]
+  posts                GroupPost[]
+  videoPackages        VideoPackage[]
+  testPackages         TestPackage[]
+  videoPackageGroups   VideoPackageGroup[]
+  videoGroups          VideoGroup[]
+  testPackageGroups    TestPackageGroup[]
+
   @@map("groups")
 }
 
@@ -79,6 +81,17 @@ model VideoPackageGroup {
 
   @@unique([packageId, groupId])
   @@map("video_package_groups")
+}
+
+model TestPackageGroup {
+  id        String      @id @default(cuid())
+  packageId String
+  groupId   String
+  package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group     Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, groupId])
+  @@map("test_package_groups")
 }
 
 model GroupMember {
@@ -153,15 +166,16 @@ model VideoPackage {
   name         String
   description  String?
   isPublished  Boolean     @default(false)
+  isPublic     Boolean     @default(false)
   visibility   ContentVisibility @default(PUBLIC)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   collectionId String?
   groupId      String?
-  teacherId    String?                                                          // ← ekle
+  teacherId    String?
   collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  teacher      User?       @relation(fields: [teacherId], references: [id], onDelete: SetNull) // ← ekle
+  teacher      User?       @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   videos       Video[]
   videoPackageGroups VideoPackageGroup[]
 
@@ -218,6 +232,7 @@ model TestPackage {
   name         String
   description  String?
   isPublished  Boolean   @default(false)
+  isPublic     Boolean   @default(false)
   isTimed      Boolean   @default(false)
   duration     Int?
   startsAt     DateTime?
@@ -231,6 +246,8 @@ model TestPackage {
   group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
   questions    Question[]
   attempts     StudentAttempt[]
+  allowRetry   Boolean @default(false)
+  testPackageGroups TestPackageGroup[]
 
   @@map("test_packages")
 }
@@ -265,7 +282,6 @@ model StudentAttempt {
   package     TestPackage   @relation(fields: [packageId], references: [id], onDelete: Cascade)
   answers     StudentAnswer[]
 
-  @@unique([studentId, packageId])
   @@map("student_attempts")
 }
 

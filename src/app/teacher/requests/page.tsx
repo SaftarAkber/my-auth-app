@@ -26,6 +26,7 @@ export default function TeacherRequestsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => { fetchEnrollments(); }, []);
 
@@ -43,17 +44,25 @@ export default function TeacherRequestsPage() {
 
   async function handleRespond(enrollmentId: string, action: "ACCEPTED" | "DECLINED") {
     setActionLoading(enrollmentId);
+    setErrorMsg("");
     try {
-      await fetch("/api/enrollment/respond", {
+      const res = await fetch("/api/enrollment/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestId: enrollmentId,
+          enrollmentId,
           action,
           teacherReply: replyText[enrollmentId] || null,
         }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Xəta baş verdi");
+        return;
+      }
       await fetchEnrollments();
+    } catch (err) {
+      setErrorMsg("Server xətası");
     } finally {
       setActionLoading(null);
     }
@@ -81,6 +90,12 @@ export default function TeacherRequestsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Gələn istəklər</h1>
+
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm mb-4">
+          ⚠️ {errorMsg}
+        </div>
+      )}
 
       {/* Arama */}
       <div className="relative mb-6">
@@ -140,11 +155,11 @@ export default function TeacherRequestsPage() {
               <div className="flex gap-2 mt-4">
                 <button onClick={() => handleRespond(e.id, "ACCEPTED")} disabled={actionLoading === e.id}
                   className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium py-2 rounded-xl text-sm transition-all">
-                  ✓ Qəbul et
+                  {actionLoading === e.id ? "..." : "✓ Qəbul et"}
                 </button>
                 <button onClick={() => handleRespond(e.id, "DECLINED")} disabled={actionLoading === e.id}
                   className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2 rounded-xl text-sm transition-all">
-                  ✗ Rədd et
+                  {actionLoading === e.id ? "..." : "✗ Rədd et"}
                 </button>
               </div>
             </div>

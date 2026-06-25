@@ -18,7 +18,7 @@ interface Package {
   id: string;
   name: string;
   questions: Question[];
-  collection: { name: string };
+  collection: { name: string } | null;
 }
 
 interface QForm {
@@ -54,10 +54,19 @@ export default function PackageQuestionsPage() {
   useEffect(() => { fetchPackage(); }, [packageId]);
 
   async function fetchPackage() {
-    const res = await fetch(`/api/packages/${packageId}`);
-    const data = await res.json();
-    setPkg(data.package);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/packages/${packageId}`);
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setPkg(data.package);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openAdd() {
@@ -179,34 +188,44 @@ export default function PackageQuestionsPage() {
     </div>
   );
 
-  if (!pkg) return <div className="text-center py-20 text-gray-400">Paket tapılmadı</div>;
+  if (!pkg) return (
+    <div className="text-center py-20 text-gray-400">
+      <div className="text-4xl mb-3">📝</div>
+      <p>Paket tapılmadı</p>
+      <Link href="/teacher/tests" className="text-blue-900 text-sm mt-3 inline-block hover:underline">← Testlərə qayıt</Link>
+    </div>
+  );
 
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-8 text-sm">
+      <div className="flex items-center gap-2 mb-8 text-sm flex-wrap">
         <Link href="/teacher/tests" className="text-gray-400 hover:text-gray-600">Testlər</Link>
-        <span className="text-gray-300">/</span>
-        <Link href={`/teacher/tests/${collectionId}`} className="text-gray-400 hover:text-gray-600">
-          {pkg.collection.name}
-        </Link>
+        {pkg.collection && (
+          <>
+            <span className="text-gray-300">/</span>
+            <Link href={`/teacher/tests/${collectionId}`} className="text-gray-400 hover:text-gray-600">
+              {pkg.collection.name}
+            </Link>
+          </>
+        )}
         <span className="text-gray-300">/</span>
         <span className="text-gray-900 font-medium">{pkg.name}</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{pkg.name}</h1>
           <p className="text-gray-500 text-sm mt-1">{pkg.questions.length} sual</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => toggleAll(true)} disabled={allToggling}
             className="px-3 py-2 bg-green-50 hover:bg-green-100 disabled:opacity-50 text-green-700 rounded-xl text-xs font-medium transition-all">
-            {allToggling ? "..." : "Hepsini Aktif"}
+            {allToggling ? "..." : "Hamısını Aktiv"}
           </button>
           <button onClick={() => toggleAll(false)} disabled={allToggling}
             className="px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-600 rounded-xl text-xs font-medium transition-all">
-            {allToggling ? "..." : "Hepsini Pasif"}
+            {allToggling ? "..." : "Hamısını Pasif"}
           </button>
           <button onClick={openAdd}
             className="bg-blue-900 hover:bg-blue-800 text-white font-medium px-5 py-2 rounded-xl text-sm transition-all">
@@ -295,6 +314,9 @@ export default function PackageQuestionsPage() {
         <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
           <div className="text-4xl mb-3">❓</div>
           <p>Hələ sual yoxdur</p>
+          <button onClick={openAdd} className="mt-3 text-blue-900 text-sm font-medium hover:underline">
+            İlk sualı əlavə et →
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

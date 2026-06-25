@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const TEACHER_LIMIT = 1;
+// Müəllim qeydiyyat limiti — bu rəqəmi dəyişərək limiti artıra/azalda bilərsən
+// register/route.ts-dəki TEACHER_LIMIT ilə eyni olmalıdır
+const TEACHER_LIMIT = 3;
 
 export async function GET() {
   try {

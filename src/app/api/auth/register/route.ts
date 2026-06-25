@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 
+// Müəllim qeydiyyat limiti — bu rəqəmi dəyişərək limiti artıra/azalda bilərsən
+const TEACHER_LIMIT = 3;
+
 export async function POST(req: NextRequest) {
   try {
     const { name, phone, email, password, role } = await req.json();
@@ -39,14 +42,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Teacher limiti — sadece 1 teacher olabilir
+    // Teacher limiti
     if (role === "TEACHER") {
       const teacherCount = await prisma.user.count({
         where: { role: "TEACHER" },
       });
-      if (teacherCount >= 1) {
+      if (teacherCount >= TEACHER_LIMIT) {
         return NextResponse.json(
-          { error: "Öğretmen kontenjanı doldu. Sadece 1 öğretmen kayıt olabilir." },
+          { error: `Öğretmen kontenjanı doldu. Maksimum ${TEACHER_LIMIT} öğretmen kayıt olabilir.` },
           { status: 409 }
         );
       }

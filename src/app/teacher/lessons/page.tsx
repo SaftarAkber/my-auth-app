@@ -7,12 +7,19 @@ interface Group {
   name: string;
 }
 
+interface VideoPackageGroup {
+  groupId: string;
+  group: { id: string; name: string };
+}
+
 interface VideoPackage {
   id: string;
   name: string;
+  isPublic: boolean;
   visibility: string;
   groupId: string | null;
   group: { id: string; name: string } | null;
+  videoPackageGroups: VideoPackageGroup[];
   videos: Video[];
 }
 
@@ -35,14 +42,15 @@ export default function TeacherLessonsPage() {
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   const [activePackage, setActivePackage] = useState<string | null>(null);
   const [watchVideo, setWatchVideo] = useState<Video | null>(null);
+  const [editPkg, setEditPkg] = useState<VideoPackage | null>(null);
 
-  const [form, setForm] = useState<{
-    title: string; description: string; url: string; packageId: string;
-  }>({ title: "", description: "", url: "", packageId: "" });
+  const [form, setForm] = useState({
+    title: "", description: "", url: "", packageId: "",
+  });
 
-  const [pkgForm, setPkgForm] = useState<{
-    name: string; description: string; groupId: string; visibility: string;
-  }>({ name: "", description: "", groupId: "", visibility: "PUBLIC" });
+  const [pkgForm, setPkgForm] = useState({
+    name: "", description: "", isPublic: false, selectedGroupIds: [] as string[],
+  });
 
   const [saving, setSaving] = useState(false);
 
@@ -69,12 +77,36 @@ export default function TeacherLessonsPage() {
   function openEdit(v: Video) {
     setEditVideo(v);
     setForm({
-      title: v.title || "",
-      description: v.description || "",
-      url: v.url || "",
-      packageId: v.packageId || "",
+      title: v.title || "", description: v.description || "",
+      url: v.url || "", packageId: v.packageId || "",
     });
     setShowForm(true);
+  }
+
+  function openEditPkg(pkg: VideoPackage) {
+    setEditPkg(pkg);
+    setPkgForm({
+      name: pkg.name,
+      description: "",
+      isPublic: pkg.isPublic,
+      selectedGroupIds: pkg.videoPackageGroups?.map(vpg => vpg.groupId) ?? (pkg.groupId ? [pkg.groupId] : []),
+    });
+    setShowPkgForm(true);
+  }
+
+  function openNewPkg() {
+    setEditPkg(null);
+    setPkgForm({ name: "", description: "", isPublic: false, selectedGroupIds: [] });
+    setShowPkgForm(true);
+  }
+
+  function toggleGroup(groupId: string) {
+    setPkgForm(f => ({
+      ...f,
+      selectedGroupIds: f.selectedGroupIds.includes(groupId)
+        ? f.selectedGroupIds.filter(id => id !== groupId)
+        : [...f.selectedGroupIds, groupId],
+    }));
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -108,35 +140,38 @@ export default function TeacherLessonsPage() {
     }
   }
 
-  async function handleCreatePkg(e: React.FormEvent) {
+  async function handleSavePkg(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      await fetch("/api/video-packages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: pkgForm.name,
-          description: pkgForm.description || null,
-          groupId: pkgForm.groupId || null,
-          visibility: pkgForm.visibility,
-        }),
-      });
-      setPkgForm({ name: "", description: "", groupId: "", visibility: "PUBLIC" });
+      const body = {
+        name: pkgForm.name,
+        description: pkgForm.description || null,
+        isPublic: pkgForm.isPublic,
+        groupIds: pkgForm.selectedGroupIds,
+        visibility: pkgForm.selectedGroupIds.length > 0 ? "GROUP_ONLY" : "PUBLIC",
+        isPublished: true,
+      };
+
+      if (editPkg) {
+        await fetch(`/api/video-packages/${editPkg.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } else {
+        await fetch("/api/video-packages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      }
       setShowPkgForm(false);
+      setEditPkg(null);
       await fetchData();
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleUpdatePkgVisibility(pkgId: string, groupId: string | null, visibility: string) {
-    await fetch(`/api/video-packages/${pkgId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId: groupId || null, visibility }),
-    });
-    await fetchData();
   }
 
   async function handleDelete(id: string) {
@@ -158,7 +193,93 @@ export default function TeacherLessonsPage() {
   if (loading) return (
     <div className="flex justify-center py-20">
       <div className="flex gap-2">
-        {[0,1,2].map(i => <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+        {[0, 1, 2].map(i => <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
+      </div>
+    </div>
+  );
+
+  /* ── Paket ayarları modalı (yeni + düzenleme) ── */
+  const PkgFormModal = () => (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-bold text-gray-900 mb-5">
+          {editPkg ? "Paketi düzənlə" : "Yeni video paketi"}
+        </h2>
+        <form onSubmit={handleSavePkg} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Paket adı</label>
+            <input type="text" value={pkgForm.name}
+              onChange={e => setPkgForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="məs: Fizika 9. sinif" required
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
+          </div>
+
+          {/* ═══ GÖRÜNÜRLÜk ═══ */}
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-4">
+            <p className="text-sm font-semibold text-blue-900">🔍 Görünürlük Ayarları</p>
+
+            {/* Herkese açıq toggle */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pkgForm.isPublic ? "bg-green-500" : "bg-gray-300"}`}
+                onClick={() => setPkgForm(f => ({ ...f, isPublic: !f.isPublic }))}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${pkgForm.isPublic ? "translate-x-6" : "translate-x-1"}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">🌍 Herkese açıq (Profildə görünsün)</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {pkgForm.isPublic
+                    ? "Bu paket müəllimin profilini görən hər kəsə görünür"
+                    : "Bu paket yalnız qrup üzvlərinə görünür"}
+                </p>
+              </div>
+            </label>
+
+            {/* Qrup seçimi — çox seçim */}
+            {groups.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  🏫 Qruplara əlavə et
+                  <span className="text-xs text-gray-400 ml-2">(bir neçə seçilə bilər)</span>
+                </p>
+                <div className="space-y-2">
+                  {groups.map(g => (
+                    <label key={g.id} className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-blue-100/50 transition-all">
+                      <div
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                          pkgForm.selectedGroupIds.includes(g.id)
+                            ? "border-blue-900 bg-blue-900"
+                            : "border-gray-300 bg-white"
+                        }`}
+                        onClick={() => toggleGroup(g.id)}>
+                        {pkgForm.selectedGroupIds.includes(g.id) && (
+                          <span className="text-white text-xs">✓</span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-700">{g.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {pkgForm.selectedGroupIds.length > 0 && (
+                  <p className="text-xs text-blue-700 mt-2">
+                    ✓ {pkgForm.selectedGroupIds.length} qrup seçilib
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button type="button" onClick={() => { setShowPkgForm(false); setEditPkg(null); }}
+              className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
+              Ləğv et
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-blue-900 text-white font-medium py-2.5 rounded-xl text-sm">
+              {saving ? "Saxlanılır..." : "Saxla"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -168,7 +289,7 @@ export default function TeacherLessonsPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Dərs Videolarım</h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowPkgForm(true)}
+          <button onClick={openNewPkg}
             className="border border-blue-900 text-blue-900 hover:bg-blue-50 font-medium px-4 py-2.5 rounded-xl text-sm transition-all">
             + Paket əlavə et
           </button>
@@ -187,77 +308,17 @@ export default function TeacherLessonsPage() {
             <button onClick={() => setWatchVideo(null)} className="text-white text-2xl hover:text-gray-300">✕</button>
           </div>
           <div className="flex-1" onClick={e => e.stopPropagation()}>
-            <iframe src={getYoutubeEmbed(watchVideo.url) || ""} className="w-full h-full" allowFullScreen allow="autoplay; fullscreen" />
+            {getYoutubeEmbed(watchVideo.url) ? (
+              <iframe src={getYoutubeEmbed(watchVideo.url)!} className="w-full h-full" allowFullScreen allow="autoplay; fullscreen" />
+            ) : (
+              <video src={watchVideo.url} controls autoPlay className="w-full h-full" />
+            )}
           </div>
         </div>
       )}
 
-      {/* Paket oluşturma modal */}
-      {showPkgForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-5">Yeni video paketi</h2>
-            <form onSubmit={handleCreatePkg} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Paket adı</label>
-                <input type="text" value={pkgForm.name}
-                  onChange={e => setPkgForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="məs: Fizika 9. sinif" required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Açıqlama</label>
-                <textarea value={pkgForm.description}
-                  onChange={e => setPkgForm(f => ({ ...f, description: e.target.value }))}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 resize-none" />
-              </div>
-              {/* Görünürlük */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Kimə görünsün?</label>
-                <div className="flex gap-3">
-                  <button type="button"
-                    onClick={() => setPkgForm(f => ({ ...f, visibility: "PUBLIC", groupId: "" }))}
-                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      pkgForm.visibility === "PUBLIC" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
-                    }`}>
-                    🌍 Herkese açıq
-                  </button>
-                  <button type="button"
-                    onClick={() => setPkgForm(f => ({ ...f, visibility: "GROUP_ONLY" }))}
-                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      pkgForm.visibility === "GROUP_ONLY" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
-                    }`}>
-                    🏫 Qrupa xas
-                  </button>
-                </div>
-              </div>
-              {/* Grup seçimi */}
-              {pkgForm.visibility === "GROUP_ONLY" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Qrup seç</label>
-                  <select value={pkgForm.groupId}
-                    onChange={e => setPkgForm(f => ({ ...f, groupId: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30">
-                    <option value="">Qrup seçin</option>
-                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowPkgForm(false)}
-                  className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
-                  Ləğv et
-                </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 bg-blue-900 text-white font-medium py-2.5 rounded-xl text-sm">
-                  {saving ? "Saxlanılır..." : "Saxla"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Paket formu modal */}
+      {showPkgForm && <PkgFormModal />}
 
       {/* Video ekleme/düzenleme modal */}
       {showForm && (
@@ -311,105 +372,109 @@ export default function TeacherLessonsPage() {
         </div>
       )}
 
-      {/* Paketler */}
+      {/* Paketlər */}
       {packages.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
           <div className="text-4xl mb-3">🎬</div>
           <p>Hələ video paketi yoxdur</p>
-          <button onClick={() => setShowPkgForm(true)}
-            className="mt-4 text-blue-900 text-sm font-medium hover:underline">
+          <button onClick={openNewPkg} className="mt-4 text-blue-900 text-sm font-medium hover:underline">
             İlk paketi yarat →
           </button>
         </div>
       ) : (
         <div className="space-y-6">
-          {packages.map(pkg => (
-            <div key={pkg.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <div>
-                  <h2 className="font-bold text-gray-900">{pkg.name}</h2>
-                  <div className="flex gap-2 mt-1 items-center">
-                    <p className="text-xs text-gray-500">{pkg.videos.length} video</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      pkg.visibility === "PUBLIC" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                    }`}>
-                      {pkg.visibility === "PUBLIC" ? "🌍 Herkese açıq" : `🏫 ${pkg.group?.name || "Qrupa xas"}`}
-                    </span>
+          {packages.map(pkg => {
+            const assignedGroups = pkg.videoPackageGroups?.map(vpg => vpg.group) ?? [];
+            return (
+              <div key={pkg.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-bold text-gray-900">{pkg.name}</h2>
+                      {pkg.isPublic && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-medium">
+                          🌍 Herkese açıq
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-1.5 flex-wrap items-center">
+                      <p className="text-xs text-gray-500">{pkg.videos.length} video</p>
+                      {assignedGroups.map(g => (
+                        <span key={g.id} className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
+                          🏫 {g.name}
+                        </span>
+                      ))}
+                      {assignedGroups.length === 0 && !pkg.isPublic && (
+                        <span className="text-xs bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-full">
+                          ⚠️ Heç bir qrupa əlavə edilməyib
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Düzənlə butonu */}
+                    <button
+                      onClick={() => openEditPkg(pkg)}
+                      className="bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
+                      ✏️ Ayarlar
+                    </button>
+                    <button onClick={() => openAdd(pkg.id)}
+                      className="bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
+                      + Video əlavə et
+                    </button>
+                    <button onClick={() => setActivePackage(activePackage === pkg.id ? null : pkg.id)}
+                      className="text-gray-400 px-2">
+                      {activePackage === pkg.id ? "▲" : "▼"}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Görünürlük değiştir */}
-                  <select
-                    value={pkg.groupId || pkg.visibility}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (val === "PUBLIC") {
-                        handleUpdatePkgVisibility(pkg.id, null, "PUBLIC");
-                      } else {
-                        handleUpdatePkgVisibility(pkg.id, val, "GROUP_ONLY");
-                      }
-                    }}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-900/30"
-                    onClick={e => e.stopPropagation()}>
-                    <option value="PUBLIC">🌍 Herkese açıq</option>
-                    {groups.map(g => <option key={g.id} value={g.id}>🏫 {g.name}</option>)}
-                  </select>
-                  <button onClick={() => openAdd(pkg.id)}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-medium px-3 py-1.5 rounded-lg transition-all">
-                    + Video əlavə et
-                  </button>
-                  <button onClick={() => setActivePackage(activePackage === pkg.id ? null : pkg.id)}
-                    className="text-gray-400 px-2">
-                    {activePackage === pkg.id ? "▲" : "▼"}
-                  </button>
-                </div>
-              </div>
 
-              {activePackage === pkg.id && (
-                <div className="p-5">
-                  {pkg.videos.length === 0 ? (
-                    <p className="text-center text-gray-400 py-6 text-sm">Bu paketdə hələ video yoxdur</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {pkg.videos.map(v => {
-                        const thumb = getYoutubeThumb(v.url);
-                        return (
-                          <div key={v.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
-                            <div className="relative h-36 bg-gray-200 cursor-pointer" onClick={() => setWatchVideo(v)}>
-                              {thumb ? (
-                                <img src={thumb} alt={v.title} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-4xl">🎬</div>
-                              )}
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xl ml-1">▶</span>
+                {activePackage === pkg.id && (
+                  <div className="p-5">
+                    {pkg.videos.length === 0 ? (
+                      <p className="text-center text-gray-400 py-6 text-sm">Bu paketdə hələ video yoxdur</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pkg.videos.map(v => {
+                          const thumb = getYoutubeThumb(v.url);
+                          return (
+                            <div key={v.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                              <div className="relative h-36 bg-gray-200 cursor-pointer" onClick={() => setWatchVideo(v)}>
+                                {thumb ? (
+                                  <img src={thumb} alt={v.title} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-4xl">🎬</div>
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xl ml-1">▶</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-3">
+                                <p className="font-medium text-gray-900 text-sm truncate">{v.title}</p>
+                                {v.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{v.description}</p>}
+                                <div className="flex gap-2 mt-2">
+                                  <button onClick={() => setWatchVideo(v)}
+                                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-1.5 rounded-lg transition-all">
+                                    ▶ İzlə
+                                  </button>
+                                  <button onClick={() => openEdit(v)}
+                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-lg transition-all">✏️</button>
+                                  <button onClick={() => handleDelete(v.id)}
+                                    className="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1.5 rounded-lg transition-all">🗑️</button>
                                 </div>
                               </div>
                             </div>
-                            <div className="p-3">
-                              <p className="font-medium text-gray-900 text-sm truncate">{v.title}</p>
-                              {v.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{v.description}</p>}
-                              <div className="flex gap-2 mt-2">
-                                <button onClick={() => setWatchVideo(v)}
-                                  className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-1.5 rounded-lg transition-all">
-                                  ▶ İzlə
-                                </button>
-                                <button onClick={() => openEdit(v)}
-                                  className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-lg transition-all">✏️</button>
-                                <button onClick={() => handleDelete(v.id)}
-                                  className="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1.5 rounded-lg transition-all">🗑️</button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
