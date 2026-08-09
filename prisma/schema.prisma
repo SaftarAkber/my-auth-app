@@ -30,6 +30,9 @@ model User {
   attempts         StudentAttempt[]
   groupPosts       GroupPost[]
   videoComments    VideoComment[]
+  coinBalance Int    @default(0) 
+  coinTransactions CoinTransaction[]       // ⬅️ YENİ
+  orders           Order[] 
 
   @@map("users")
 }
@@ -343,4 +346,61 @@ enum PostVisibility {
 enum CommentVisibility {
   PUBLIC
   GROUP_ONLY
+}
+
+model CoinTransaction {
+  id        String              @id @default(cuid())
+  userId    String
+  amount    Int                 // müsbət = qazanc, mənfi = xərc
+  type      CoinTransactionType
+  reason    String?
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coin_transactions")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Int
+  imageUrl    String?
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+
+  @@map("products")
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int         @default(1)
+  totalCost Int
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
+enum CoinTransactionType {
+  INITIAL_GRANT
+  TEST_CREATED
+  CORRECT_ANSWER
+  RANK_REWARD
+  PURCHASE
+  ADMIN_ADJUST
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DELIVERED
 }

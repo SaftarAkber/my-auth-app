@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { adjustCoins } from "@/lib/coins";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,6 +40,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       visibility, groupIds, allowRetry,
     } = await req.json();
 
+    // ⬇️ YENİ — coin vermədən əvvəl mövcud vəziyyəti yoxlayırıq
+    const existing = await prisma.testPackage.findUnique({ where: { id } });
+
     // Əvvəlki qrup bağlantılarını sil
     await prisma.testPackageGroup.deleteMany({ where: { packageId: id } });
 
@@ -68,6 +72,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         },
       },
     });
+
+    // ⬇️ YENİ — müəllim testi ilk dəfə yayımlayanda 5 coin
+    if (isPublished === true && existing && !existing.isPublished) {
+      try {
+        await adjustCoins(
+          currentUser.id,
+          5,
+          "TEST_CREATED",
+          `"${pkg.name}" yayımlandı`
+        );
+      } catch (coinErr) {
+        console.error("Coin vermə xətası:", coinErr);
+        // testin yayımlanmasını bloklamırıq, sadəcə log yazırıq
+      }
+    }
 
     return NextResponse.json({ package: pkg });
   } catch (error) {

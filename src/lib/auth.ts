@@ -21,6 +21,7 @@ export async function getCurrentUser() {
       role: true,
       bio: true,
       photo: true,
+      coinBalance: true,
     },
   });
 

@@ -14,21 +14,21 @@ export async function POST(req: NextRequest) {
     if (!name || !password) {
       return NextResponse.json(
         { error: "Ad ve şifre zorunludur" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!phone && !email) {
       return NextResponse.json(
         { error: "Telefon veya email zorunludur" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (password.length < 6) {
       return NextResponse.json(
         { error: "Şifre en az 6 karakter olmalıdır" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -36,8 +36,11 @@ export async function POST(req: NextRequest) {
       const phoneRegex = /^\+[1-9]\d{7,14}$/;
       if (!phoneRegex.test(phone)) {
         return NextResponse.json(
-          { error: "Telefon numarası uluslararası formatta olmalıdır (+994XXXXXXXXX)" },
-          { status: 400 }
+          {
+            error:
+              "Telefon numarası uluslararası formatta olmalıdır (+994XXXXXXXXX)",
+          },
+          { status: 400 },
         );
       }
     }
@@ -49,8 +52,10 @@ export async function POST(req: NextRequest) {
       });
       if (teacherCount >= TEACHER_LIMIT) {
         return NextResponse.json(
-          { error: `Öğretmen kontenjanı doldu. Maksimum ${TEACHER_LIMIT} öğretmen kayıt olabilir.` },
-          { status: 409 }
+          {
+            error: `Öğretmen kontenjanı doldu. Maksimum ${TEACHER_LIMIT} öğretmen kayıt olabilir.`,
+          },
+          { status: 409 },
         );
       }
     }
@@ -58,17 +63,14 @@ export async function POST(req: NextRequest) {
     // Mevcut kullanıcı kontrolü
     const existing = await prisma.user.findFirst({
       where: {
-        OR: [
-          ...(phone ? [{ phone }] : []),
-          ...(email ? [{ email }] : []),
-        ],
+        OR: [...(phone ? [{ phone }] : []), ...(email ? [{ email }] : [])],
       },
     });
 
     if (existing) {
       return NextResponse.json(
         { error: "Bu telefon veya email zaten kayıtlı" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -81,13 +83,32 @@ export async function POST(req: NextRequest) {
         email: email || null,
         password: hashedPassword,
         role: role === "TEACHER" ? "TEACHER" : "STUDENT",
+        coinBalance: role === "TEACHER" ? 500 : 0,
       },
       select: {
-        id: true, name: true, phone: true, email: true, role: true,
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+        coinBalance: true,
       },
     });
+    if (role === "TEACHER") {
+      await prisma.coinTransaction.create({
+        data: {
+          userId: user.id,
+          amount: 500,
+          type: "INITIAL_GRANT",
+          reason: "Qeydiyyat bonusu",
+        },
+      });
+    }
 
-    const token = signToken({ userId: user.id, phone: user.phone || user.email || "" });
+    const token = signToken({
+      userId: user.id,
+      phone: user.phone || user.email || "",
+    });
 
     const cookieStore = await cookies();
     cookieStore.set("auth_token", token, {

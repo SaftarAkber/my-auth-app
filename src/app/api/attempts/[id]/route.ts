@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { adjustCoins } from "@/lib/coins";
 
 // Cevapları kaydet ve testi bitir
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -33,16 +34,23 @@ export async function POST(
     }
 
     if (attempt.finishedAt) {
-      return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Test artıq tamamlanıb" },
+        { status: 409 },
+      );
     }
 
     let correctCount = 0;
     const totalMC = attempt.package.questions.filter(
-      (q) => q.type === "MULTIPLE_CHOICE"
+      (q) => q.type === "MULTIPLE_CHOICE",
     ).length;
 
-    const answerData = (answers as { questionId: string; answer: string }[]).map((a) => {
-      const question = attempt.package.questions.find((q) => q.id === a.questionId);
+    const answerData = (
+      answers as { questionId: string; answer: string }[]
+    ).map((a) => {
+      const question = attempt.package.questions.find(
+        (q) => q.id === a.questionId,
+      );
       let isCorrect: boolean | null = null;
       let status: "APPROVED" | "PENDING" = "PENDING";
 
@@ -71,6 +79,33 @@ export async function POST(
         totalScore: totalMC,
       },
     });
+    if (correctCount > 0) {
+      await adjustCoins(
+        currentUser.id,
+        correctCount,
+        "CORRECT_ANSWER",
+        `${attempt.package.name}: ${correctCount} doğru cavab`,
+      );
+    }
+
+    if (totalMC > 0) {
+      const betterOrEqual = await prisma.studentAttempt.count({
+        where: {
+          packageId: attempt.packageId,
+          finishedAt: { not: null },
+          score: { gte: correctCount },
+          id: { not: updated.id },
+        },
+      });
+      if (betterOrEqual === 0) {
+        await adjustCoins(
+          currentUser.id,
+          10,
+          "RANK_REWARD",
+          `${attempt.package.name}: 1-ci yer`,
+        );
+      }
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -82,7 +117,7 @@ export async function POST(
 // Attempt detayını getir
 export async function GET(
   _: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;

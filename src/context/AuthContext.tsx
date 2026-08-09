@@ -11,6 +11,7 @@ interface User {
   role: "STUDENT" | "TEACHER";
   bio: string | null;
   photo: string | null;
+  coinBalance: number;
 }
 
 interface AuthContextType {
