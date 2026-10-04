@@ -1,65 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import {
+  forbidden,
+  notFound,
+  requireTeacher,
+  serverError,
+  teacherOwnsGroups,
+  teacherOwnsVideoPackage,
+} from "@/lib/guards";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id } = await params;
-    const { title, description, url, visibility, groupIds, packageId, isActive } = await req.json();
-
-    // Önce mevcut videoGroups'u sil
-    await prisma.videoGroup.deleteMany({
-      where: { videoId: id },
+    const owned = await prisma.video.findFirst({
+      where: { id, teacherId: auth.user.id },
+      select: { id: true },
     });
+    if (!owned) return notFound();
 
-    const video = await prisma.video.update({
-      where: { id, teacherId: currentUser.id },
-      data: {
-        ...(title && { title }),
-        ...(description !== undefined && { description }),
-        ...(url && { url }),
-        ...(visibility && { visibility }),
-        ...(packageId !== undefined && { packageId: packageId || null }),
-        ...(isActive !== undefined && { isActive }),
-        videoGroups: visibility === "GROUP_ONLY" && groupIds?.length
-          ? {
-              create: groupIds.map((groupId: string) => ({ groupId })),
-            }
-          : undefined,
-      },
-      include: {
-        videoGroups: {
-          include: {
-            group: { select: { id: true, name: true } },
-          },
+    const { title, description, url, visibility, groupIds, packageId, isActive, order } = await req.json();
+
+    if (Array.isArray(groupIds) && !(await teacherOwnsGroups(auth.user.id, groupIds))) {
+      return forbidden();
+    }
+    if (packageId && !(await teacherOwnsVideoPackage(auth.user.id, packageId))) return forbidden();
+
+    const video = await prisma.$transaction(async (tx) => {
+      // Qrup bağlantıları yalnız siyahı və ya görünürlük dəyişdikdə yenilənir
+      if (Array.isArray(groupIds) || visibility === "PUBLIC") {
+        await tx.videoGroup.deleteMany({ where: { videoId: id } });
+      }
+      return tx.video.update({
+        where: { id },
+        data: {
+          ...(title && { title }),
+          ...(description !== undefined && { description }),
+          ...(url && { url }),
+          ...(visibility && { visibility }),
+          ...(packageId !== undefined && { packageId: packageId || null }),
+          ...(isActive !== undefined && { isActive }),
+          ...(order !== undefined && { order }),
+          ...(visibility !== "PUBLIC" && Array.isArray(groupIds) && groupIds.length
+            ? { videoGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }
+            : {}),
         },
-      },
+        include: { videoGroups: { include: { group: { select: { id: true, name: true } } } } },
+      });
     });
 
     return NextResponse.json({ video });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id } = await params;
-    await prisma.video.delete({ where: { id, teacherId: currentUser.id } });
+    const result = await prisma.video.deleteMany({ where: { id, teacherId: auth.user.id } });
+    if (result.count === 0) return notFound();
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }

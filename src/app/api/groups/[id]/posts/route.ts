@@ -1,54 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { forbidden, requireTeacher, serverError, teacherOwnsGroup } from "@/lib/guards";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function POST(req: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id: groupId } = await params;
-    const { content, images, visibility } = await req.json();
+    if (!(await teacherOwnsGroup(auth.user.id, groupId))) return forbidden();
 
-    if (!content) return NextResponse.json({ error: "Məzmun məcburidir" }, { status: 400 });
+    const { content, images, visibility } = await req.json();
+    if (!content || !String(content).trim()) {
+      return NextResponse.json({ error: "Məzmun məcburidir" }, { status: 400 });
+    }
 
     const post = await prisma.groupPost.create({
       data: {
-        content,
+        content: String(content).trim(),
         groupId,
-        teacherId: currentUser.id,
-        visibility: visibility || "GROUP",
-        images: images?.length ? {
-          create: images.map((url: string) => ({ url })),
-        } : undefined,
+        teacherId: auth.user.id,
+        visibility: visibility === "PUBLIC" ? "PUBLIC" : "GROUP",
+        images: images?.length ? { create: images.map((url: string) => ({ url })) } : undefined,
       },
       include: { images: true },
     });
 
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
-    const { searchParams } = new URL(req.url);
-    const postId = searchParams.get("postId");
+    const { id: groupId } = await params;
+    const postId = new URL(req.url).searchParams.get("postId");
     if (!postId) return NextResponse.json({ error: "Post ID lazımdır" }, { status: 400 });
 
-    await prisma.groupPost.delete({ where: { id: postId, teacherId: currentUser.id } });
+    const result = await prisma.groupPost.deleteMany({
+      where: { id: postId, groupId, teacherId: auth.user.id },
+    });
+    if (result.count === 0) return forbidden();
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }

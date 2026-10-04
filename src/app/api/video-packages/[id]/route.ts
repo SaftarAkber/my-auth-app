@@ -1,63 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import {
+  forbidden,
+  requireTeacher,
+  serverError,
+  teacherOwnsGroups,
+  teacherOwnsVideoPackage,
+} from "@/lib/guards";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id } = await params;
+    if (!(await teacherOwnsVideoPackage(auth.user.id, id))) return forbidden();
+
     const { name, description, isPublished, isPublic, visibility, groupIds } = await req.json();
 
-    // Əvvəlki qrup bağlantılarını sil
-    await prisma.videoPackageGroup.deleteMany({ where: { packageId: id } });
+    if (Array.isArray(groupIds) && !(await teacherOwnsGroups(auth.user.id, groupIds))) {
+      return forbidden();
+    }
 
-    const pkg = await prisma.videoPackage.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(isPublished !== undefined && { isPublished }),
-        ...(isPublic !== undefined && { isPublic }),
-        ...(visibility !== undefined && { visibility }),
-        // Multi-group bağlantılar
-        videoPackageGroups: groupIds?.length
-          ? {
-              create: groupIds.map((groupId: string) => ({ groupId })),
-            }
-          : undefined,
-      },
-      include: {
-        videoPackageGroups: {
-          include: {
-            group: { select: { id: true, name: true } },
-          },
+    const pkg = await prisma.$transaction(async (tx) => {
+      // Qrup bağlantıları yalnız siyahı göndərildikdə yenilənir
+      if (Array.isArray(groupIds)) {
+        await tx.videoPackageGroup.deleteMany({ where: { packageId: id } });
+      }
+      return tx.videoPackage.update({
+        where: { id },
+        data: {
+          // Sahibi olmayan köhnə paketləri bu müəllimə bağla
+          teacherId: auth.user.id,
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description }),
+          ...(isPublished !== undefined && { isPublished }),
+          ...(isPublic !== undefined && { isPublic }),
+          ...(visibility !== undefined && { visibility }),
+          ...(Array.isArray(groupIds) && groupIds.length
+            ? { videoPackageGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }
+            : {}),
         },
-      },
+        include: { videoPackageGroups: { include: { group: { select: { id: true, name: true } } } } },
+      });
     });
 
     return NextResponse.json({ package: pkg });
   } catch (error) {
-    console.error("video-packages PATCH error:", error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id } = await params;
+    if (!(await teacherOwnsVideoPackage(auth.user.id, id))) return forbidden();
+
     await prisma.videoPackage.delete({ where: { id } });
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }

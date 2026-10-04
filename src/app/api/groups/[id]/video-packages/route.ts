@@ -1,31 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { forbidden, requireTeacher, serverError, teacherOwnsGroup } from "@/lib/guards";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
     const { id: groupId } = await params;
-    const { name, description, collectionId } = await req.json();
+    if (!(await teacherOwnsGroup(auth.user.id, groupId))) return forbidden();
 
+    const { name, description, collectionId } = await req.json();
     if (!name) return NextResponse.json({ error: "Ad məcburidir" }, { status: 400 });
+
+    if (collectionId) {
+      const col = await prisma.collection.findFirst({ where: { id: collectionId, teacherId: auth.user.id } });
+      if (!col) return forbidden();
+    }
 
     const pkg = await prisma.videoPackage.create({
       data: {
         name,
         description: description || null,
         groupId,
+        teacherId: auth.user.id,
         collectionId: collectionId || null,
       },
     });
 
     return NextResponse.json({ package: pkg }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }

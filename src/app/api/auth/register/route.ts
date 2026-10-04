@@ -1,127 +1,94 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
-import { cookies } from "next/headers";
-
-// Müəllim qeydiyyat limiti — bu rəqəmi dəyişərək limiti artıra/azalda bilərsən
-const TEACHER_LIMIT = 3;
+import {
+  AUTH_COOKIE,
+  AUTH_COOKIE_OPTIONS,
+  EMAIL_REGEX,
+  PHONE_REGEX,
+  TEACHER_LIMIT,
+} from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, phone, email, password, role } = await req.json();
+    const body = await req.json();
+    const name = String(body.name ?? "").trim();
+    const phone = body.phone ? String(body.phone).trim() : "";
+    const email = body.email ? String(body.email).trim().toLowerCase() : "";
+    const password = String(body.password ?? "");
+    const role = body.role === "TEACHER" ? "TEACHER" : "STUDENT";
 
     if (!name || !password) {
-      return NextResponse.json(
-        { error: "Ad ve şifre zorunludur" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Ad və şifrə məcburidir" }, { status: 400 });
     }
-
     if (!phone && !email) {
-      return NextResponse.json(
-        { error: "Telefon veya email zorunludur" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Telefon və ya email məcburidir" }, { status: 400 });
     }
-
     if (password.length < 6) {
+      return NextResponse.json({ error: "Şifrə ən azı 6 simvol olmalıdır" }, { status: 400 });
+    }
+    if (phone && !PHONE_REGEX.test(phone)) {
       return NextResponse.json(
-        { error: "Şifre en az 6 karakter olmalıdır" },
+        { error: "Telefon beynəlxalq formatda olmalıdır (+994XXXXXXXXX)" },
         { status: 400 },
       );
     }
-
-    if (phone) {
-      const phoneRegex = /^\+[1-9]\d{7,14}$/;
-      if (!phoneRegex.test(phone)) {
-        return NextResponse.json(
-          {
-            error:
-              "Telefon numarası uluslararası formatta olmalıdır (+994XXXXXXXXX)",
-          },
-          { status: 400 },
-        );
-      }
+    if (email && !EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: "Email formatı yanlışdır" }, { status: 400 });
     }
 
-    // Teacher limiti
     if (role === "TEACHER") {
-      const teacherCount = await prisma.user.count({
-        where: { role: "TEACHER" },
-      });
+      const teacherCount = await prisma.user.count({ where: { role: "TEACHER" } });
       if (teacherCount >= TEACHER_LIMIT) {
         return NextResponse.json(
-          {
-            error: `Öğretmen kontenjanı doldu. Maksimum ${TEACHER_LIMIT} öğretmen kayıt olabilir.`,
-          },
+          { error: `Müəllim kontingenti dolub. Maksimum ${TEACHER_LIMIT} müəllim qeydiyyatdan keçə bilər.` },
           { status: 409 },
         );
       }
     }
 
-    // Mevcut kullanıcı kontrolü
     const existing = await prisma.user.findFirst({
-      where: {
-        OR: [...(phone ? [{ phone }] : []), ...(email ? [{ email }] : [])],
-      },
+      where: { OR: [...(phone ? [{ phone }] : []), ...(email ? [{ email }] : [])] },
     });
-
     if (existing) {
-      return NextResponse.json(
-        { error: "Bu telefon veya email zaten kayıtlı" },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "Bu telefon və ya email artıq qeydiyyatdadır" }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        phone: phone || null,
-        email: email || null,
-        password: hashedPassword,
-        role: role === "TEACHER" ? "TEACHER" : "STUDENT",
-        coinBalance: role === "TEACHER" ? 500 : 0,
-      },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        role: true,
-        coinBalance: true,
-      },
-    });
-    if (role === "TEACHER") {
-      await prisma.coinTransaction.create({
+    // İstifadəçi + başlanğıc coin bir transaksiyada
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
         data: {
-          userId: user.id,
-          amount: 500,
-          type: "INITIAL_GRANT",
-          reason: "Qeydiyyat bonusu",
+          name,
+          phone: phone || null,
+          email: email || null,
+          password: hashedPassword,
+          role,
+          coinBalance: role === "TEACHER" ? 500 : 0,
+        },
+        select: {
+          id: true, name: true, phone: true, email: true,
+          role: true, bio: true, photo: true, coinBalance: true,
         },
       });
-    }
-
-    const token = signToken({
-      userId: user.id,
-      phone: user.phone || user.email || "",
+      if (role === "TEACHER") {
+        await tx.coinTransaction.create({
+          data: { userId: created.id, amount: 500, type: "INITIAL_GRANT", reason: "Qeydiyyat bonusu" },
+        });
+      }
+      return created;
     });
 
+    const token = signToken({ userId: user.id, phone: user.phone || user.email || "" });
     const cookieStore = await cookies();
-    cookieStore.set("auth_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    cookieStore.set(AUTH_COOKIE, token, AUTH_COOKIE_OPTIONS);
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
-    console.error("Register hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    console.error("Register xətası:", error);
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

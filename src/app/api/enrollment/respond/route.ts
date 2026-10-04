@@ -1,64 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { notFound, requireTeacher, serverError } from "@/lib/guards";
 
 export async function POST(req: NextRequest) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
 
-    const { enrollmentId, action, teacherReply } = await req.json(); // requestId → enrollmentId
+    const { enrollmentId, action, teacherReply } = await req.json();
 
     if (!enrollmentId || !action) {
       return NextResponse.json({ error: "Bütün sahələr məcburidir" }, { status: 400 });
     }
-
-    const request = await prisma.enrollmentRequest.findUnique({
-      where: { id: enrollmentId }, // requestId → enrollmentId
-    });
-
-    if (!request || request.teacherId !== currentUser.id) {
-      return NextResponse.json({ error: "Tapılmadı" }, { status: 404 });
+    if (action !== "ACCEPTED" && action !== "DECLINED") {
+      return NextResponse.json({ error: "Yanlış əməliyyat" }, { status: 400 });
     }
 
-    const updated = await prisma.enrollmentRequest.update({
-      where: { id: enrollmentId }, // requestId → enrollmentId
-      data: {
-        status: action,
-        teacherReply: teacherReply || null,
-      },
-    });
+    const request = await prisma.enrollmentRequest.findUnique({ where: { id: enrollmentId } });
+    if (!request || request.teacherId !== auth.user.id) return notFound();
 
-    if (action === "ACCEPTED") {
-      await prisma.groupMember.upsert({
-        where: {
-          groupId_studentId: {
-            groupId: request.groupId,
-            studentId: request.studentId,
-          },
-        },
-        create: {
-          groupId: request.groupId,
-          studentId: request.studentId,
-        },
-        update: {},
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.enrollmentRequest.update({
+        where: { id: enrollmentId },
+        data: { status: action, teacherReply: teacherReply || null },
       });
-    }
 
-    if (action === "DECLINED") {
-      await prisma.groupMember.deleteMany({
-        where: {
-          groupId: request.groupId,
-          studentId: request.studentId,
-        },
-      });
-    }
+      if (action === "ACCEPTED") {
+        await tx.groupMember.upsert({
+          where: { groupId_studentId: { groupId: request.groupId, studentId: request.studentId } },
+          create: { groupId: request.groupId, studentId: request.studentId },
+          update: {},
+        });
+      } else {
+        await tx.groupMember.deleteMany({
+          where: { groupId: request.groupId, studentId: request.studentId },
+        });
+      }
+      return result;
+    });
 
     return NextResponse.json({ request: updated });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
+    return serverError(error);
   }
 }

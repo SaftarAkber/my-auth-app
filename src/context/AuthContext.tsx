@@ -1,9 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-interface User {
+export interface User {
   id: string;
   name: string;
   phone: string | null;
@@ -11,7 +10,9 @@ interface User {
   role: "STUDENT" | "TEACHER";
   bio: string | null;
   photo: string | null;
+  coverPhoto?: string | null;
   coinBalance: number;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -21,9 +22,10 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
-interface RegisterData {
+export interface RegisterData {
   name: string;
   phone?: string;
   email?: string;
@@ -33,59 +35,55 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+async function post(url: string, body: unknown) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Xəta baş verdi");
+  return data;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
-  useEffect(() => {
-    fetchMe();
-  }, []);
-
-  async function fetchMe() {
+  const refreshUser = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/me");
       if (res.ok) {
-        const { user } = await res.json();
-        setUser(user);
+        const data = await res.json();
+        setUser(data.user);
+      } else {
+        setUser(null);
       }
     } catch {
-      /* ignore */
+      /* şəbəkə xətası — mövcud vəziyyəti saxla */
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function refreshUser() {
-    await fetchMe();
-  }
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshUser();
+  }, [refreshUser]);
+
+  const goHome = (role: User["role"]) =>
+    window.location.replace(role === "TEACHER" ? "/teacher" : "/student");
 
   async function login(identifier: string, password: string) {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = await post("/api/auth/login", { identifier, password });
     setUser(data.user);
-    window.location.replace(
-      data.user.role === "TEACHER" ? "/teacher" : "/student"
-    );
+    goHome(data.user.role);
   }
 
-  async function register(formData: RegisterData) {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+  async function register(form: RegisterData) {
+    const data = await post("/api/auth/register", form);
     setUser(data.user);
-    window.location.replace(
-      data.user.role === "TEACHER" ? "/teacher" : "/student"
-    );
+    goHome(data.user.role);
   }
 
   async function logout() {
@@ -95,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

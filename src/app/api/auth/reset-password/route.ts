@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +13,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Tüm alanları doldurun" },
         { status: 400 },
+      );
+    }
+
+    // 6 rəqəmli kodun brute-force edilməsinin qarşısı
+    const limit = rateLimit(`reset:${phone}`, { windowMs: 15 * 60 * 1000, maxRequests: 8 });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Çox cəhd edildi. Bir az sonra yenidən yoxlayın." },
+        { status: 429 },
       );
     }
 

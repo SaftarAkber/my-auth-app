@@ -1,128 +1,78 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setBusy(true);
     try {
-      await login(identifier, password);
-    } catch (err: unknown) {
+      await login(identifier.trim(), password);
+    } catch (err) {
       setError(err instanceof Error ? err.message : "Xəta baş verdi");
-      setLoading(false);
+      setBusy(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sol panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-blue-400 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-blue-300 rounded-full blur-3xl" />
-        </div>
-        <div className="relative">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎓</span>
-            <span className="text-white font-bold text-xl">Edu</span>
+    <>
+      <h1 className="text-3xl font-extrabold tracking-tight">Xoş gəlmisiniz</h1>
+      <p className="mt-1.5 text-muted">Hesabınıza daxil olun.</p>
+
+      <form onSubmit={submit} className="mt-8 space-y-5">
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-bad/30 bg-bad/10 p-3 text-sm text-bad" role="alert">
+            <Icon name="alert" size={18} className="mt-0.5" /> {error}
           </div>
-        </div>
-        <div className="relative">
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-            Yeni nəsil öyrənənləri gücləndiririk.
-          </h2>
-          <p className="text-blue-200 text-lg">
-            Dərin fokus və akademik mükəmməllik üçün nəzərdə tutulmuş birgə mühitdə minlərlə tələbə və müəllimə qoşulun.
-          </p>
-        </div>
-        <div className="relative">
-          <div className="flex items-center gap-2 text-blue-200 text-sm">
-            <span>⭐</span>
-            <span>10 mindən çox müəllim qoşulub</span>
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Sağ panel */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Yenidən xoş gördük</h1>
-          <p className="text-gray-500 mb-8">Edu hesabınıza daxil olun.</p>
+        <Field label="Telefon və ya email" hint="Telefon beynəlxalq formatda: +994501234567">
+          <input
+            className="input"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="+994501234567 və ya ad@mail.com"
+            autoComplete="username"
+            required
+            autoFocus
+          />
+        </Field>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Telefon və ya Email
-              </label>
-              <input
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="+994501234567 və ya name@example.com"
-                required
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="block text-sm font-medium text-gray-700">Şifrə</label>
-                <Link href="/forgot-password" className="text-xs text-blue-900 hover:underline">
-                  Şifrəni unutmusunuz?
-                </Link>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPassword ? "🙈" : "👁️"}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-                ⚠️ {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={loading}
-              className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-semibold py-3 rounded-xl transition-all">
-              {loading ? "Giriş edilir..." : "Daxil ol"}
-            </button>
-          </form>
-
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Hesabınız yoxdur?{" "}
-            <Link href="/register" className="text-blue-900 font-medium hover:underline">
-              Hesab yaradın
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="label !mb-0">Şifrə</span>
+            <Link href="/forgot-password" className="text-xs font-semibold text-brand hover:underline">
+              Şifrəni unutmusunuz?
             </Link>
-          </p>
-
-          <div className="flex justify-center gap-6 mt-8 text-xs text-gray-400">
-            <a href="#" className="hover:text-gray-600">Məxfilik Siyasəti</a>
-            <a href="#" className="hover:text-gray-600">İstifadə Şərtləri</a>
           </div>
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            required
+          />
         </div>
-      </div>
-    </div>
+
+        <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+          {busy ? <Spinner /> : "Daxil ol"}
+        </button>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-muted">
+        Hesabınız yoxdur?{" "}
+        <Link href="/register" className="font-bold text-brand hover:underline">Qeydiyyatdan keçin</Link>
+      </p>
+    </>
   );
 }

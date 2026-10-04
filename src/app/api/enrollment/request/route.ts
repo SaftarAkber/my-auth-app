@@ -43,11 +43,20 @@ export async function POST(req: NextRequest) {
       where: { studentId_groupId: { studentId: currentUser.id, groupId } },
     });
 
-    if (existing) {
+    if (existing && existing.status !== "DECLINED") {
       return NextResponse.json(
         { error: "Bu qrupa artıq müraciət göndərdiniz" },
         { status: 409 }
       );
+    }
+
+    // Rədd edilmiş müraciət təkrar göndərilə bilər
+    if (existing) {
+      const reopened = await prisma.enrollmentRequest.update({
+        where: { id: existing.id },
+        data: { status: "PENDING", message: message || null, teacherReply: null },
+      });
+      return NextResponse.json({ request: reopened }, { status: 201 });
     }
 
     const request = await prisma.enrollmentRequest.create({

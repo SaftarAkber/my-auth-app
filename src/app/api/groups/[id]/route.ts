@@ -143,8 +143,18 @@ export async function GET(
         })
       : [];
 
+    // Üzv siyahısı: yalnız qrup üzvləri/müəllim görür; əlaqə məlumatı yalnız müəllimə
+    const members = hasAccess
+      ? group.members.map((m) =>
+          isTeacher
+            ? m
+            : { ...m, student: { ...m.student, email: null, phone: null } },
+        )
+      : [];
+
     return NextResponse.json({
       ...group,
+      members,
       posts,
       videoPackages,
       testPackages,

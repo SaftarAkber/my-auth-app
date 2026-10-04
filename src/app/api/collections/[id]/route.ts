@@ -7,9 +7,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "TEACHER") {
+      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const collection = await prisma.collection.findUnique({
-      where: { id },
+    const collection = await prisma.collection.findFirst({
+      where: { id, teacherId: currentUser.id },
       include: {
         packages: {
           include: {

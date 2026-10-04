@@ -1,3 +1,168 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ───────────── Dizayn tokenləri (RGB kanalları, Tailwind alpha dəstəyi üçün) ───────────── */
+:root {
+  --bg: 246 247 251;
+  --surface: 255 255 255;
+  --surface-2: 240 242 249;
+  --line: 227 231 241;
+  --ink: 15 20 36;
+  --muted: 98 108 130;
+  --brand: 91 80 235;
+  --brand-hover: 76 65 214;
+  --ok: 22 163 74;
+  --bad: 220 38 38;
+  --warn: 217 119 6;
+  --info: 2 132 199;
+  --shadow: 0 1px 2px rgb(15 20 36 / 0.04), 0 4px 16px rgb(15 20 36 / 0.05);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 10 12 20;
+    --surface: 17 20 32;
+    --surface-2: 25 29 44;
+    --line: 38 43 62;
+    --ink: 232 236 247;
+    --muted: 145 154 178;
+    --brand: 120 112 255;
+    --brand-hover: 139 132 255;
+    --ok: 52 211 120;
+    --bad: 248 113 113;
+    --warn: 251 191 36;
+    --info: 56 189 248;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+    color-scheme: dark;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-bg text-ink antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.25);
+}
+
+/* ───────────── Komponent sinifləri ───────────── */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+    box-shadow: var(--shadow);
+  }
+  .card-flat {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+      transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:opacity-90;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-surface text-ink hover:bg-surface-2;
+  }
+  .btn-ghost {
+    @apply btn text-muted hover:bg-surface-2 hover:text-ink;
+  }
+  .btn-danger {
+    @apply btn bg-bad text-white hover:opacity-90;
+  }
+  .btn-soft {
+    @apply btn bg-brand/10 text-brand hover:bg-brand/15;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+  .btn-icon {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted transition
+      hover:bg-surface-2 hover:text-ink;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+      placeholder:text-muted/70 transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .badge-brand {
+    @apply badge bg-brand/10 text-brand;
+  }
+  .badge-ok {
+    @apply badge bg-ok/10 text-ok;
+  }
+  .badge-bad {
+    @apply badge bg-bad/10 text-bad;
+  }
+  .badge-warn {
+    @apply badge bg-warn/10 text-warn;
+  }
+  .badge-info {
+    @apply badge bg-info/10 text-info;
+  }
+  .badge-muted {
+    @apply badge bg-surface-2 text-muted;
+  }
+
+  .page {
+    @apply mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8;
+  }
+  .page-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8;
+  }
+}
+
+/* ───────────── Animasiyalar ───────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.animate-fade-up { animation: fade-up 0.35s ease both; }
+.animate-pop { animation: pop 0.18s ease both; }
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  @apply rounded-xl bg-surface-2;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--ink) / 0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbar */
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--line)) transparent; }

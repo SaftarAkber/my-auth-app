@@ -1,171 +1,129 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-
-interface Student {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  photo: string | null;
-}
+import { useState } from "react";
+import { api, errMsg, useFetch } from "@/lib/api";
+import { timeAgo } from "@/lib/format";
+import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
 
 interface Enrollment {
   id: string;
   status: "PENDING" | "ACCEPTED" | "DECLINED";
   message: string | null;
+  teacherReply: string | null;
   createdAt: string;
-  student: Student;
+  student: { id: string; name: string; photo: string | null; email: string | null; phone: string | null };
   group: { id: string; name: string };
 }
 
 export default function TeacherRequestsPage() {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState<Record<string, string>>({});
-  const [search, setSearch] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
+  const toast = useToast();
+  const { data, loading, error, reload } = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
+  const [tab, setTab] = useState<"PENDING" | "ACCEPTED" | "DECLINED">("PENDING");
+  const [reply, setReply] = useState<{ req: Enrollment; action: "ACCEPTED" | "DECLINED" } | null>(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => { fetchEnrollments(); }, []);
+  const all = data?.enrollments ?? [];
+  const list = all.filter((e) => e.status === tab);
+  const count = (s: Enrollment["status"]) => all.filter((e) => e.status === s).length;
 
-  async function fetchEnrollments() {
+  async function submit() {
+    if (!reply) return;
+    setBusy(true);
     try {
-      const res = await fetch("/api/enrollment/my");
-      const data = await res.json();
-      setEnrollments((data.enrollments || data.requests || []).filter((e: Enrollment) => e.status === "PENDING"));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRespond(enrollmentId: string, action: "ACCEPTED" | "DECLINED") {
-    setActionLoading(enrollmentId);
-    setErrorMsg("");
-    try {
-      const res = await fetch("/api/enrollment/respond", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enrollmentId,
-          action,
-          teacherReply: replyText[enrollmentId] || null,
-        }),
+      await api("/api/enrollment/respond", {
+        body: { enrollmentId: reply.req.id, action: reply.action, teacherReply: text.trim() || undefined },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMsg(data.error || "Xəta baş verdi");
-        return;
-      }
-      await fetchEnrollments();
-    } catch (err) {
-      setErrorMsg("Server xətası");
+      toast.success(reply.action === "ACCEPTED" ? "Tələbə qrupa əlavə edildi" : "Müraciət rədd edildi");
+      setReply(null);
+      setText("");
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
     } finally {
-      setActionLoading(null);
+      setBusy(false);
     }
   }
-
-  const filtered = search.trim()
-    ? enrollments.filter(e =>
-        e.student.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.student.email?.toLowerCase().includes(search.toLowerCase()) ||
-        e.student.phone?.includes(search)
-      )
-    : enrollments;
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="flex gap-2">
-        {[0,1,2].map(i => (
-          <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce"
-            style={{ animationDelay: `${i*0.15}s` }} />
-        ))}
-      </div>
-    </div>
-  );
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Gələn istəklər</h1>
+    <div className="page-narrow">
+      <PageHeader title="Müraciətlər" subtitle="Qruplara qoşulmaq istəyən tələbələr" />
 
-      {errorMsg && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm mb-4">
-          ⚠️ {errorMsg}
-        </div>
-      )}
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "PENDING", label: "Gözləyən", count: count("PENDING") },
+          { id: "ACCEPTED", label: "Qəbul edilən", count: count("ACCEPTED") },
+          { id: "DECLINED", label: "Rədd edilən", count: count("DECLINED") },
+        ]}
+      />
 
-      {/* Arama */}
-      <div className="relative mb-6">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Tələbə adı, email və ya telefon ilə axtar..."
-          className="w-full border border-gray-300 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900"
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-gray-200 shadow-sm text-center text-gray-400">
-          <div className="text-4xl mb-3">📩</div>
-          <p>{search.trim() ? "Axtarışa uyğun istək tapılmadı" : "Gələn istək yoxdur"}</p>
-        </div>
+      {loading ? (
+        <SkeletonList />
+      ) : error ? (
+        <ErrorBox message={error} onRetry={reload} />
+      ) : list.length === 0 ? (
+        <Empty icon="inbox" title="Burada müraciət yoxdur" />
       ) : (
-        <div className="space-y-4">
-          {filtered.map(e => (
-            <div key={e.id} className="bg-white rounded-2xl p-5 border border-yellow-200 shadow-sm">
-              <div className="flex items-start gap-4">
-                <Link href={`/teacher/students/${e.student.id}`}>
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-xl font-bold text-blue-900 overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-900 transition-all">
-                    {e.student.photo ? (
-                      <img src={e.student.photo} alt={e.student.name} className="w-full h-full object-cover" />
-                    ) : e.student.name.charAt(0).toUpperCase()}
-                  </div>
-                </Link>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link href={`/teacher/students/${e.student.id}`}>
-                      <p className="font-semibold text-gray-900 hover:text-blue-900 cursor-pointer">{e.student.name}</p>
-                    </Link>
-                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                      {e.group.name}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5">{e.student.email || e.student.phone || "—"}</p>
-                  {e.message && (
-                    <div className="bg-gray-50 rounded-xl px-4 py-2 mt-3 text-sm text-gray-700">
-                      💬 {e.message}
-                    </div>
-                  )}
-                  <div className="mt-3">
-                    <input
-                      type="text"
-                      value={replyText[e.id] || ""}
-                      onChange={ev => setReplyText(prev => ({ ...prev, [e.id]: ev.target.value }))}
-                      placeholder="Cavab yazın (isteğe bağlı)..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900"
-                    />
-                  </div>
+        <div className="space-y-3">
+          {list.map((e) => (
+            <article key={e.id} className="card p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <Avatar src={e.student.photo} name={e.student.name} size={48} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold">{e.student.name}</p>
+                  <p className="text-xs text-muted">
+                    <span className="font-semibold text-brand">{e.group.name}</span> · {timeAgo(e.createdAt)}
+                  </p>
+                  <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted">
+                    {e.student.phone && <span className="inline-flex items-center gap-1"><Icon name="phone" size={12} />{e.student.phone}</span>}
+                    {e.student.email && <span className="inline-flex items-center gap-1"><Icon name="mail" size={12} />{e.student.email}</span>}
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => handleRespond(e.id, "ACCEPTED")} disabled={actionLoading === e.id}
-                  className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium py-2 rounded-xl text-sm transition-all">
-                  {actionLoading === e.id ? "..." : "✓ Qəbul et"}
-                </button>
-                <button onClick={() => handleRespond(e.id, "DECLINED")} disabled={actionLoading === e.id}
-                  className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2 rounded-xl text-sm transition-all">
-                  {actionLoading === e.id ? "..." : "✗ Rədd et"}
-                </button>
-              </div>
-            </div>
+              {e.message && <p className="mt-3 rounded-xl bg-surface-2 p-3 text-sm">“{e.message}”</p>}
+              {e.teacherReply && <p className="mt-2 rounded-xl bg-brand/5 p-3 text-sm"><span className="font-semibold text-brand">Cavabınız:</span> {e.teacherReply}</p>}
+
+              {e.status === "PENDING" ? (
+                <div className="mt-4 flex gap-2">
+                  <button className="btn-primary btn-sm" onClick={() => { setReply({ req: e, action: "ACCEPTED" }); setText(""); }}><Icon name="check" size={14} /> Qəbul et</button>
+                  <button className="btn-secondary btn-sm" onClick={() => { setReply({ req: e, action: "DECLINED" }); setText(""); }}><Icon name="x" size={14} /> Rədd et</button>
+                </div>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  {e.status === "DECLINED" && (
+                    <button className="btn-soft btn-sm" onClick={() => { setReply({ req: e, action: "ACCEPTED" }); setText(""); }}>Yenə də qəbul et</button>
+                  )}
+                  {e.status === "ACCEPTED" && (
+                    <button className="btn-ghost btn-sm hover:!text-bad" onClick={() => { setReply({ req: e, action: "DECLINED" }); setText(""); }}>Qrupdan çıxar</button>
+                  )}
+                </div>
+              )}
+            </article>
           ))}
         </div>
       )}
+
+      <Modal
+        open={!!reply}
+        onClose={() => setReply(null)}
+        title={reply?.action === "ACCEPTED" ? "Müraciəti qəbul et" : "Müraciəti rədd et"}
+        size="sm"
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setReply(null)}>Ləğv et</button>
+            <button className={reply?.action === "ACCEPTED" ? "btn-primary" : "btn-danger"} onClick={submit} disabled={busy}>
+              {busy ? <Spinner /> : reply?.action === "ACCEPTED" ? "Qəbul et" : "Rədd et"}
+            </button>
+          </>
+        }
+      >
+        <label className="block">
+          <span className="label">Tələbəyə cavab (istəyə bağlı)</span>
+          <textarea className="input min-h-24" value={text} onChange={(e) => setText(e.target.value)} placeholder="Qısa mesaj yazın…" />
+        </label>
+      </Modal>
     </div>
   );
 }

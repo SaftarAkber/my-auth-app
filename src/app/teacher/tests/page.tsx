@@ -1,122 +1,122 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { api, errMsg, useFetch } from "@/lib/api";
+import {
+  Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
+} from "@/components/ui";
 
 interface Collection {
   id: string;
   name: string;
+  description: string | null;
   _count: { packages: number; videoPackages: number };
 }
 
 export default function TeacherTestsPage() {
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [collectionName, setCollectionName] = useState("");
-  const [collectionDesc, setCollectionDesc] = useState("");
-  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { data, loading, error, reload } = useFetch<{ collections: Collection[] }>("/api/collections");
+  const [editing, setEditing] = useState<Collection | "new" | null>(null);
+  const [form, setForm] = useState({ name: "", description: "" });
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => { fetchCollections(); }, []);
-
-  async function fetchCollections() {
-    const res = await fetch("/api/collections");
-    const data = await res.json();
-    setCollections(data.collections || []);
-    setLoading(false);
+  function open(c: Collection | "new") {
+    setEditing(c);
+    setForm(c === "new" ? { name: "", description: "" } : { name: c.name, description: c.description ?? "" });
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
+  async function save() {
+    if (!form.name.trim()) return toast.error("Ad məcburidir");
+    setBusy(true);
     try {
-      await fetch("/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: collectionName, description: collectionDesc }),
-      });
-      setShowForm(false);
-      setCollectionName("");
-      setCollectionDesc("");
-      await fetchCollections();
+      if (editing === "new") await api("/api/collections", { body: form });
+      else if (editing) await api(`/api/collections/${editing.id}`, { method: "PATCH", body: form });
+      toast.success("Yadda saxlanıldı");
+      setEditing(null);
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   }
 
-  if (loading) return (
-    <div className="flex justify-center py-20">
-      <div className="flex gap-2">
-        {[0,1,2].map(i => (
-          <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce"
-            style={{ animationDelay: `${i*0.15}s` }} />
-        ))}
-      </div>
-    </div>
-  );
+  async function remove(c: Collection) {
+    const ok = await confirm({
+      title: `“${c.name}” kolleksiyası silinsin?`,
+      message: "İçindəki bütün testlər, suallar və tələbə cəhdləri də silinəcək.",
+      confirmText: "Sil",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/api/collections/${c.id}`, { method: "DELETE" });
+      toast.success("Silindi");
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    }
+  }
+
+  const list = data?.collections ?? [];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Test Kolleksiyaları</h1>
-        <button onClick={() => setShowForm(true)}
-          className="bg-blue-900 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-all">
-          + Kolleksiya əlavə et
-        </button>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="Testlər"
+        subtitle="Testlərinizi kolleksiyalara bölün, sonra qruplara bağlayın"
+        actions={<button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni kolleksiya</button>}
+      />
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-5">Yeni kolleksiya</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kolleksiya adı</label>
-                <input type="text" value={collectionName}
-                  onChange={e => setCollectionName(e.target.value)} required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Açıqlama</label>
-                <textarea value={collectionDesc}
-                  onChange={e => setCollectionDesc(e.target.value)}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 resize-none" />
-              </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowForm(false)}
-                  className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm">
-                  Ləğv et
-                </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-medium py-2.5 rounded-xl text-sm">
-                  {saving ? "Saxlanılır..." : "Saxla"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {collections.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
-          <div className="text-4xl mb-3">📚</div>
-          <p>Hələ kolleksiya yoxdur</p>
-        </div>
+      {loading ? (
+        <SkeletonList rows={3} className="h-32" />
+      ) : error ? (
+        <ErrorBox message={error} onRetry={reload} />
+      ) : list.length === 0 ? (
+        <Empty
+          icon="folder"
+          title="Hələ kolleksiya yoxdur"
+          text="Mövzu və ya fənn üzrə kolleksiya yaradın, testləri içinə əlavə edin."
+          action={<button className="btn-primary" onClick={() => open("new")}>Kolleksiya yarat</button>}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {collections.map(c => (
-            <Link key={c.id} href={`/teacher/tests/${c.id}`}
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:border-blue-900 hover:shadow-md transition-all">
-              <h3 className="font-bold text-gray-900 text-lg mb-2">{c.name}</h3>
-              <div className="flex gap-4 text-sm text-gray-500">
-                <span>📝 {c._count.packages} paket</span>
-                <span>🎬 {c._count.videoPackages} video</span>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((c) => (
+            <article key={c.id} className="card flex flex-col p-5 transition hover:border-brand/40">
+              <Link href={`/teacher/tests/${c.id}`} className="flex-1">
+                <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand"><Icon name="folder" size={22} /></span>
+                <h3 className="text-lg font-bold hover:text-brand">{c.name}</h3>
+                <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{c.description || "Təsvir yoxdur."}</p>
+                <span className="badge-muted mt-3"><Icon name="file" size={12} /> {c._count.packages} test</span>
+              </Link>
+              <div className="mt-4 flex items-center gap-1 border-t border-line pt-3">
+                <Link href={`/teacher/tests/${c.id}`} className="btn-soft btn-sm flex-1">Aç</Link>
+                <button className="btn-icon" onClick={() => open(c)} title="Redaktə"><Icon name="edit" size={17} /></button>
+                <button className="btn-icon hover:!text-bad" onClick={() => remove(c)} title="Sil"><Icon name="trash" size={17} /></button>
               </div>
-            </Link>
+            </article>
           ))}
         </div>
       )}
+
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" ? "Yeni kolleksiya" : "Kolleksiyanı redaktə et"}
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setEditing(null)}>Ləğv et</button>
+            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Ad *"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="məs. Riyaziyyat — Triqonometriya" autoFocus /></Field>
+          <Field label="Təsvir"><textarea className="input min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+        </div>
+      </Modal>
     </div>
   );
 }

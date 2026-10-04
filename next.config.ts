@@ -1,14 +1,10 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
-const nextConfig = {
-  api: {
-    bodyParser: false,
-    responseLimit: false,
-  },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "500mb",
-    },
+const nextConfig: NextConfig = {
+  // C:\Users\Notebook\package-lock.json ilə qarışmasın deyə layihə kökünü göstəririk
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 };
 

@@ -1,19 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { forbidden, notFound, requireTeacher, serverError, teacherOwnsTestPackage } from "@/lib/guards";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type Ctx = { params: Promise<{ id: string }> };
+
+async function authorize(id: string) {
+  const auth = await requireTeacher();
+  if ("response" in auth) return { response: auth.response };
+
+  const question = await prisma.question.findUnique({
+    where: { id },
+    select: { id: true, packageId: true },
+  });
+  if (!question) return { response: notFound() };
+  if (!(await teacherOwnsTestPackage(auth.user.id, question.packageId))) {
+    return { response: forbidden() };
+  }
+  return { question };
+}
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
-
     const { id } = await params;
-    const { text, type, options, correctAnswer, isActive } = await req.json();
+    const result = await authorize(id);
+    if ("response" in result) return result.response;
+
+    const { text, type, options, correctAnswer, isActive, order } = await req.json();
 
     const question = await prisma.question.update({
       where: { id },
@@ -23,31 +35,25 @@ export async function PATCH(
         ...(options !== undefined && { options }),
         ...(correctAnswer !== undefined && { correctAnswer }),
         ...(isActive !== undefined && { isActive }),
+        ...(order !== undefined && { order }),
       },
     });
 
     return NextResponse.json({ question });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return serverError(error);
   }
 }
 
-export async function DELETE(
-  _: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_: NextRequest, { params }: Ctx) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
-
     const { id } = await params;
+    const result = await authorize(id);
+    if ("response" in result) return result.response;
+
     await prisma.question.delete({ where: { id } });
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return serverError(error);
   }
-} 
+}

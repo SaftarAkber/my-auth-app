@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { api, errMsg, useFetch } from "@/lib/api";
+import {
+  Empty, ErrorBox, Field, Icon, Img, ImageUpload, Modal, PageHeader, SkeletonList, Spinner, Toggle,
+  useConfirm, useToast,
+} from "@/components/ui";
 
 interface Group {
   id: string;
@@ -14,206 +19,149 @@ interface Group {
   _count: { members: number; posts: number };
 }
 
+const EMPTY = { name: "", description: "", schedule: "", photo: null as string | null, coverPhoto: null as string | null, isActive: true };
+
 export default function TeacherGroupsPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editGroup, setEditGroup] = useState<Group | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", schedule: "" });
-  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { data, loading, error, reload } = useFetch<{ groups: Group[] }>("/api/groups");
+  const [editing, setEditing] = useState<Group | "new" | null>(null);
+  const [form, setForm] = useState(EMPTY);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => { fetchGroups(); }, []);
-
-  async function fetchGroups() {
-    const res = await fetch("/api/groups");
-    const data = await res.json();
-    setGroups(data.groups || []);
-    setLoading(false);
+  function open(g: Group | "new") {
+    setEditing(g);
+    setForm(
+      g === "new"
+        ? EMPTY
+        : { name: g.name, description: g.description ?? "", schedule: g.schedule ?? "", photo: g.photo, coverPhoto: g.coverPhoto, isActive: g.isActive },
+    );
   }
 
-  function openAdd() {
-    setEditGroup(null);
-    setForm({ name: "", description: "", schedule: "" });
-    setShowForm(true);
-  }
-
-  function openEdit(g: Group) {
-    setEditGroup(g);
-    setForm({ name: g.name, description: g.description || "", schedule: g.schedule || "" });
-    setShowForm(true);
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
+  async function save() {
+    if (!form.name.trim()) return toast.error("Qrup adı məcburidir");
+    setBusy(true);
     try {
-      if (editGroup) {
-        await fetch(`/api/groups/${editGroup.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-      } else {
-        await fetch("/api/groups", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-      }
-      setShowForm(false);
-      await fetchGroups();
+      const body = { ...form, photo: form.photo ?? "", coverPhoto: form.coverPhoto ?? "" };
+      if (editing === "new") await api("/api/groups", { body });
+      else if (editing) await api(`/api/groups/${editing.id}`, { method: "PATCH", body });
+      toast.success(editing === "new" ? "Qrup yaradıldı" : "Qrup yeniləndi");
+      setEditing(null);
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
     } finally {
-      setSaving(false);
+      setBusy(false);
+    }
+  }
+
+  async function remove(g: Group) {
+    const ok = await confirm({
+      title: `“${g.name}” qrupu silinsin?`,
+      message: "Qrupun paylaşımları, üzvlükləri və müraciətləri də silinəcək. Bu əməliyyat geri qaytarılmır.",
+      confirmText: "Sil",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/api/groups/${g.id}`, { method: "DELETE" });
+      toast.success("Qrup silindi");
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   }
 
   async function toggleActive(g: Group) {
-    await fetch(`/api/groups/${g.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !g.isActive }),
-    });
-    await fetchGroups();
+    try {
+      await api(`/api/groups/${g.id}`, { method: "PATCH", body: { isActive: !g.isActive } });
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Bu qrupu silmək istədiyinizdən əminsiniz?")) return;
-    await fetch(`/api/groups/${id}`, { method: "DELETE" });
-    await fetchGroups();
-  }
-
-  if (loading) return (
-    <div className="flex justify-center py-20">
-      <div className="flex gap-2">
-        {[0,1,2].map(i => (
-          <div key={i} className="w-3 h-3 bg-blue-900 rounded-full animate-bounce"
-            style={{ animationDelay: `${i*0.15}s` }} />
-        ))}
-      </div>
-    </div>
-  );
+  const groups = data?.groups ?? [];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Qruplarım</h1>
-        <button onClick={openAdd}
-          className="bg-blue-900 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-all">
-          + Qrup əlavə et
-        </button>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="Qruplar"
+        subtitle="Tələbələrinizi qruplara bölün, hər qrupa ayrıca məzmun verin"
+        actions={<button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni qrup</button>}
+      />
 
-      {/* Form modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-5">
-              {editGroup ? "Qrupu düzənlə" : "Yeni qrup"}
-            </h2>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Qrup adı</label>
-                <input type="text" value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="məs: Fizika 9cu sinif, A qrupu..." required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Açıqlama / Qeyd
-                </label>
-                <textarea value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="Qrup haqqında məlumat..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 resize-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Dərs cədvəli
-                </label>
-                <textarea value={form.schedule}
-                  onChange={e => setForm(f => ({ ...f, schedule: e.target.value }))}
-                  rows={2} placeholder="məs: Çərşənbə 14:00, Şənbə 12:00 (2 saatlıq)"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 resize-none" />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)}
-                  className="flex-1 border border-gray-300 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50">
-                  Ləğv et
-                </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-medium py-2.5 rounded-xl text-sm">
-                  {saving ? "Saxlanılır..." : "Saxla"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {groups.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-gray-200 text-center text-gray-400">
-          <div className="text-4xl mb-3">🏫</div>
-          <p>Hələ qrup yaradılmayıb</p>
-          <button onClick={openAdd} className="mt-4 text-blue-900 text-sm font-medium hover:underline">
-            İlk qrupu yarat →
-          </button>
-        </div>
+      {loading ? (
+        <SkeletonList rows={3} className="h-44" />
+      ) : error ? (
+        <ErrorBox message={error} onRetry={reload} />
+      ) : groups.length === 0 ? (
+        <Empty
+          icon="users"
+          title="Hələ qrup yoxdur"
+          text="İlk qrupunuzu yaradın və tələbələr müraciət göndərsin."
+          action={<button className="btn-primary" onClick={() => open("new")}>Qrup yarat</button>}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {groups.map(g => (
-            <div key={g.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
-              g.isActive ? "border-gray-200" : "border-gray-100 opacity-70"
-            }`}>
-              {/* Cover */}
-              <div className="h-24 bg-gradient-to-br from-blue-800 to-blue-600 relative">
-                {g.coverPhoto && (
-                  <img src={g.coverPhoto} alt="" className="w-full h-full object-cover" />
-                )}
-                <div className="absolute top-2 right-2">
-                  <button onClick={() => toggleActive(g)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      g.isActive ? "bg-green-500 text-white" : "bg-gray-400 text-white"
-                    }`}>
-                    {g.isActive ? "Aktiv" : "Deaktiv"}
-                  </button>
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {groups.map((g) => (
+            <article key={g.id} className="card overflow-hidden">
+              <Link href={`/teacher/groups/${g.id}`} className="block">
+                <div className="relative h-24 bg-gradient-to-br from-brand/70 to-brand/30">
+                  {g.coverPhoto && <Img src={g.coverPhoto} className="h-full w-full object-cover" />}
+                  {!g.isActive && <span className="badge-warn absolute right-3 top-3">Deaktiv</span>}
                 </div>
+                <div className="px-5 pt-4">
+                  <h3 className="text-lg font-bold hover:text-brand">{g.name}</h3>
+                  <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{g.description || "Təsvir yoxdur."}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span className="badge-muted"><Icon name="users" size={12} /> {g._count.members} üzv</span>
+                    <span className="badge-muted"><Icon name="message" size={12} /> {g._count.posts} paylaşım</span>
+                    {g.schedule && <span className="badge-muted"><Icon name="calendar" size={12} /> {g.schedule}</span>}
+                  </div>
+                </div>
+              </Link>
+              <div className="mt-4 flex items-center gap-2 border-t border-line px-3 py-2.5">
+                <Link href={`/teacher/groups/${g.id}`} className="btn-soft btn-sm flex-1">Aç</Link>
+                <button className="btn-icon" title={g.isActive ? "Deaktiv et" : "Aktiv et"} onClick={() => toggleActive(g)}>
+                  <Icon name={g.isActive ? "eye" : "eyeOff"} size={17} />
+                </button>
+                <button className="btn-icon" title="Redaktə" onClick={() => open(g)}><Icon name="edit" size={17} /></button>
+                <button className="btn-icon hover:!text-bad" title="Sil" onClick={() => remove(g)}><Icon name="trash" size={17} /></button>
               </div>
-
-              <div className="p-5">
-                <h3 className="font-bold text-gray-900 text-lg">{g.name}</h3>
-                {g.description && (
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{g.description}</p>
-                )}
-                {g.schedule && (
-                  <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 mt-2">
-                    🕐 {g.schedule}
-                  </p>
-                )}
-                <div className="flex gap-3 mt-3 text-xs text-gray-400">
-                  <span>👥 {g._count.members} tələbə</span>
-                  <span>📌 {g._count.posts} paylaşım</span>
-                </div>
-
-                <div className="flex gap-2 mt-4">
-                  <Link href={`/teacher/groups/${g.id}`}
-                    className="flex-1 text-center bg-blue-900 hover:bg-blue-800 text-white font-medium py-2 rounded-xl text-sm transition-all">
-                    Qrupa bax →
-                  </Link>
-                  <button onClick={() => openEdit(g)}
-                    className="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-sm transition-all">
-                    ✏️
-                  </button>
-                  <button onClick={() => handleDelete(g.id)}
-                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm transition-all">
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
+
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" ? "Yeni qrup" : "Qrupu redaktə et"}
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setEditing(null)}>Ləğv et</button>
+            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <ImageUpload label="Üz qabığı" value={form.coverPhoto} onChange={(u) => setForm({ ...form, coverPhoto: u })} />
+          <ImageUpload label="Qrup şəkli" shape="square" value={form.photo} onChange={(u) => setForm({ ...form, photo: u })} />
+          <Field label="Ad *">
+            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="məs. 11-ci sinif Riyaziyyat" />
+          </Field>
+          <Field label="Təsvir">
+            <textarea className="input min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </Field>
+          <Field label="Dərs cədvəli">
+            <input className="input" value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} placeholder="B.e, Çər — 18:00" />
+          </Field>
+          {editing !== "new" && (
+            <Toggle checked={form.isActive} onChange={(v) => setForm({ ...form, isActive: v })} label="Aktiv" hint="Deaktiv qruplara yeni müraciət göndərilə bilməz" />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

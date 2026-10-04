@@ -1,244 +1,123 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-
-type Role = "STUDENT" | "TEACHER";
+import { api } from "@/lib/api";
+import { cx } from "@/lib/format";
+import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const [role, setRole] = useState<Role>("STUDENT");
-  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
+  const [teacherOpen, setTeacherOpen] = useState(true);
+  const [form, setForm] = useState({ name: "", phone: "", email: "", password: "", confirm: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [teacherFull, setTeacherFull] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  }
+  useEffect(() => {
+    api<{ available: boolean }>("/api/auth/teacher-available")
+      .then((d) => setTeacherOpen(d.available))
+      .catch(() => {});
+  }, []);
 
-  async function handleRoleClick(r: Role) {
-    if (r === "TEACHER") {
-      // Müəllim yerinin dolu olub-olmadığını yoxla
-      const res = await fetch("/api/auth/teacher-available");
-      const data = await res.json();
-      if (!data.available) {
-        setTeacherFull(true);
-        return;
-      }
-      setTeacherFull(false);
-    }
-    setRole(r);
-  }
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!form.phone.trim() && !form.email.trim()) return setError("Telefon və ya email daxil edin");
+    if (form.password.length < 6) return setError("Şifrə ən azı 6 simvol olmalıdır");
+    if (form.password !== form.confirm) return setError("Şifrələr uyğun gəlmir");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Şifrələr uyğun gəlmir");
-      return;
-    }
-
-    setLoading(true);
+    setBusy(true);
     try {
       await register({
-        name: formData.name,
-        phone: loginMethod === "phone" ? formData.phone : undefined,
-        email: loginMethod === "email" ? formData.email : undefined,
-        password: formData.password,
+        name: form.name.trim(),
+        phone: form.phone.trim() || undefined,
+        email: form.email.trim() || undefined,
+        password: form.password,
         role,
       });
-    } catch (err: unknown) {
+    } catch (err) {
       setError(err instanceof Error ? err.message : "Xəta baş verdi");
-    } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
+  const roles = [
+    { id: "STUDENT" as const, label: "Tələbə", icon: "grad" as const, text: "Test həll et, dərs izlə" },
+    { id: "TEACHER" as const, label: "Müəllim", icon: "book" as const, text: "Qrup, test və dərs yarat" },
+  ];
+
   return (
-    <div className="min-h-screen flex">
-      {/* Sol panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-blue-400 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-blue-300 rounded-full blur-3xl" />
-        </div>
-        <div className="relative">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎓</span>
-            <span className="text-white font-bold text-xl">Edu</span>
-          </div>
-        </div>
-        <div className="relative">
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-            Yeni nəsil öyrənənləri gücləndiririk.
-          </h2>
-          <p className="text-blue-200 text-lg">
-            Dərin fokus və akademik mükəmməllik üçün nəzərdə tutulmuş birgə mühitdə minlərlə tələbə və müəllimə qoşulun.
-          </p>
-        </div>
-        <div className="relative">
-          <div className="flex items-center gap-2 text-blue-200 text-sm">
-            <span>⭐</span>
-            <span>10 mindən çox müəllim qoşulub</span>
-          </div>
-        </div>
-      </div>
+    <>
+      <h1 className="text-3xl font-extrabold tracking-tight">Hesab yaradın</h1>
+      <p className="mt-1.5 text-muted">Bir neçə saniyəyə qeydiyyatdan keçin.</p>
 
-      {/* Sağ panel */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Hesab yaradın</h1>
-          <p className="text-gray-500 mb-8">Edu ilə öyrənmə yolculuğunuza bu gün başlayın.</p>
+      <form onSubmit={submit} className="mt-8 space-y-5">
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-bad/30 bg-bad/10 p-3 text-sm text-bad" role="alert">
+            <Icon name="alert" size={18} className="mt-0.5" /> {error}
+          </div>
+        )}
 
-          {/* Rol seçimi */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Rolunuzu seçin</label>
-            <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          {roles.map((r) => {
+            const disabled = r.id === "TEACHER" && !teacherOpen;
+            const on = role === r.id;
+            return (
               <button
                 type="button"
-                onClick={() => handleRoleClick("STUDENT")}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  role === "STUDENT"
-                    ? "border-blue-900 bg-blue-50 text-blue-900"
-                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                }`}
-              >
-                <span className="text-2xl">👤</span>
-                <span className="font-medium text-sm">Tələbə</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleRoleClick("TEACHER")}
-                disabled={teacherFull}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all relative ${
-                  teacherFull
-                    ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60"
-                    : role === "TEACHER"
-                    ? "border-blue-900 bg-blue-50 text-blue-900"
-                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                }`}
-              >
-                <span className="text-2xl">🎓</span>
-                <span className="font-medium text-sm">Müəllim</span>
-                {teacherFull && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">Dolu</span>
+                key={r.id}
+                disabled={disabled}
+                onClick={() => setRole(r.id)}
+                className={cx(
+                  "rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50",
+                  on ? "border-brand bg-brand/5" : "border-line bg-surface hover:border-brand/40",
                 )}
+              >
+                <Icon name={r.icon} size={22} className={on ? "text-brand" : "text-muted"} />
+                <p className="mt-2 font-bold">{r.label}</p>
+                <p className="text-xs text-muted">{disabled ? "Kontingent doludur" : r.text}</p>
               </button>
-            </div>
-            {teacherFull && (
-              <p className="text-red-500 text-xs mt-2">Müəllim kontingenti dolub.</p>
-            )}
-          </div>
-
-          {/* Giriş yöntemi */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Qeydiyyat üsulu</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setLoginMethod("phone")}
-                className={`py-2 rounded-xl border-2 text-sm font-medium transition-all ${
-                  loginMethod === "phone" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
-                }`}>
-                📱 Telefon
-              </button>
-              <button type="button" onClick={() => setLoginMethod("email")}
-                className={`py-2 rounded-xl border-2 text-sm font-medium transition-all ${
-                  loginMethod === "email" ? "border-blue-900 bg-blue-50 text-blue-900" : "border-gray-200 text-gray-600"
-                }`}>
-                ✉️ Email
-              </button>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Ad */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ad və Soyad</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange}
-                placeholder="Nümunə: Əli Məmmədov" required
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-              />
-            </div>
-
-            {/* Telefon veya Email */}
-            {loginMethod === "phone" ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Nömrəsi</label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  placeholder="+994501234567" required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Ünvanı</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  placeholder="ad@misal.com" required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-                />
-              </div>
-            )}
-
-            {/* Şifre */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Şifrə</label>
-              <div className="relative">
-                <input type={showPassword ? "text" : "password"} name="password"
-                  value={formData.password} onChange={handleChange}
-                  placeholder="••••••••" required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPassword ? "🙈" : "👁️"}
-                </button>
-              </div>
-            </div>
-
-            {/* Şifre tekrar */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Şifrəni təsdiqləyin</label>
-              <input type="password" name="confirmPassword"
-                value={formData.confirmPassword} onChange={handleChange}
-                placeholder="••••••••" required
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
-                ⚠️ {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={loading}
-              className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-semibold py-3 rounded-xl transition-all">
-              {loading ? "Hesab yaradılır..." : "Hesab yarat"}
-            </button>
-          </form>
-
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Artıq hesabınız var?{" "}
-            <Link href="/login" className="text-blue-900 font-medium hover:underline">Daxil olun</Link>
-          </p>
-
-          <div className="flex justify-center gap-6 mt-8 text-xs text-gray-400">
-            <a href="#" className="hover:text-gray-600">Məxfilik Siyasəti</a>
-            <a href="#" className="hover:text-gray-600">İstifadə Şərtləri</a>
-          </div>
+            );
+          })}
         </div>
-      </div>
-    </div>
+
+        <Field label="Ad və soyad">
+          <input className="input" value={form.name} onChange={set("name")} autoComplete="name" required placeholder="Ad Soyad" />
+        </Field>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Telefon (WhatsApp)">
+            <input className="input" value={form.phone} onChange={set("phone")} placeholder="+994501234567" autoComplete="tel" inputMode="tel" />
+          </Field>
+          <Field label="Email">
+            <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="ad@mail.com" autoComplete="email" />
+          </Field>
+        </div>
+        <p className="-mt-3 text-xs text-muted">Ən azı biri məcburidir. Şifrəni bərpa etmək üçün lazım olacaq.</p>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Şifrə">
+            <PasswordInput value={form.password} onChange={set("password")} placeholder="Ən azı 6 simvol" autoComplete="new-password" required />
+          </Field>
+          <Field label="Şifrə təkrarı">
+            <PasswordInput value={form.confirm} onChange={set("confirm")} placeholder="Təkrar daxil edin" autoComplete="new-password" required />
+          </Field>
+        </div>
+
+        <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+          {busy ? <Spinner /> : "Qeydiyyatdan keç"}
+        </button>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-muted">
+        Artıq hesabınız var?{" "}
+        <Link href="/login" className="font-bold text-brand hover:underline">Daxil olun</Link>
+      </p>
+    </>
   );
 }
