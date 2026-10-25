@@ -6,7 +6,11 @@ import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, email, method } = await req.json();
+    const body = await req.json();
+    const method = body.method;
+    const phone = body.phone ? String(body.phone).trim() : body.phone;
+    // register email-i kiçik hərflə saxlayır; burada da eyni normallaşdırma lazımdır
+    const email = body.email ? String(body.email).trim().toLowerCase() : body.email;
 
     // method: "whatsapp" veya "email"
     if (!method) {

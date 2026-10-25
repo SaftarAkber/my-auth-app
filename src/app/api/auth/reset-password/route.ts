@@ -7,7 +7,11 @@ import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, code, newPassword } = await req.json();
+    const body = await req.json();
+    const code = body.code;
+    const newPassword = body.newPassword;
+    // email ilə göndərilən kodlar kiçik hərflə saxlanır
+    const phone = body.phone ? (String(body.phone).includes("@") ? String(body.phone).trim().toLowerCase() : String(body.phone).trim()) : body.phone;
 
     if (!phone || !code || !newPassword) {
       return NextResponse.json(

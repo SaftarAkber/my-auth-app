@@ -1,20 +1,25 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// Google App Password boşluqlu (xxxx xxxx xxxx xxxx) kopyalanır; boşluqları təmizləyirik
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER?.trim(),
+      pass: (process.env.GMAIL_APP_PASSWORD ?? "").replace(/\s+/g, ""),
+    },
+  });
+}
 
 export async function sendEmailOtp(
   email: string,
   code: string
 ): Promise<boolean> {
   try {
-    await transporter.sendMail({
-      from: `"Auth App" <${process.env.GMAIL_USER}>`,
+    await getTransporter().sendMail({
+      from: `"EduFlow" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: "Şifre Sıfırlama Kodu",
       html: `
