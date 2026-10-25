@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { adjustCoins } from "@/lib/coins";
+import { grantTestReward } from "@/lib/rewards";
 import { forbidden, notFound, serverError, teacherOwnsTestPackage, unauthorized } from "@/lib/guards";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -59,8 +59,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       return [{ attemptId: attempt.id, questionId: a.questionId, answer: a.answer, isCorrect, status }];
     });
 
-    const totalMC = pkg.questions.filter((q) => q.type === "MULTIPLE_CHOICE").length;
-
     // Yarış vəziyyətinin qarşısı: yalnız hələ bitməmiş cəhd bağlanır
     const updated = await prisma.$transaction(async (tx) => {
       const closed = await tx.studentAttempt.updateMany({
@@ -76,43 +74,22 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
     }
 
-    // Mükafatlar yalnız testin ilk tamamlanmasında verilir (təkrarlarda coin farm olmasın)
-    const earlierFinished = await prisma.studentAttempt.count({
-      where: {
-        studentId: currentUser.id,
-        packageId: attempt.packageId,
-        finishedAt: { not: null },
-        id: { not: attempt.id },
-      },
-    });
-
+    // Mükafat: müəllimin test üçün qoyduğu qayda ödənibsə (avtomatik rejimdə) coin müəllimdən köçürülür.
+    // Açıq cavablar hələ yoxlanmayıbsa, nəticə təsdiqlənənədək gözlənilir.
     let coinsEarned = 0;
-    if (earlierFinished === 0) {
+    let rewardPending = false;
+    const hasOpen = pkg.questions.some((q) => q.type === "OPEN_ENDED");
+    if (pkg.rewardEnabled && pkg.rewardAuto && !hasOpen) {
       try {
-        if (correctCount > 0) {
-          await adjustCoins(currentUser.id, correctCount, "CORRECT_ANSWER", `${pkg.name}: ${correctCount} düzgün cavab`);
-          coinsEarned += correctCount;
-        }
-        if (totalMC > 0) {
-          const betterOrEqual = await prisma.studentAttempt.count({
-            where: {
-              packageId: attempt.packageId,
-              finishedAt: { not: null },
-              score: { gte: correctCount },
-              id: { not: attempt.id },
-            },
-          });
-          if (betterOrEqual === 0) {
-            await adjustCoins(currentUser.id, 10, "RANK_REWARD", `${pkg.name}: 1-ci yer`);
-            coinsEarned += 10;
-          }
-        }
+        const r = await grantTestReward(attempt.id);
+        if (r.status === "granted") coinsEarned = r.coins;
+        if (r.status === "insufficient") rewardPending = true;
       } catch (coinErr) {
-        console.error("Coin mükafatı xətası:", coinErr);
+        console.error("Mükafat xətası:", coinErr);
       }
     }
 
-    return NextResponse.json({ ...updated, coinsEarned });
+    return NextResponse.json({ ...updated, coinsEarned, rewardPending });
   } catch (error) {
     return serverError(error);
   }

@@ -1,5 +1,5 @@
-// Müəllim qeydiyyat limiti — bütün yerlərdə bu dəyər istifadə olunur
-export const TEACHER_LIMIT = 3;
+// Yeni müəllim hesabına verilən başlanğıc coin; tələbələr 0 ilə başlayır
+export const TEACHER_START_COINS = 500;
 
 export const AUTH_COOKIE = "auth_token";
 export const AUTH_COOKIE_OPTIONS = {

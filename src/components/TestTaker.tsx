@@ -27,6 +27,7 @@ interface Result {
   score: number | null;
   totalScore: number | null;
   coinsEarned?: number;
+  rewardPending?: boolean;
 }
 
 /** Testi başladır. Uğurlu olarsa `AttemptStart` qaytarır, əks halda toast göstərir və null qaytarır. */
@@ -171,9 +172,12 @@ export default function TestTaker({
             {result.score} / {result.totalScore} düzgün cavab
           </p>
           {!!result.coinsEarned && (
-            <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-warn/10 px-4 py-1.5 font-bold text-warn">
-              <Icon name="coin" size={16} /> +{result.coinsEarned} coin qazandınız
+            <p className="mt-3 inline-flex items-center gap-2 rounded-full border-2 border-ink bg-sun px-4 py-1.5 font-bold text-ink">
+              <Icon name="coin" size={16} /> Müəllimdən +{result.coinsEarned} coin qazandınız
             </p>
+          )}
+          {result.rewardPending && (
+            <p className="mt-3 text-sm text-muted">Mükafat şərti ödənib. Coin müəllimin təsdiqindən sonra hesabınıza əlavə olunacaq.</p>
           )}
           {hasOpen && (
             <p className="mt-4 text-sm text-muted">Açıq sualları müəllim yoxladıqdan sonra bal yenilənəcək.</p>

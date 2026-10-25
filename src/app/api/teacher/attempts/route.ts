@@ -27,6 +27,10 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            rewardEnabled: true,
+            rewardMinCorrect: true,
+            rewardCoins: true,
+            rewardAuto: true,
             collection: { select: { name: true } },
             group: { select: { name: true } },
           },

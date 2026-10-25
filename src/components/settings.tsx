@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg } from "@/lib/api";
 import { Field, Icon, ImageUpload, Modal, PasswordInput, Spinner, useToast } from "@/components/ui";
+import { COVER_PRESETS, PRESET_PREFIX } from "@/components/covers";
+import { cx } from "@/lib/format";
 
 /* ───────── Profil redaktəsi ───────── */
 export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onClose: () => void; withCover?: boolean }) {
@@ -46,7 +48,33 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
       }
     >
       <div className="space-y-5">
-        {withCover && <ImageUpload label="Üz qabığı" value={cover} onChange={setCover} />}
+        {withCover && (
+          <div>
+            <span className="label">Divar kağızı</span>
+            <div className="mb-3 grid grid-cols-3 gap-2">
+              {COVER_PRESETS.map((p) => {
+                const active = cover === PRESET_PREFIX + p.id;
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    title={p.name}
+                    aria-pressed={active}
+                    onClick={() => setCover(PRESET_PREFIX + p.id)}
+                    className={cx("h-16 overflow-hidden rounded-xl border-[2.5px] transition", active ? "border-ink shadow-hard" : "border-line hover:border-ink")}
+                  >
+                    {p.svg}
+                  </button>
+                );
+              })}
+            </div>
+            <ImageUpload
+              label="Və ya öz şəklini yüklə"
+              value={cover && !cover.startsWith(PRESET_PREFIX) ? cover : null}
+              onChange={(u) => setCover(u)}
+            />
+          </div>
+        )}
         <ImageUpload label="Profil şəkli" value={photo} onChange={setPhoto} shape="round" />
         <Field label="Ad və soyad">
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -107,7 +135,7 @@ function ContactRow({ type }: { type: "phone" | "email" }) {
   }
 
   return (
-    <div className="rounded-xl border border-line p-4">
+    <div className="rounded-xl border-[2.5px] border-ink p-4">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
           <Icon name={type === "phone" ? "phone" : "mail"} />

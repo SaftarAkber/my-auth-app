@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { adjustCoins } from "@/lib/coins";
+import { rewardData } from "@/lib/rewards";
 import {
   forbidden,
   notFound,
@@ -64,11 +64,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { id } = await params;
     if (!(await teacherOwnsTestPackage(auth.user.id, id))) return forbidden();
 
+    const body = await req.json();
     const {
       name, description, isPublished, isPublic,
       isTimed, duration, startsAt, endsAt,
       visibility, groupIds, allowRetry,
-    } = await req.json();
+    } = body;
 
     if (Array.isArray(groupIds) && !(await teacherOwnsGroups(auth.user.id, groupIds))) {
       return forbidden();
@@ -102,6 +103,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
           ...(visibility !== undefined && { visibility }),
           ...(allowRetry !== undefined && { allowRetry }),
+          ...rewardData(body),
           ...(Array.isArray(groupIds) && groupIds.length
             ? { testPackageGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }
             : {}),
@@ -111,15 +113,6 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         },
       });
     });
-
-    // Müəllim testi ilk dəfə dərc edəndə 5 coin
-    if (isPublished === true && !existing.isPublished) {
-      try {
-        await adjustCoins(auth.user.id, 5, "TEST_CREATED", `"${pkg.name}" dərc edildi`);
-      } catch (coinErr) {
-        console.error("Coin vermə xətası:", coinErr);
-      }
-    }
 
     return NextResponse.json({ package: pkg });
   } catch (error) {

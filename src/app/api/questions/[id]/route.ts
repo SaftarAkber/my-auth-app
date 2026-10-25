@@ -27,6 +27,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
     const { text, type, options, correctAnswer, isActive, order } = await req.json();
 
+    if (Array.isArray(options) && options.length > 5) {
+      return NextResponse.json({ error: "Ən çoxu 5 variant (A–E) ola bilər" }, { status: 400 });
+    }
+
     const question = await prisma.question.update({
       where: { id },
       data: {

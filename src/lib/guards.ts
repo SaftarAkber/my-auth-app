@@ -34,6 +34,15 @@ export async function requireTeacher(): Promise<
   return { user };
 }
 
+export async function requireAdmin(): Promise<
+  { user: CurrentUser } | { response: NextResponse }
+> {
+  const user = await getCurrentUser();
+  if (!user) return { response: unauthorized() };
+  if (user.role !== "ADMIN") return { response: forbidden() };
+  return { user };
+}
+
 export async function requireStudent(): Promise<
   { user: CurrentUser } | { response: NextResponse }
 > {

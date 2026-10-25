@@ -101,12 +101,12 @@ export function Avatar({
   const style = { width: size, height: size, fontSize: Math.max(11, size * 0.38) };
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={name ?? ""} style={style} className={cx("shrink-0 rounded-full object-cover", className)} />;
+    return <img src={src} alt={name ?? ""} style={style} className={cx("shrink-0 rounded-full border-2 border-ink object-cover", className)} />;
   }
   return (
     <span
       style={style}
-      className={cx("inline-flex shrink-0 items-center justify-center rounded-full bg-brand/15 font-bold text-brand", className)}
+      className={cx("inline-flex shrink-0 items-center justify-center rounded-full border-2 border-ink bg-iris/50 font-bold text-ink", className)}
     >
       {initials(name)}
     </span>
@@ -135,7 +135,7 @@ export function SkeletonList({ rows = 3, className = "h-24" }: { rows?: number; 
 export function ProgressBar({ value, tone = "brand" }: { value: number; tone?: "brand" | "ok" | "bad" | "warn" }) {
   const color = { brand: "bg-brand", ok: "bg-ok", bad: "bg-bad", warn: "bg-warn" }[tone];
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+    <div className="h-3 w-full overflow-hidden rounded-full border-2 border-ink bg-surface-2">
       <div className={cx("h-full rounded-full transition-all duration-500", color)} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   );
@@ -143,7 +143,7 @@ export function ProgressBar({ value, tone = "brand" }: { value: number; tone?: "
 
 export function CoinPill({ amount, className }: { amount: number; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full bg-warn/10 px-3 py-1 text-sm font-bold text-warn", className)}>
+    <span className={cx("inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-sun px-3 py-1 text-sm font-bold text-ink", className)}>
       <Icon name="coin" size={15} />
       {amount.toLocaleString("az-AZ")}
     </span>
@@ -160,14 +160,14 @@ export function PageHeader({
       {back && (
         <button
           onClick={() => (back === true ? router.back() : router.push(back))}
-          className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted transition hover:text-ink"
+          className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-ink"
         >
           <Icon name="left" size={16} /> Geri
         </button>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+          <h1 className="inline-block text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ boxShadow: "inset 0 -0.34em 0 rgb(var(--sun))", padding: "0 4px", marginLeft: -4 }}>{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted sm:text-base">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -177,36 +177,35 @@ export function PageHeader({
 }
 
 const TONES = {
-  brand: "bg-brand/10 text-brand",
-  ok: "bg-ok/10 text-ok",
-  warn: "bg-warn/10 text-warn",
-  bad: "bg-bad/10 text-bad",
-  info: "bg-info/10 text-info",
+  brand: "bg-sun",
+  ok: "bg-iris",
+  warn: "bg-tiger",
+  bad: "bg-[#fd9b62]",
+  info: "bg-[#aeaff4]",
 } as const;
 
 export function StatCard({
   label, value, icon, tone = "brand", href,
 }: { label: string; value: React.ReactNode; icon: IconName; tone?: keyof typeof TONES; href?: string }) {
   const body = (
-    <div className="card flex items-center gap-4 p-4 transition hover:-translate-y-0.5 sm:p-5">
-      <span className={cx("flex h-12 w-12 items-center justify-center rounded-2xl", TONES[tone])}>
-        <Icon name={icon} size={22} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-2xl font-extrabold leading-none tracking-tight">{value}</p>
-        <p className="mt-1 truncate text-xs font-medium text-muted">{label}</p>
+    <div className={cx("card relative h-full overflow-hidden p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 sm:p-5", TONES[tone])}>
+      <span className="pointer-events-none absolute -bottom-8 -right-8 h-24 w-24 rounded-full border-[2.5px] border-ink bg-white/40" />
+      <div className="relative flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold">{label}</p>
+        <Icon name={icon} size={18} />
       </div>
+      <p className="relative mt-2 text-3xl font-extrabold leading-none tracking-tight tabular-nums sm:text-4xl">{value}</p>
     </div>
   );
-  return href ? <Link href={href}>{body}</Link> : body;
+  return href ? <Link href={href} className="block">{body}</Link> : body;
 }
 
 export function Empty({
   icon = "inbox", title, text, action,
 }: { icon?: IconName; title: string; text?: string; action?: React.ReactNode }) {
   return (
-    <div className="card-flat flex flex-col items-center justify-center border-dashed px-6 py-14 text-center">
-      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2 text-muted">
+    <div className="card-flat flex flex-col items-center justify-center border-dashed bg-white/70 px-6 py-14 text-center">
+      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border-[2.5px] border-ink bg-sun text-ink shadow-hard">
         <Icon name={icon} size={26} />
       </span>
       <h3 className="text-base font-bold">{title}</h3>
@@ -218,7 +217,7 @@ export function Empty({
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-bad/30 bg-bad/10 p-4 text-sm text-bad">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border-[2.5px] border-ink bg-flame/30 p-4 text-sm font-semibold text-ink">
       <span className="flex items-center gap-2"><Icon name="alert" /> {message}</span>
       {onRetry && <button className="btn-secondary btn-sm" onClick={onRetry}>Yenilə</button>}
     </div>
@@ -229,19 +228,20 @@ export function Tabs<T extends string>({
   tabs, value, onChange,
 }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="-mx-1 mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-line bg-surface p-1">
+    <div className="-mx-2 mb-5 flex gap-2 overflow-x-auto px-2 pb-3 pt-2">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
+          aria-pressed={value === t.id}
           className={cx(
-            "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition",
-            value === t.id ? "bg-brand text-white shadow-soft" : "text-muted hover:bg-surface-2 hover:text-ink",
+            "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-[2.5px] border-ink px-4 py-1.5 text-sm font-semibold transition hover:-translate-y-0.5",
+            value === t.id ? "bg-ink text-white" : "bg-white text-ink hover:bg-sun/40",
           )}
         >
           {t.label}
           {t.count !== undefined && (
-            <span className={cx("rounded-full px-1.5 text-xs", value === t.id ? "bg-white/25" : "bg-surface-2")}>{t.count}</span>
+            <span className="rounded-full border-2 border-ink bg-sun px-1.5 text-xs font-bold text-ink">{t.count}</span>
           )}
         </button>
       ))}
@@ -271,14 +271,14 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-xl border border-line bg-surface p-3.5 text-left transition hover:bg-surface-2"
+      className="flex w-full items-center justify-between gap-4 rounded-xl border-[2.5px] border-ink bg-surface p-3.5 text-left transition hover:bg-sun/20"
     >
       <span>
         <span className="block text-sm font-semibold">{label}</span>
         {hint && <span className="mt-0.5 block text-xs text-muted">{hint}</span>}
       </span>
-      <span className={cx("relative h-6 w-11 shrink-0 rounded-full transition", checked ? "bg-brand" : "bg-line")}>
-        <span className={cx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", checked ? "left-[22px]" : "left-0.5")} />
+      <span className={cx("relative h-6 w-11 shrink-0 rounded-full border-2 border-ink transition", checked ? "bg-sun" : "bg-white")}>
+        <span className={cx("absolute top-[1px] h-4 w-4 rounded-full bg-ink transition-all", checked ? "left-[22px]" : "left-[2px]")} />
       </span>
     </button>
   );
@@ -298,8 +298,8 @@ export function ChipSelect({
             key={o.id}
             onClick={() => onChange(on ? value.filter((v) => v !== o.id) : [...value, o.id])}
             className={cx(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition",
-              on ? "border-brand bg-brand/10 text-brand" : "border-line bg-surface text-muted hover:text-ink",
+              "inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-sm font-semibold transition",
+              on ? "bg-sun text-ink" : "bg-white text-muted hover:text-ink",
             )}
           >
             {on && <Icon name="check" size={14} />} {o.label}
@@ -365,7 +365,7 @@ export function ImageUpload({
   return (
     <div className={className}>
       {label && <span className="label">{label}</span>}
-      <div className={cx("group relative overflow-hidden border border-dashed border-line bg-surface-2", box)}>
+      <div className={cx("group relative overflow-hidden border-[2.5px] border-dashed border-ink bg-surface-2", box)}>
         {value && <Img src={value} className="h-full w-full object-cover" />}
         <button
           type="button"
@@ -422,16 +422,16 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/60" onClick={onClose} />
       <div className={cx("card relative flex max-h-[92vh] w-full animate-pop flex-col rounded-b-none sm:rounded-b-2xl", width)}>
         {title && (
-          <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
+          <div className="flex items-center justify-between gap-3 border-b-[2.5px] border-ink px-5 py-4">
             <h2 className="text-lg font-bold">{title}</h2>
             <button className="btn-icon -mr-2" onClick={onClose} aria-label="Bağla"><Icon name="x" /></button>
           </div>
         )}
         <div className="overflow-y-auto px-5 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t-[2.5px] border-ink px-5 py-4">{footer}</div>}
       </div>
     </div>
   );

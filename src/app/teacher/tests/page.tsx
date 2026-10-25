@@ -6,6 +6,7 @@ import { api, errMsg, useFetch } from "@/lib/api";
 import {
   Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
 } from "@/components/ui";
+import { SubNav, TESTS_NAV } from "@/components/SubNav";
 
 interface Collection {
   id: string;
@@ -69,6 +70,7 @@ export default function TeacherTestsPage() {
         subtitle="Testlərinizi kolleksiyalara bölün, sonra qruplara bağlayın"
         actions={<button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni kolleksiya</button>}
       />
+      <SubNav items={TESTS_NAV} />
 
       {loading ? (
         <SkeletonList rows={3} className="h-32" />

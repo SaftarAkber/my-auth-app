@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { forbidden, notFound, requireTeacher, serverError, teacherOwnsTestPackage } from "@/lib/guards";
+import { grantTestReward } from "@/lib/rewards";
 
 // Müəllim açıq uçlu sualı qiymətləndirir
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +39,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await tx.studentAttempt.update({ where: { id: existing.attempt.id }, data: { score } });
       return updated;
     });
+
+    // Bütün açıq cavablar yoxlanıbsa və test avtomatik mükafat rejimindədirsə, qaydanı yenidən yoxla
+    try {
+      const pending = await prisma.studentAnswer.count({ where: { attemptId: existing.attempt.id, status: "PENDING" } });
+      const pkg = await prisma.testPackage.findUnique({
+        where: { id: existing.attempt.packageId },
+        select: { rewardEnabled: true, rewardAuto: true },
+      });
+      if (pending === 0 && pkg?.rewardEnabled && pkg.rewardAuto) await grantTestReward(existing.attempt.id);
+    } catch (e) {
+      console.error("Mükafat xətası:", e);
+    }
 
     return NextResponse.json({ answer });
   } catch (error) {

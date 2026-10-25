@@ -8,7 +8,7 @@ import {
   AUTH_COOKIE_OPTIONS,
   EMAIL_REGEX,
   PHONE_REGEX,
-  TEACHER_LIMIT,
+  TEACHER_START_COINS,
 } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
@@ -39,16 +39,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email formatı yanlışdır" }, { status: 400 });
     }
 
-    if (role === "TEACHER") {
-      const teacherCount = await prisma.user.count({ where: { role: "TEACHER" } });
-      if (teacherCount >= TEACHER_LIMIT) {
-        return NextResponse.json(
-          { error: `Müəllim kontingenti dolub. Maksimum ${TEACHER_LIMIT} müəllim qeydiyyatdan keçə bilər.` },
-          { status: 409 },
-        );
-      }
-    }
-
     const existing = await prisma.user.findFirst({
       where: { OR: [...(phone ? [{ phone }] : []), ...(email ? [{ email }] : [])] },
     });
@@ -67,7 +57,7 @@ export async function POST(req: NextRequest) {
           email: email || null,
           password: hashedPassword,
           role,
-          coinBalance: role === "TEACHER" ? 500 : 0,
+          coinBalance: role === "TEACHER" ? TEACHER_START_COINS : 0,
         },
         select: {
           id: true, name: true, phone: true, email: true,
@@ -76,7 +66,7 @@ export async function POST(req: NextRequest) {
       });
       if (role === "TEACHER") {
         await tx.coinTransaction.create({
-          data: { userId: created.id, amount: 500, type: "INITIAL_GRANT", reason: "Qeydiyyat bonusu" },
+          data: { userId: created.id, amount: TEACHER_START_COINS, type: "INITIAL_GRANT", reason: "Qeydiyyat bonusu" },
         });
       }
       return created;

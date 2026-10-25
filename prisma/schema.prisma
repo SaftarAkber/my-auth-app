@@ -251,6 +251,11 @@ model TestPackage {
   attempts     StudentAttempt[]
   allowRetry   Boolean @default(false)
   testPackageGroups TestPackageGroup[]
+  // Müəllimin istəyə bağlı coin mükafatı qaydası
+  rewardEnabled    Boolean @default(false)
+  rewardMinCorrect Int?
+  rewardCoins      Int?
+  rewardAuto       Boolean @default(true)
 
   @@map("test_packages")
 }
@@ -284,6 +289,8 @@ model StudentAttempt {
   student     User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   package     TestPackage   @relation(fields: [packageId], references: [id], onDelete: Cascade)
   answers     StudentAnswer[]
+  rewardGranted Boolean @default(false)
+  rewardCoins   Int     @default(0)
 
   @@map("student_attempts")
 }
@@ -308,6 +315,7 @@ model StudentAnswer {
 enum Role {
   STUDENT
   TEACHER
+  ADMIN
 }
 
 enum OtpType {
@@ -396,6 +404,9 @@ enum CoinTransactionType {
   RANK_REWARD
   PURCHASE
   ADMIN_ADJUST
+  GIFT_SENT
+  GIFT_RECEIVED
+  TEST_REWARD
 }
 
 enum OrderStatus {
@@ -403,4 +414,11 @@ enum OrderStatus {
   APPROVED
   REJECTED
   DELIVERED
+}
+model SiteContent {
+  key       String   @id
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("site_content")
 }

@@ -23,10 +23,24 @@ const config: Config = {
         bad: token("bad"),
         warn: token("warn"),
         info: token("info"),
+        // Marka paleti: amber, orta slate-mavi, narıncı, qırmızı-narıncı
+        sun: token("sun"),
+        iris: token("iris"),
+        tiger: token("tiger"),
+        flame: token("flame"),
       },
       boxShadow: {
         soft: "var(--shadow)",
+        hard: "var(--hard)",
+        "hard-lg": "var(--hard-lg)",
       },
+      keyframes: {
+        "slide-in": {
+          "0%": { opacity: "0", transform: "translateY(-6px) scale(.98)" },
+          "100%": { opacity: "1", transform: "none" },
+        },
+      },
+      animation: { "slide-in": "slide-in .18s ease-out both" },
     },
   },
   plugins: [],

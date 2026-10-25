@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireTeacher, serverError } from "@/lib/guards";
+import { rewardData } from "@/lib/rewards";
+
 
 export async function GET() {
   try {
@@ -32,8 +34,8 @@ export async function POST(req: NextRequest) {
     const auth = await requireTeacher();
     if ("response" in auth) return auth.response;
 
-    const { name, description, collectionId, isTimed, duration, startsAt, endsAt, allowRetry } =
-      await req.json();
+    const body = await req.json();
+    const { name, description, collectionId, isTimed, duration, startsAt, endsAt, allowRetry } = body;
 
     if (!name || !collectionId) {
       return NextResponse.json({ error: "Ad və kolleksiya məcburidir" }, { status: 400 });
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
         startsAt: startsAt ? new Date(startsAt) : null,
         endsAt: endsAt ? new Date(endsAt) : null,
         allowRetry: !!allowRetry,
+        ...rewardData(body),
       },
     });
 

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useFetch } from "@/lib/api";
 import { fmtDateTime, percent, timeAgo } from "@/lib/format";
-import { Avatar, CoinPill, Empty, Icon, SkeletonList, StatCard } from "@/components/ui";
+import { useState } from "react";
+import GiftModal from "@/components/GiftModal";
+import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
 
 interface Stats {
   students: number;
@@ -33,6 +35,7 @@ interface Attempt {
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const [gift, setGift] = useState(false);
   const stats = useFetch<Stats>("/api/teacher/stats");
   const reqs = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<{ attempts: Attempt[] }>("/api/teacher/attempts");
@@ -50,25 +53,22 @@ export default function TeacherDashboard() {
 
   return (
     <div className="page space-y-8">
-      <section className="relative overflow-hidden rounded-3xl bg-brand p-6 text-white sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-white/75">Müəllim paneli</p>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Salam, {user?.name} 👋</h1>
-            <p className="mt-1.5 text-white/80">
-              {s && s.pendingRequests > 0 ? `${s.pendingRequests} yeni müraciət sizi gözləyir.` : "Hər şey qaydasındadır."}
-            </p>
-          </div>
-          <CoinPill amount={user?.coinBalance ?? 0} className="!bg-white/20 !px-4 !py-2 !text-base !text-white" />
-        </div>
-      </section>
+      <PageHeader
+        title="Ana səhifə"
+        actions={
+          <button className="btn-primary" onClick={() => setGift(true)}>
+            <Icon name="coin" size={16} /> Coin hədiyyə et
+          </button>
+        }
+      />
+      <GiftModal open={gift} onClose={() => setGift(false)} />
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.loading || !s ? (
-          Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-[84px]" />)
+          Array.from({ length: 7 }).map((_, i) => <div key={i} className="skeleton h-[84px]" />)
         ) : (
           <>
+            <StatCard label="Coin balansım" value={user?.coinBalance ?? 0} icon="coin" tone="warn" href={`/u/${user?.id}?tab=coins`} />
             <StatCard label="Qrup" value={s.groups} icon="users" href="/teacher/groups" />
             <StatCard label="Tələbə" value={s.students} icon="grad" tone="ok" href="/teacher/students" />
             <StatCard label="Dərc olunmuş test" value={s.packages} icon="file" tone="info" href="/teacher/tests" />

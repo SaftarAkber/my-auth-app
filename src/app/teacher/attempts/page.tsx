@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
+import { SubNav, TESTS_NAV } from "@/components/SubNav";
+import GiftModal from "@/components/GiftModal";
 
 interface Answer {
   id: string;
@@ -19,8 +21,13 @@ interface Attempt {
   totalScore: number | null;
   startedAt: string;
   finishedAt: string | null;
+  rewardGranted: boolean;
+  rewardCoins: number;
   student: { id: string; name: string; photo: string | null };
-  package: { id: string; name: string; collection: { name: string } | null; group: { name: string } | null };
+  package: {
+    id: string; name: string; collection: { name: string } | null; group: { name: string } | null;
+    rewardEnabled: boolean; rewardMinCorrect: number | null; rewardCoins: number | null; rewardAuto: boolean;
+  };
   answers: Answer[];
 }
 
@@ -31,6 +38,7 @@ export default function TeacherAttemptsPage() {
   const [pkgId, setPkgId] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [giftFor, setGiftFor] = useState<Attempt | null>(null);
 
   const [grading, setGrading] = useState<Answer | null>(null);
   const [comment, setComment] = useState("");
@@ -38,6 +46,9 @@ export default function TeacherAttemptsPage() {
 
   const all = useMemo(() => data?.attempts ?? [], [data]);
   const needsReview = (a: Attempt) => a.answers.some((x) => x.status === "PENDING");
+  // Coin qaydası ödənib, amma hələ mükafat verilməyib (açıq cavablar yoxlanıbsa)
+  const eligible = (a: Attempt) =>
+    a.package.rewardEnabled && a.package.rewardMinCorrect != null && (a.score ?? 0) >= a.package.rewardMinCorrect && !a.rewardGranted && !needsReview(a);
 
   const packages = useMemo(() => {
     const m = new Map<string, string>();
@@ -70,6 +81,7 @@ export default function TeacherAttemptsPage() {
   return (
     <div className="page">
       <PageHeader title="Nəticələr" subtitle="Tələbələrin tamamladığı testlər və açıq sualların yoxlanması" />
+      <SubNav items={TESTS_NAV} />
 
       <Tabs
         value={tab}
@@ -112,6 +124,8 @@ export default function TeacherAttemptsPage() {
                     <p className="truncate text-xs text-muted">{a.package.name} · {fmtDateTime(a.finishedAt)}</p>
                   </div>
                   {pend > 0 && <span className="badge-warn">{pend} yoxlanmamış</span>}
+                  {a.rewardGranted && <span className="badge-ok"><Icon name="coin" size={12} /> +{a.rewardCoins}</span>}
+                  {eligible(a) && <span className="badge-warn"><Icon name="coin" size={12} /> Mükafat gözləyir</span>}
                   <span className="hidden text-sm text-muted sm:inline">{a.score}/{a.totalScore}</span>
                   <span className={cx("badge", p >= 70 ? "bg-ok/10 text-ok" : p >= 40 ? "bg-warn/10 text-warn" : "bg-bad/10 text-bad")}>{p}%</span>
                   <Icon name="down" className={cx("text-muted transition", isOpen && "rotate-180")} />
@@ -119,6 +133,14 @@ export default function TeacherAttemptsPage() {
 
                 {isOpen && (
                   <div className="space-y-3 border-t border-line bg-surface-2/50 p-4">
+                    {eligible(a) && (
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-[2.5px] border-ink bg-sun/40 p-3.5">
+                        <p className="text-sm font-semibold">
+                          Qayda ödənib: {a.package.rewardMinCorrect}+ düz cavab = {a.package.rewardCoins} coin
+                        </p>
+                        <button className="btn-primary btn-sm" onClick={() => setGiftFor(a)}><Icon name="coin" size={14} /> Coin ver</button>
+                      </div>
+                    )}
                     {a.answers.length === 0 && <p className="text-sm text-muted">Cavab qeyd olunmayıb.</p>}
                     {a.answers.map((r, i) => (
                       <div key={r.id} className="rounded-xl border border-line bg-surface p-4">
@@ -146,6 +168,17 @@ export default function TeacherAttemptsPage() {
           })}
         </div>
       )}
+
+      <GiftModal
+        open={!!giftFor}
+        onClose={() => setGiftFor(null)}
+        onDone={reload}
+        studentId={giftFor?.student.id}
+        studentName={giftFor?.student.name}
+        attemptId={giftFor?.id}
+        defaultAmount={giftFor?.package.rewardCoins ?? 10}
+        defaultReason={giftFor ? `${giftFor.package.name}, ${giftFor.score}/${giftFor.totalScore}` : ""}
+      />
 
       <Modal
         open={!!grading}

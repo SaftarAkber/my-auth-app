@@ -21,6 +21,10 @@ interface Pkg {
   startsAt: string | null;
   endsAt: string | null;
   allowRetry: boolean;
+  rewardEnabled: boolean;
+  rewardMinCorrect: number | null;
+  rewardCoins: number | null;
+  rewardAuto: boolean;
   _count: { questions: number; attempts: number };
   testPackageGroups: { groupId: string; group: { id: string; name: string } }[];
 }
@@ -34,6 +38,7 @@ interface Collection {
 const EMPTY = {
   name: "", description: "", isPublic: false, groupIds: [] as string[],
   isTimed: false, durationMin: "", startsAt: "", endsAt: "", allowRetry: false,
+  rewardEnabled: false, rewardMinCorrect: "", rewardCoins: "", rewardAuto: true,
 };
 
 export default function CollectionPage() {
@@ -62,6 +67,10 @@ export default function CollectionPage() {
             startsAt: toInputDateTime(p.startsAt),
             endsAt: toInputDateTime(p.endsAt),
             allowRetry: p.allowRetry,
+            rewardEnabled: p.rewardEnabled,
+            rewardMinCorrect: p.rewardMinCorrect ? String(p.rewardMinCorrect) : "",
+            rewardCoins: p.rewardCoins ? String(p.rewardCoins) : "",
+            rewardAuto: p.rewardAuto,
           },
     );
   }
@@ -69,6 +78,12 @@ export default function CollectionPage() {
   async function save() {
     if (!form.name.trim()) return toast.error("Test adı məcburidir");
     if (form.isTimed && !(parseInt(form.durationMin) > 0)) return toast.error("Müddəti dəqiqə ilə daxil edin");
+    if (form.rewardEnabled) {
+      if (!(parseInt(form.rewardMinCorrect) >= 1)) return toast.error("Mükafat üçün minimum düz cavab sayını yazın");
+      if (!(parseInt(form.rewardCoins) >= 1)) return toast.error("Mükafat coin sayını yazın");
+      const total = editing && editing !== "new" ? editing._count.questions : 0;
+      if (total > 0 && parseInt(form.rewardMinCorrect) > total) return toast.error(`Testdə cəmi ${total} sual var, minimum düz cavab ondan çox ola bilməz`);
+    }
     setBusy(true);
     try {
       const common = {
@@ -79,6 +94,10 @@ export default function CollectionPage() {
         startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
         endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
         allowRetry: form.allowRetry,
+        rewardEnabled: form.rewardEnabled,
+        rewardMinCorrect: form.rewardEnabled ? parseInt(form.rewardMinCorrect) : null,
+        rewardCoins: form.rewardEnabled ? parseInt(form.rewardCoins) : null,
+        rewardAuto: form.rewardAuto,
       };
       const links = {
         isPublic: form.isPublic,
@@ -167,6 +186,7 @@ export default function CollectionPage() {
                       <span className="badge-muted">{p._count.attempts} cəhd</span>
                       {p.isTimed && p.duration && <span className="badge-muted"><Icon name="clock" size={12} /> {minutes(p.duration)} dəq</span>}
                       {p.allowRetry && <span className="badge-muted"><Icon name="retry" size={12} /> Təkrar</span>}
+                      {p.rewardEnabled && p.rewardCoins && <span className="badge-warn"><Icon name="coin" size={12} /> {p.rewardMinCorrect}+ düz = {p.rewardCoins}</span>}
                       {p.startsAt && <span className="badge-muted"><Icon name="calendar" size={12} /> {fmtDate(p.startsAt)}</span>}
                       {p.testPackageGroups.map((g) => <span key={g.groupId} className="badge-brand">{g.group.name}</span>)}
                     </div>
@@ -227,6 +247,34 @@ export default function CollectionPage() {
             <Field label="Bitmə vaxtı"><input className="input" type="datetime-local" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} /></Field>
           </div>
           <Toggle checked={form.allowRetry} onChange={(v) => setForm({ ...form, allowRetry: v })} label="Təkrar həll icazəsi" hint="Tələbə testi bir neçə dəfə həll edə bilər (coin yalnız ilk dəfə verilir)" />
+
+          <div className="rounded-2xl border-[2.5px] border-ink bg-sun/25 p-4">
+            <Toggle
+              checked={form.rewardEnabled}
+              onChange={(v) => setForm({ ...form, rewardEnabled: v })}
+              label="Coin mükafatı"
+              hint="Şərti ödəyən tələbəyə öz balansınızdan coin göndərilir (istəyə bağlı)"
+            />
+            {form.rewardEnabled && (
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Minimum düz cavab" hint={editing && editing !== "new" ? `Testdə ${editing._count.questions} sual var` : "Məsələn: 30 sualdan 28"}>
+                    <input className="input tabular-nums" type="number" min={1} value={form.rewardMinCorrect} onChange={(e) => setForm({ ...form, rewardMinCorrect: e.target.value })} placeholder="28" />
+                  </Field>
+                  <Field label="Hər tələbəyə (coin)">
+                    <input className="input tabular-nums" type="number" min={1} value={form.rewardCoins} onChange={(e) => setForm({ ...form, rewardCoins: e.target.value })} placeholder="20" />
+                  </Field>
+                </div>
+                <Field label="Necə verilsin">
+                  <select className="input" value={form.rewardAuto ? "auto" : "manual"} onChange={(e) => setForm({ ...form, rewardAuto: e.target.value === "auto" })}>
+                    <option value="auto">Avtomatik, test bitəndə</option>
+                    <option value="manual">Mən təsdiq edim (Nəticələrdən “Coin ver”)</option>
+                  </select>
+                </Field>
+                <p className="text-xs text-muted">Hər tələbə bu testdən bir dəfə mükafat alır. Balansınız çatmasa, mükafat “gözləyir” statusunda qalır və sonra əl ilə verə bilərsiniz.</p>
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
     </div>

@@ -7,7 +7,7 @@ export interface User {
   name: string;
   phone: string | null;
   email: string | null;
-  role: "STUDENT" | "TEACHER";
+  role: "STUDENT" | "TEACHER" | "ADMIN";
   bio: string | null;
   photo: string | null;
   coverPhoto?: string | null;
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const goHome = (role: User["role"]) =>
-    window.location.replace(role === "TEACHER" ? "/teacher" : "/student");
+    window.location.replace(role === "TEACHER" ? "/teacher" : role === "ADMIN" ? "/admin" : "/student");
 
   async function login(identifier: string, password: string) {
     const data = await post("/api/auth/login", { identifier, password });

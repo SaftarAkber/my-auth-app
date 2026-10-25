@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFetch } from "@/lib/api";
 import { fmtDate, percent } from "@/lib/format";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
-import { Avatar, CoinPill, Empty, Icon, SkeletonList, StatCard } from "@/components/ui";
+import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
 
 interface Enrollment {
   id: string;
@@ -60,29 +60,15 @@ export default function StudentHome() {
     if (data) setTaking({ name: a.package.name, data });
   }
 
-  const hour = new Date().getHours();
-  const greeting = hour < 6 ? "Gecəniz xeyir" : hour < 12 ? "Sabahınız xeyir" : hour < 18 ? "Günortanız xeyir" : "Axşamınız xeyir";
-
   return (
     <div className="page space-y-8">
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl bg-brand p-6 text-white sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-white/75">{greeting},</p>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{user?.name} 👋</h1>
-            <p className="mt-1.5 text-white/80">Bu gün nə öyrənirik?</p>
-          </div>
-          <CoinPill amount={user?.coinBalance ?? 0} className="!bg-white/20 !px-4 !py-2 !text-base !text-white" />
-        </div>
-      </section>
+      <PageHeader title="Ana səhifə" />
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Qruplarım" value={groups.length} icon="users" href="/student/teacher" />
-        <StatCard label="Tamamlanan test" value={finished.length} icon="check" tone="ok" href="/student/my-tests" />
-        <StatCard label="Orta nəticə" value={`${avg}%`} icon="chart" tone="info" />
-        <StatCard label="Coin" value={user?.coinBalance ?? 0} icon="coin" tone="warn" href="/student/profil" />
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Coin" value={user?.coinBalance ?? 0} icon="coin" tone="warn" href={`/u/${user?.id}?tab=coins`} />
+        <StatCard label="Qruplarım" value={groups.length} icon="users" tone="ok" href="/student/teacher" />
+        <StatCard label="Tamamlanan test" value={finished.length} icon="check" tone="info" href="/student/my-tests" />
+        <StatCard label="Orta nəticə" value={`${avg}%`} icon="chart" />
       </section>
 
       {taking && (
@@ -161,7 +147,7 @@ export default function StudentHome() {
           ) : (
             <div className="space-y-3">
               {teachers.data!.teachers.map((t) => (
-                <Link key={t.id} href={`/student/teacher/${t.id}`} className="card flex items-center gap-4 p-4 transition hover:border-brand/40">
+                <Link key={t.id} href={`/u/${t.id}`} className="card flex items-center gap-4 p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5">
                   <Avatar src={t.photo} name={t.name} size={52} />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">{t.name}</p>

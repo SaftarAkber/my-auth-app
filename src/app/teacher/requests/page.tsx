@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
+import { STUDENTS_NAV, SubNav } from "@/components/SubNav";
 
 interface Enrollment {
   id: string;
@@ -48,6 +49,7 @@ export default function TeacherRequestsPage() {
   return (
     <div className="page-narrow">
       <PageHeader title="Müraciətlər" subtitle="Qruplara qoşulmaq istəyən tələbələr" />
+      <SubNav items={STUDENTS_NAV} />
 
       <Tabs
         value={tab}

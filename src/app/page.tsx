@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getSiteContent } from "@/lib/site";
+import Landing from "@/components/Landing";
+
+export const dynamic = "force-dynamic";
+
+const HOME = { TEACHER: "/teacher", ADMIN: "/admin", STUDENT: "/student" } as const;
 
 export default async function HomePage() {
   const currentUser = await getCurrentUser();
-  if (!currentUser) redirect("/login");
+  if (currentUser) redirect(HOME[currentUser.role]);
 
-  const user = await prisma.user.findUnique({
-    where: { id: currentUser.id },
-    select: { role: true },
-  });
-
-  if (user?.role === "TEACHER") redirect("/teacher");
-  else redirect("/student");
+  // Giriş etməmişlər üçün ana səhifə: məzmun admin panelindən idarə olunur
+  return <Landing site={await getSiteContent()} />;
 }

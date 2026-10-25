@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { useFetch } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, PageHeader, SkeletonList } from "@/components/ui";
+import { STUDENTS_NAV, SubNav } from "@/components/SubNav";
+import GiftModal from "@/components/GiftModal";
 
 interface Enrollment {
   id: string;
@@ -18,6 +20,7 @@ export default function TeacherStudentsPage() {
   const { data, loading, error, reload } = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const [q, setQ] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [gift, setGift] = useState<{ id: string; name: string } | null>(null);
 
   const accepted = useMemo(() => (data?.enrollments ?? []).filter((e) => e.status === "ACCEPTED"), [data]);
 
@@ -44,6 +47,7 @@ export default function TeacherStudentsPage() {
   return (
     <div className="page">
       <PageHeader title="Tələbələr" subtitle={`${students.length} tələbə`} />
+      <SubNav items={STUDENTS_NAV} />
 
       <div className="mb-5 flex flex-wrap gap-3">
         <div className="relative min-w-60 flex-1 sm:max-w-sm">
@@ -65,20 +69,26 @@ export default function TeacherStudentsPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {students.map(({ student: s, groups: gs, since }) => (
-            <Link key={s.id} href={`/teacher/students/${s.id}`} className="card flex items-center gap-4 p-4 transition hover:border-brand/40">
-              <Avatar src={s.photo} name={s.name} size={52} />
-              <div className="min-w-0 flex-1">
+            <div key={s.id} className="card flex items-center gap-3 p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+              <Link href={`/u/${s.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+                <Avatar src={s.photo} name={s.name} size={52} />
+                <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{s.name}</p>
                 <p className="truncate text-xs text-muted">{s.phone ?? s.email ?? "—"} · {fmtDate(since)}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {gs.map((g) => <span key={g.id} className="badge-brand">{g.name}</span>)}
                 </div>
-              </div>
-              <Icon name="right" className="text-muted" />
-            </Link>
+                </div>
+              </Link>
+              <button className="btn-secondary btn-sm shrink-0" onClick={() => setGift({ id: s.id, name: s.name })} aria-label={`${s.name} adlı tələbəyə coin göndər`}>
+                <Icon name="coin" size={14} /> Coin
+              </button>
+              <Link href={`/teacher/students/${s.id}`} className="btn-icon shrink-0" aria-label="Ətraflı"><Icon name="right" /></Link>
+            </div>
           ))}
         </div>
       )}
+      <GiftModal open={!!gift} onClose={() => setGift(null)} studentId={gift?.id} studentName={gift?.name} />
     </div>
   );
 }

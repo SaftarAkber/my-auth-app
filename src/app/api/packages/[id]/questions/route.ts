@@ -19,6 +19,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (!Array.isArray(options) || options.filter(Boolean).length < 2) {
         return NextResponse.json({ error: "Ən azı 2 variant lazımdır" }, { status: 400 });
       }
+      if (options.length > 5) {
+        return NextResponse.json({ error: "Ən çoxu 5 variant (A–E) ola bilər" }, { status: 400 });
+      }
       if (!correctAnswer || !options.includes(correctAnswer)) {
         return NextResponse.json({ error: "Düzgün cavab variantlar arasından seçilməlidir" }, { status: 400 });
       }
