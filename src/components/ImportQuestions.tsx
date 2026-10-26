@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, errMsg, ApiError } from "@/lib/api";
 import { cx } from "@/lib/format";
 import { Icon, Modal, Spinner, useToast } from "@/components/ui";
@@ -19,10 +19,36 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
+  const [help, setHelp] = useState(false);
+  // 4 saniyədən uzun çəkəndə faiz göstərən yükləmə lövhəsi
+  const [slow, setSlow] = useState(false);
+  const [pct, setPct] = useState(0);
+  const started = useRef(0);
+
+  useEffect(() => {
+    if (!busy) return;
+    started.current = Date.now();
+    const t = setInterval(() => {
+      const el = Date.now() - started.current;
+      if (el >= 4000) setSlow(true);
+      setPct(Math.min(92, Math.round(92 * (1 - Math.exp(-el / 7000)))));
+    }, 150);
+    return () => clearInterval(t);
+  }, [busy]);
 
   function close() {
     setOpen(false);
     setDrafts(null);
+  }
+
+  async function finish(done: () => void) {
+    if (slow) {
+      setPct(100);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    setSlow(false);
+    setPct(0);
+    done();
   }
 
   async function pick(file: File) {
@@ -33,8 +59,17 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
       const res = await fetch(`/api/packages/${packageId}/import`, { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new ApiError(data?.error ?? "Fayl oxunmadı", res.status);
-      setDrafts(data.questions as Draft[]);
+      const list = data.questions as Draft[];
+      if (list.some((d) => d.type === "MULTIPLE_CHOICE" && d.correct < 0)) {
+        // Düzgün cavabı tapılmayan sual var: müəllim seçsin
+        setSlow(false);
+        setDrafts(list);
+        setOpen(true);
+      } else {
+        await store(list, true);
+      }
     } catch (e) {
+      setSlow(false);
       toast.error(errMsg(e));
     } finally {
       setBusy(false);
@@ -45,37 +80,75 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
   const patch = (i: number, p: Partial<Draft>) => setDrafts((d) => d && d.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const missing = (drafts ?? []).filter((d) => d.type === "MULTIPLE_CHOICE" && d.correct < 0).length;
 
-  async function save() {
-    if (!drafts?.length) return;
-    setBusy(true);
+  async function store(list: Draft[], fromPick = false) {
+    if (!list.length) return;
+    if (!fromPick) setBusy(true);
     try {
       await api(`/api/packages/${packageId}/questions/bulk`, {
         body: {
-          questions: drafts.map((d) => ({
+          questions: list.map((d) => ({
             text: d.text, type: d.type,
             options: d.type === "MULTIPLE_CHOICE" ? d.options : undefined,
             correctAnswer: d.type === "MULTIPLE_CHOICE" ? d.options[d.correct] : null,
           })),
         },
       });
-      toast.success(`${drafts.length} sual əlavə olundu`);
-      close();
-      onDone();
+      await finish(() => {
+        toast.success(`${list.length} sual əlavə olundu`);
+        close();
+        onDone();
+      });
     } catch (e) {
+      setSlow(false);
       toast.error(errMsg(e));
     } finally {
-      setBusy(false);
+      if (!fromPick) setBusy(false);
     }
   }
 
+  const save = () => drafts && store(drafts);
+
   return (
     <>
-      <button className="btn-secondary" onClick={() => setOpen(true)}><Icon name="upload" size={16} /> Fayldan yüklə</button>
+      <button className="btn-secondary" disabled={busy} onClick={() => input.current?.click()}>
+        <Icon name="upload" size={16} /> Faylınızı əlavə edin
+      </button>
+      <button type="button" className="btn-icon" aria-label="Fayl formatı" title="Fayl formatı" onClick={() => setHelp(true)}>?</button>
+      <input ref={input} type="file" hidden accept=".pdf,.docx,.txt,application/pdf" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+
+      {slow && (
+        <div className="fixed inset-0 z-[300] grid place-items-center bg-ink/60 px-6" role="status" aria-live="polite">
+          <div className="w-full max-w-md rounded-3xl border-[3px] border-ink bg-white p-7 shadow-hard">
+            <p className="text-xl font-extrabold">Test paketiniz yaradılır…</p>
+            <p className="mt-1 text-sm text-muted">Fayl oxunur və suallar hazırlanır, bir az gözləyin.</p>
+            <div className="mt-5 h-5 overflow-hidden rounded-full border-[2.5px] border-ink bg-surface-2">
+              <div className="h-full bg-sun transition-[width] duration-200 ease-out" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="mt-2 text-right text-sm font-extrabold tabular-nums">{pct}%</p>
+          </div>
+        </div>
+      )}
+
+      <Modal open={help} onClose={() => setHelp(false)} title="Fayl formatı">
+        <div className="text-sm">
+          <pre className="whitespace-pre-wrap font-sans text-muted">{`1. Sual mətni
+A) birinci variant
+B) ikinci variant
+C) üçüncü variant
+Cavab: B
+
+2. Növbəti sual ...`}</pre>
+          <p className="mt-3 text-xs text-muted">
+            PDF, DOCX və ya TXT (maksimum 4 MB). Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur.
+          </p>
+        </div>
+      </Modal>
+
       <Modal
         open={open}
         onClose={close}
         size="xl"
-        title="Fayldan sual yüklə"
+        title="Düzgün cavabları seçin"
         footer={drafts ? (
           <>
             <button className="btn-secondary" onClick={() => setDrafts(null)}>Başqa fayl</button>
@@ -85,34 +158,7 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
           </>
         ) : undefined}
       >
-        {!drafts ? (
-          <div className="space-y-4">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => input.current?.click()}
-              className="flex w-full flex-col items-center gap-2 rounded-2xl border-[2.5px] border-dashed border-ink bg-surface-2 px-6 py-10 text-center transition hover:bg-sun/25"
-            >
-              {busy ? <Spinner /> : <Icon name="upload" size={28} />}
-              <span className="font-bold">{busy ? "Fayl oxunur…" : "PDF, DOCX və ya TXT faylı seçin"}</span>
-              <span className="text-xs text-muted">Maksimum 4 MB</span>
-            </button>
-            <input ref={input} type="file" hidden accept=".pdf,.docx,.txt,application/pdf" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
-            <div className="rounded-xl border-2 border-ink/20 bg-white p-4 text-sm">
-              <p className="mb-2 font-bold">Fayl belə hazırlanmalıdır:</p>
-              <pre className="whitespace-pre-wrap font-sans text-muted">{`1. Sual mətni
-A) birinci variant
-B) ikinci variant
-C) üçüncü variant
-Cavab: B
-
-2. Növbəti sual ...`}</pre>
-              <p className="mt-2 text-xs text-muted">
-                Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur. Əlavə etməzdən əvvəl hamısını yoxlaya və düzəldə bilərsiniz.
-              </p>
-            </div>
-          </div>
-        ) : (
+        {drafts && (
           <div className="space-y-3">
             {missing > 0 && (
               <p className="flex items-center gap-2 rounded-xl border-2 border-ink bg-sun/40 px-3 py-2 text-sm font-semibold">
