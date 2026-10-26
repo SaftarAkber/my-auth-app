@@ -108,7 +108,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         student: { select: { id: true, name: true, photo: true } },
         package: {
           select: {
-            id: true, name: true, isTimed: true, duration: true, shareAnswers: true,
+            id: true, name: true, isTimed: true, duration: true, shareAnswers: true, allowRetry: true,
             group: { select: { id: true, name: true, teacherId: true } },
           },
         },
@@ -149,7 +149,19 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       });
     }
 
-    return NextResponse.json(attempt);
+    // Təkrar həllə icazə verilməyən testdə bitmiş nəticədə bütün suallar ardıcıl göstərilir (cavabsızlar da).
+    // Təkrar olanlarda yalnız cavab verilmiş suallar (düzgün/səhv) qalır.
+    const activeQuestions = await prisma.question.findMany({
+      where: { packageId: attempt.package.id, isActive: true },
+      orderBy: { order: "asc" },
+      select: { id: true, text: true, type: true, options: true, correctAnswer: true, order: true },
+    });
+    const numbers: Record<string, number> = Object.fromEntries(activeQuestions.map((q, i) => [q.id, i + 1]));
+    const answered = new Set(attempt.answers.map((a) => a.question.id));
+    const blanks =
+      attempt.finishedAt && !attempt.package.allowRetry ? activeQuestions.filter((q) => !answered.has(q.id)) : [];
+
+    return NextResponse.json({ ...attempt, numbers, blanks });
   } catch (error) {
     return serverError(error);
   }

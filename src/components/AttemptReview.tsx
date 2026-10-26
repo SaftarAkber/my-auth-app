@@ -15,6 +15,8 @@ interface ReviewAttempt {
   rewardCoins: number;
   student: { id: string; name: string; photo: string | null };
   package: { id: string; name: string; group: { id: string; name: string } | null };
+  numbers?: Record<string, number>;
+  blanks?: { id: string; text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; order: number }[];
   answers: {
     id: string;
     answer: string;
@@ -34,6 +36,13 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
 
   const pct = percent(a.score, a.totalScore);
   const pending = a.answers.filter((x) => x.status === "PENDING").length;
+  // Cavabsız suallar (yalnız təkrarsız testlərdə gəlir) cavablarla birlikdə sual sırasına düzülür
+  const rows = [
+    ...a.answers.map((r) => ({ ...r, blank: false })),
+    ...(a.blanks ?? []).map((q) => ({
+      id: `blank-${q.id}`, answer: "", isCorrect: false, status: "APPROVED" as const, teacherComment: null, question: q, blank: true,
+    })),
+  ].sort((x, y) => x.question.order - y.question.order);
 
   return (
     <div className="page-narrow">
@@ -63,9 +72,9 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
       </section>
 
       <div className="space-y-4">
-        {a.answers.map((r, i) => {
+        {rows.map((r, i) => {
           const q = r.question;
-          const state = r.status === "PENDING" ? "pending" : r.isCorrect ? "ok" : "bad";
+          const state = r.blank ? "blank" : r.status === "PENDING" ? "pending" : r.isCorrect ? "ok" : "bad";
           return (
             <article
               key={r.id}
@@ -74,13 +83,15 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
                 state === "ok" && "border-l-ok",
                 state === "bad" && "border-l-bad",
                 state === "pending" && "border-l-warn",
+                state === "blank" && "border-l-ink/30",
               )}
             >
               <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-xs font-bold uppercase tracking-wide text-muted">Sual {i + 1}</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-muted">Sual {a.numbers?.[q.id] ?? i + 1}</span>
                 {state === "ok" && <span className="badge-ok"><Icon name="check" size={12} /> Düzgün</span>}
                 {state === "bad" && <span className="badge-bad"><Icon name="x" size={12} /> Yanlış</span>}
                 {state === "pending" && <span className="badge-warn"><Icon name="clock" size={12} /> Yoxlanılır</span>}
+                {state === "blank" && <span className="badge-muted">Cavab verilməyib</span>}
               </div>
               <p className="whitespace-pre-wrap font-semibold">{q.text}</p>
 
@@ -109,7 +120,7 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
               ) : (
                 <div className="mt-3 rounded-xl bg-surface-2 p-3.5 text-sm">
                   <p className="mb-1 text-xs font-semibold uppercase text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</p>
-                  <p className="whitespace-pre-wrap">{r.answer}</p>
+                  <p className="whitespace-pre-wrap">{r.blank ? "Cavab verilməyib" : r.answer}</p>
                 </div>
               )}
 
@@ -122,7 +133,7 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
             </article>
           );
         })}
-        {a.answers.length === 0 && <p className="text-center text-muted">Cavab qeyd olunmayıb.</p>}
+        {rows.length === 0 && <p className="text-center text-muted">Cavab qeyd olunmayıb.</p>}
       </div>
     </div>
   );
