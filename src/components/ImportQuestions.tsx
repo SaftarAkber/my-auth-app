@@ -12,7 +12,27 @@ interface Draft {
   correct: number;
 }
 
-/** PDF / DOCX / TXT faylından sualları avtomatik yaradır: əvvəl önbaxış, təsdiqdən sonra yazılır. */
+const MAX_IMAGES = 10;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** Şəkli brauzerdə kiçildir (uzun tərəf 1800px, JPEG): həm sürətli yüklənir, həm server limitinə sığır. */
+async function shrink(file: File): Promise<File> {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("Şəkil işlənmədi");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.85));
+  if (!blob) throw new Error("Şəkil işlənmədi");
+  return new File([blob], "page.jpg", { type: "image/jpeg" });
+}
+
+/** Fayldan (PDF / DOCX / TXT) və ya şəkillərdən sualları yaradır. Fayl: avtomatik; şəkil: əvvəlcə önbaxış. */
 export default function ImportQuestions({ packageId, onDone }: { packageId: string; onDone: () => void }) {
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -24,6 +44,8 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
   const [slow, setSlow] = useState(false);
   const [pct, setPct] = useState(0);
   const started = useRef(0);
+  const imgProg = useRef<number | null>(null);
+  const [imgInfo, setImgInfo] = useState("");
 
   useEffect(() => {
     if (!busy) return;
@@ -31,7 +53,7 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
     const t = setInterval(() => {
       const el = Date.now() - started.current;
       if (el >= 4000) setSlow(true);
-      setPct(Math.min(92, Math.round(92 * (1 - Math.exp(-el / 7000)))));
+      setPct(imgProg.current !== null ? Math.round(3 + imgProg.current * 92) : Math.min(92, Math.round(92 * (1 - Math.exp(-el / 7000)))));
     }, 150);
     return () => clearInterval(t);
   }, [busy]);
@@ -77,6 +99,53 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
     }
   }
 
+  async function pickImages(files: File[]) {
+    if (files.length > MAX_IMAGES) return toast.error(`Ən çoxu ${MAX_IMAGES} şəkil seçə bilərsiniz`);
+    if (files.some((f) => f.size > MAX_IMAGE_BYTES)) return toast.error("Hər şəkil ən çoxu 5 MB ola bilər");
+    setBusy(true);
+    setSlow(true);
+    imgProg.current = 0;
+    const all: Draft[] = [];
+    try {
+      for (const [i, file] of files.entries()) {
+        setImgInfo(`Şəkil ${i + 1} / ${files.length} oxunur`);
+        imgProg.current = i / files.length;
+        try {
+          const fd = new FormData();
+          fd.append("file", await shrink(file));
+          const res = await fetch(`/api/packages/${packageId}/import-image`, { method: "POST", body: fd });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new ApiError(data?.error ?? "Şəkil oxunmadı", res.status);
+          all.push(...(data.questions as Draft[]));
+        } catch (e) {
+          toast.error(`${i + 1}-ci şəkil: ${errMsg(e)}`);
+          if (e instanceof ApiError && e.status === 503) break;
+        }
+      }
+      imgProg.current = 1;
+      if (all.length) {
+        setPct(100);
+        await new Promise((r) => setTimeout(r, 400));
+        setDrafts(all);
+        setOpen(true);
+      }
+    } finally {
+      imgProg.current = null;
+      setImgInfo("");
+      setSlow(false);
+      setPct(0);
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  function onFiles(list: FileList | null) {
+    const files = Array.from(list ?? []);
+    if (files.length === 0) return;
+    if (files.every((f) => f.type.startsWith("image/"))) void pickImages(files);
+    else void pick(files.find((f) => !f.type.startsWith("image/")) ?? files[0]);
+  }
+
   const patch = (i: number, p: Partial<Draft>) => setDrafts((d) => d && d.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const missing = (drafts ?? []).filter((d) => d.type === "MULTIPLE_CHOICE" && d.correct < 0).length;
 
@@ -114,13 +183,13 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
         <Icon name="upload" size={16} /> Faylınızı əlavə edin
       </button>
       <button type="button" className="btn-icon" aria-label="Fayl formatı" title="Fayl formatı" onClick={() => setHelp(true)}>?</button>
-      <input ref={input} type="file" hidden accept=".pdf,.docx,.txt,application/pdf" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+      <input ref={input} type="file" hidden multiple accept=".pdf,.docx,.txt,application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => onFiles(e.target.files)} />
 
       {slow && (
         <div className="fixed inset-0 z-[300] grid place-items-center bg-ink/60 px-6" role="status" aria-live="polite">
           <div className="w-full max-w-md rounded-3xl border-[3px] border-ink bg-white p-7 shadow-hard">
             <p className="text-xl font-extrabold">Test paketiniz yaradılır…</p>
-            <p className="mt-1 text-sm text-muted">Fayl oxunur və suallar hazırlanır, bir az gözləyin.</p>
+            <p className="mt-1 text-sm text-muted">{imgInfo || "Fayl oxunur və suallar hazırlanır, bir az gözləyin."}</p>
             <div className="mt-5 h-5 overflow-hidden rounded-full border-[2.5px] border-ink bg-surface-2">
               <div className="h-full bg-sun transition-[width] duration-200 ease-out" style={{ width: `${pct}%` }} />
             </div>
@@ -139,7 +208,7 @@ Cavab: B
 
 2. Növbəti sual ...`}</pre>
           <p className="mt-3 text-xs text-muted">
-            PDF, DOCX və ya TXT (maksimum 4 MB). Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur.
+            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur.
           </p>
         </div>
       </Modal>
@@ -148,7 +217,7 @@ Cavab: B
         open={open}
         onClose={close}
         size="xl"
-        title="Düzgün cavabları seçin"
+        title="Sualları yoxlayın"
         footer={drafts ? (
           <>
             <button className="btn-secondary" onClick={() => setDrafts(null)}>Başqa fayl</button>
