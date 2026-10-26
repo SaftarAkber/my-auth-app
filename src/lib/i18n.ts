@@ -16,6 +16,7 @@ const DICT = {
   videos: { AZ: "Videolar", RU: "Видео", EN: "Videos" },
   students: { AZ: "Tələbələr", RU: "Студенты", EN: "Students" },
   shop: { AZ: "Mağaza", RU: "Магазин", EN: "Shop" },
+  dashboard: { AZ: "Dashboard", RU: "Панель", EN: "Dashboard" },
   users: { AZ: "İstifadəçilər", RU: "Пользователи", EN: "Users" },
   content: { AZ: "Məzmun", RU: "Контент", EN: "Content" },
   site: { AZ: "Sayt", RU: "Сайт", EN: "Site" },

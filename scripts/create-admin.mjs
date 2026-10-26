@@ -72,7 +72,7 @@ try {
     });
     console.log(`"${username}" admin hesabı yaradıldı.`);
   }
-  console.log("Giriş: /login səhifəsində istifadəçi adı və parolla daxil olun.");
+  console.log("Giriş: saytda /admin (və ya /dashboard) ünvanında istifadəçi adı və parolla daxil olun.");
 } finally {
   await prisma.$disconnect();
 }

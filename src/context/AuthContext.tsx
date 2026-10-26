@@ -87,9 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
+    const wasAdmin = user?.role === "ADMIN";
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
-    window.location.replace("/login");
+    window.location.replace(wasAdmin ? "/admin" : "/login");
   }
 
   return (

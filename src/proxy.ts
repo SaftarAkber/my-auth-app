@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const AUTH_COOKIE = "auth_token";
 const AUTH_PAGES = ["/login", "/register", "/forgot-password"];
-const PROTECTED_PREFIXES = ["/student", "/teacher", "/admin", "/u", "/dashboard"];
+const PROTECTED_PREFIXES = ["/student", "/teacher", "/u"];
 
 // Yalnız cookie-nin varlığına baxır (token yoxlaması və rol yoxlaması API və layout-lardadır).
 // Məqsəd: girişsiz istifadəçini dərhal /login-ə yönləndirmək, girişli istifadəçini auth səhifələrindən uzaqlaşdırmaq.
@@ -28,5 +28,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/register", "/forgot-password", "/dashboard/:path*", "/student/:path*", "/teacher/:path*", "/admin/:path*", "/u/:path*"],
+  matcher: ["/login", "/register", "/forgot-password", "/student/:path*", "/teacher/:path*", "/u/:path*"],
 };

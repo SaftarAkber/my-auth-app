@@ -1,214 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { api, errMsg, useFetch } from "@/lib/api";
+import { useFetch } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
-import { useAuth } from "@/context/AuthContext";
-import { Avatar, Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast } from "@/components/ui";
+import { Avatar, ErrorBox, Icon, PageHeader, SkeletonList, StatCard, type IconName } from "@/components/ui";
 
-interface Row {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  role: "STUDENT" | "TEACHER" | "ADMIN";
-  bio: string | null;
-  photo: string | null;
-  coinBalance: number;
-  createdAt: string;
-  _count: { groups: number; groupMembers: number; attempts: number };
-}
-interface Res {
-  users: Row[];
-  totals: { all: number; teachers: number; students: number; admins: number };
+interface Stats {
+  users: { total: number; teachers: number; students: number; admins: number };
+  content: { groups: number; activeGroups: number; tests: number; publishedTests: number; videos: number; posts: number };
+  pendingRequests: number;
+  attempts: number;
+  coinsInCirculation: number;
+  recentUsers: { id: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; createdAt: string; photo: string | null }[];
+  signups: { date: string; count: number }[];
 }
 
-const ROLE = {
-  STUDENT: { label: "Tələbə", cls: "badge-warn" },
-  TEACHER: { label: "Müəllim", cls: "badge-brand" },
-  ADMIN: { label: "Admin", cls: "badge-bad" },
-} as const;
+const ROLE = { STUDENT: ["badge-warn", "Tələbə"], TEACHER: ["badge-brand", "Müəllim"], ADMIN: ["badge-bad", "Admin"] } as const;
 
-export default function AdminUsersPage() {
-  const { user: me } = useAuth();
-  const toast = useToast();
-  const confirm = useConfirm();
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [role, setRole] = useState("");
-  const [editing, setEditing] = useState<Row | null>(null);
+export default function AdminDashboardPage() {
+  const { data, loading, error, reload } = useFetch<Stats>("/api/admin/stats");
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(q.trim()), 250);
-    return () => clearTimeout(t);
-  }, [q]);
+  const links: { href: string; icon: IconName; title: string; text: string }[] = [
+    { href: "/admin/users", icon: "users", title: "İstifadəçilər", text: "Hesabları axtar, düzəlt, sil" },
+    { href: "/admin/content", icon: "file", title: "Məzmun", text: "Qrup, test, video, paylaşım" },
+    { href: "/admin/site", icon: "globe", title: "Sayt", text: "Ana səhifənin məzmunu" },
+  ];
 
-  const { data, loading, error, reload } = useFetch<Res>(
-    `/api/admin/users?q=${encodeURIComponent(debounced)}${role ? `&role=${role}` : ""}`,
-  );
-
-  async function remove(u: Row) {
-    const ok = await confirm({
-      title: `${u.name} silinsin?`,
-      message: "Hesab və ona aid qruplar, testlər, videolar, nəticələr və paylaşımlar da silinəcək. Bunu geri qaytarmaq olmur.",
-      confirmText: "Sil",
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await api(`/api/admin/users/${u.id}`, { method: "DELETE" });
-      toast.success("Hesab silindi");
-      reload();
-    } catch (e) {
-      toast.error(errMsg(e));
-    }
-  }
-
-  const t = data?.totals;
+  const max = Math.max(1, ...(data?.signups ?? []).map((s) => s.count));
 
   return (
     <div className="page">
-      <PageHeader title="İstifadəçilər" subtitle="Qeydiyyatdan keçən hər kəs" />
-
-      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { l: "Cəmi hesab", v: t?.all, c: "bg-sun" },
-          { l: "Müəllim", v: t?.teachers, c: "bg-iris" },
-          { l: "Tələbə", v: t?.students, c: "bg-tiger" },
-          { l: "Admin", v: t?.admins, c: "bg-flame/70" },
-        ].map((k) => (
-          <div key={k.l} className={`card ${k.c} p-4`}>
-            <p className="text-sm font-semibold">{k.l}</p>
-            <p className="mt-1 text-4xl font-extrabold tabular-nums">{k.v ?? "—"}</p>
-          </div>
-        ))}
-      </section>
-
-      <div className="mb-5 flex flex-wrap gap-3">
-        <div className="relative min-w-60 flex-1 sm:max-w-sm">
-          <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
-          <input className="input pl-10" placeholder="Ad, email və ya telefon" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        <select className="input !w-auto" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Rol">
-          <option value="">Bütün rollar</option>
-          <option value="TEACHER">Müəllim</option>
-          <option value="STUDENT">Tələbə</option>
-          <option value="ADMIN">Admin</option>
-        </select>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Platformanın ümumi vəziyyəti" />
 
       {loading && !data ? (
-        <SkeletonList rows={5} className="h-16" />
-      ) : error ? (
-        <ErrorBox message={error} onRetry={reload} />
-      ) : (data?.users ?? []).length === 0 ? (
-        <Empty icon="users" title="İstifadəçi tapılmadı" />
+        <SkeletonList rows={3} className="h-28" />
+      ) : error || !data ? (
+        <ErrorBox message={error ?? "Yüklənmədi"} onRetry={reload} />
       ) : (
-        <div className="card max-w-[1400px] overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-[2.5px] border-ink bg-surface-2 text-left">
-                <th className="px-4 py-3 font-semibold">Ad</th>
-                <th className="px-4 py-3 font-semibold">Rol</th>
-                <th className="px-4 py-3 font-semibold">Əlaqə</th>
-                <th className="px-4 py-3 text-right font-semibold">Coin</th>
-                <th className="px-4 py-3 font-semibold">Qeydiyyat</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {data!.users.map((u) => (
-                <tr key={u.id} className="border-b border-line transition last:border-0 hover:bg-sun/20">
-                  <td className="px-4 py-2.5">
-                    <Link href={`/u/${u.id}`} className="flex items-center gap-3 font-semibold hover:underline">
-                      <Avatar src={u.photo} name={u.name} size={34} className="border-2 border-ink" />
-                      {u.name}
+        <div className="space-y-8">
+          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Cəmi hesab" value={data.users.total} icon="users" href="/admin/users" />
+            <StatCard label="Müəllim" value={data.users.teachers} icon="grad" tone="ok" href="/admin/users" />
+            <StatCard label="Tələbə" value={data.users.students} icon="user" tone="warn" href="/admin/users" />
+            <StatCard label="Gözləyən müraciət" value={data.pendingRequests} icon="inbox" tone="bad" href="/admin/content" />
+            <StatCard label="Qrup" value={`${data.content.activeGroups}/${data.content.groups}`} icon="users" tone="info" href="/admin/content" />
+            <StatCard label="Dərc olunmuş test" value={`${data.content.publishedTests}/${data.content.tests}`} icon="file" href="/admin/content" />
+            <StatCard label="Video" value={data.content.videos} icon="video" tone="ok" href="/admin/content" />
+            <StatCard label="Tamamlanan cəhd" value={data.attempts} icon="chart" tone="warn" />
+          </section>
+
+          <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+            <section className="card p-5">
+              <div className="mb-4 flex items-baseline justify-between gap-3">
+                <h2 className="text-lg font-bold">Son 14 gündə qeydiyyat</h2>
+                <span className="text-sm text-muted">cəmi {data.signups.reduce((s, d) => s + d.count, 0)}</span>
+              </div>
+              <div className="flex h-44 items-end gap-1.5" role="img" aria-label="Gündəlik qeydiyyat sütun diaqramı">
+                {data.signups.map((d, i) => (
+                  <div key={d.date} className="group flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${d.count}`}>
+                    <span className="text-xs font-bold tabular-nums">{d.count || ""}</span>
+                    <div
+                      className={`w-full rounded-t-lg border-[2.5px] border-ink transition ${i === data.signups.length - 1 ? "bg-sun" : "bg-iris"} group-hover:bg-sun`}
+                      style={{ height: `${Math.max(d.count ? 8 : 3, (d.count / max) * 100)}%` }}
+                    />
+                    <span className="text-[10px] text-muted">{d.date.slice(8)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-sm text-muted">
+                Dövriyyədəki coin: <b className="tabular-nums text-ink">{data.coinsInCirculation.toLocaleString("az-AZ")}</b>
+                {" · "}Paylaşım: <b className="tabular-nums text-ink">{data.content.posts}</b>
+              </p>
+            </section>
+
+            <section className="card overflow-hidden">
+              <div className="flex items-center justify-between border-b-[2.5px] border-ink px-5 py-3.5">
+                <h2 className="text-lg font-bold">Son hesablar</h2>
+                <Link href="/admin/users" className="text-sm font-semibold text-brand hover:underline">Hamısı →</Link>
+              </div>
+              <ul className="divide-y divide-line">
+                {data.recentUsers.map((u) => (
+                  <li key={u.id}>
+                    <Link href={`/u/${u.id}`} className="row-link">
+                      <Avatar src={u.photo} name={u.name} size={36} />
+                      <span className="min-w-0 flex-1 truncate font-semibold">{u.name}</span>
+                      <span className={ROLE[u.role][0]}>{ROLE[u.role][1]}</span>
+                      <span className="hidden text-xs text-muted sm:inline">{fmtDate(u.createdAt)}</span>
                     </Link>
-                  </td>
-                  <td className="px-4 py-2.5"><span className={ROLE[u.role].cls}>{ROLE[u.role].label}</span></td>
-                  <td className="px-4 py-2.5 text-muted">{u.email ?? u.phone ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{u.role === "ADMIN" ? "—" : u.coinBalance}</td>
-                  <td className="px-4 py-2.5 text-muted">{fmtDate(u.createdAt)}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    <button className="btn-icon" onClick={() => setEditing(u)} aria-label="Redaktə et"><Icon name="edit" size={16} /></button>
-                    {u.id !== me?.id && (
-                      <button className="btn-icon hover:!bg-flame hover:!text-white" onClick={() => remove(u)} aria-label="Sil"><Icon name="trash" size={16} /></button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <section className="grid gap-4 sm:grid-cols-3">
+            {links.map((l) => (
+              <Link key={l.href} href={l.href} className="card flex items-center gap-4 p-5 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-[2.5px] border-ink bg-sun"><Icon name={l.icon} size={20} /></span>
+                <span>
+                  <span className="block font-bold">{l.title}</span>
+                  <span className="block text-sm text-muted">{l.text}</span>
+                </span>
+              </Link>
+            ))}
+          </section>
         </div>
       )}
-
-      {editing && <EditUser key={editing.id} user={editing} self={editing.id === me?.id} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
     </div>
-  );
-}
-
-function EditUser({ user, self, onClose, onSaved }: { user: Row; self: boolean; onClose: () => void; onSaved: () => void }) {
-  const toast = useToast();
-  const [f, setF] = useState({
-    name: user.name, phone: user.phone ?? "", email: user.email ?? "", bio: user.bio ?? "",
-    role: user.role as string, coinBalance: String(user.coinBalance),
-  });
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    setBusy(true);
-    try {
-      await api(`/api/admin/users/${user.id}`, {
-        method: "PATCH",
-        body: {
-          name: f.name, phone: f.phone, email: f.email, bio: f.bio, role: f.role,
-          ...(user.role !== "ADMIN" ? { coinBalance: Number(f.coinBalance) } : {}),
-        },
-      });
-      toast.success("Yeniləndi");
-      onSaved();
-    } catch (e) {
-      toast.error(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="İstifadəçini redaktə et"
-      footer={
-        <>
-          <button className="btn-secondary" onClick={onClose}>Ləğv et</button>
-          <button className="btn-primary" onClick={save} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
-        </>
-      }
-    >
-      <div className="grid gap-4">
-        <Field label="Ad"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Telefon" hint="+994XXXXXXXXX"><input className="input" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
-          <Field label="Email"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
-        </div>
-        <Field label="Haqqında"><textarea className="input min-h-20" value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} /></Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Rol">
-            <select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} disabled={self}>
-              <option value="STUDENT">Tələbə</option>
-              <option value="TEACHER">Müəllim</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          </Field>
-          {user.role !== "ADMIN" && (
-            <Field label="Coin balansı" hint="Dəyişiklik “Admin düzəlişi” kimi qeyd olunur">
-              <input className="input tabular-nums" type="number" min={0} value={f.coinBalance} onChange={(e) => setF({ ...f, coinBalance: e.target.value })} />
-            </Field>
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 }

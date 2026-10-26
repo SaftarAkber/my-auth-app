@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Köhnə /dashboard ünvanı — rola uyğun səhifəyə yönləndirir
+// /dashboard admin panelin ikinci ünvanıdır
 export default function DashboardPage() {
-  redirect("/");
+  redirect("/admin");
 }

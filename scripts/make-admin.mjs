@@ -23,7 +23,7 @@ try {
     process.exit(1);
   }
   await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
-  console.log(`${user.name} (${user.role} → ADMIN). Çıxıb yenidən daxil olun, /admin açılacaq.`);
+  console.log(`${user.name} (${user.role} → ADMIN). Admin yalnız /admin (və ya /dashboard) ünvanından daxil olur. Bu hesabın email/telefon parolu ilə.`);
 } finally {
   await prisma.$disconnect();
 }

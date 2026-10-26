@@ -17,6 +17,7 @@ interface NavItem {
   icon: IconName;
   match: string[];
   dot?: "requests";
+  exact?: boolean;
 }
 
 const NAV: Record<"STUDENT" | "TEACHER" | "ADMIN", NavItem[]> = {
@@ -34,7 +35,8 @@ const NAV: Record<"STUDENT" | "TEACHER" | "ADMIN", NavItem[]> = {
     { href: "/teacher/market", key: "shop", icon: "bag", match: ["/teacher/market"] },
   ],
   ADMIN: [
-    { href: "/admin", key: "users", icon: "users", match: ["/admin/users", "/admin"] },
+    { href: "/admin", key: "dashboard", icon: "chart", match: ["/admin"], exact: true },
+    { href: "/admin/users", key: "users", icon: "users", match: ["/admin/users"] },
     { href: "/admin/content", key: "content", icon: "file", match: ["/admin/content"] },
     { href: "/admin/site", key: "site", icon: "globe", match: ["/admin/site"] },
   ],
@@ -276,7 +278,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
 
   const items = NAV[user.role];
   const isActive = (i: NavItem) =>
-    i.match.some((m) => (m === "/admin" ? pathname === "/admin" : pathname === m || pathname.startsWith(m + "/")));
+    i.match.some((m) => (i.exact ? pathname === m : pathname === m || pathname.startsWith(m + "/")));
   const onProfile = pathname === `/u/${user.id}`;
   const showCoin = user.role !== "ADMIN";
 

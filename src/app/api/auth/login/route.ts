@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
     });
 
     const valid = user ? await bcrypt.compare(password, user.password) : false;
-    if (!user || !valid) {
+    // Admin yalnız /admin (və ya /dashboard) giriş formu ilə daxil ola bilər
+    if (!user || !valid || user.role === "ADMIN") {
       return NextResponse.json(
         { error: "İstifadəçi tapılmadı və ya şifrə yanlışdır" },
         { status: 401 },
