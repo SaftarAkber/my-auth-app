@@ -193,6 +193,7 @@ export default function CollectionPage() {
                   </div>
                   <div className="flex w-full items-center gap-1 sm:w-auto">
                     <Link href={`/teacher/tests/${id}/${p.id}`} className="btn-secondary btn-sm">Suallar</Link>
+                    <Link href={`/teacher/results/${p.id}`} className="btn-soft btn-sm">Nəticələr</Link>
                     <button className={p.isPublished ? "btn-ghost btn-sm" : "btn-primary btn-sm"} onClick={() => togglePublish(p)}>
                       {p.isPublished ? "Dərcdən çıxar" : "Dərc et"}
                     </button>

@@ -31,19 +31,12 @@ interface Teacher {
   photo: string | null;
   _count: { groups: number };
 }
-interface Entry {
-  rank: number;
-  student: { id: string; name: string; photo: string | null };
-  coins: number;
-  isMe: boolean;
-}
 
 export default function StudentHome() {
   const { user } = useAuth();
   const enrollments = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<Attempt[]>("/api/attempts");
   const teachers = useFetch<{ teachers: Teacher[] }>("/api/teacher/public");
-  const board = useFetch<{ entries: Entry[] }>("/api/leaderboard");
 
   const { start, starting } = useStartTest();
   const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
@@ -139,7 +132,7 @@ export default function StudentHome() {
         )}
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+      <div>
         <section>
           <h2 className="mb-3 text-lg font-bold">Müəllimlər</h2>
           {teachers.loading ? (
@@ -165,25 +158,6 @@ export default function StudentHome() {
           )}
         </section>
 
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Liderlər</h2>
-          <div className="card divide-y divide-line">
-            {board.loading ? (
-              <div className="p-4"><SkeletonList rows={4} className="h-10" /></div>
-            ) : (board.data?.entries ?? []).length === 0 ? (
-              <p className="p-6 text-center text-sm text-muted">Hələ reytinq yoxdur.</p>
-            ) : (
-              board.data!.entries.slice(0, 5).map((e) => (
-                <div key={e.student.id} className={`flex items-center gap-3 px-4 py-3 ${e.isMe ? "bg-brand/5" : ""}`}>
-                  <span className={`w-6 text-center text-sm font-extrabold ${e.rank <= 3 ? "text-warn" : "text-muted"}`}>{e.rank}</span>
-                  <Avatar src={e.student.photo} name={e.student.name} size={32} />
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{e.student.name}{e.isMe && " (siz)"}</span>
-                  <span className="inline-flex items-center gap-1 text-sm font-bold text-warn"><Icon name="coin" size={14} />{e.coins}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );

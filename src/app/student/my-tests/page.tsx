@@ -114,6 +114,7 @@ export default function MyTestsPage() {
                   {a.finishedAt ? (
                     <>
                       <Link href={`/student/attempts/${a.id}`} className="btn-secondary btn-sm">Cavablara bax</Link>
+                      <Link href={`/student/results/${a.package.id}`} className="btn-soft btn-sm"><Icon name="chart" size={14} /> Cədvəl</Link>
                       {a.package.allowRetry && isLatest && (
                         <button className="btn-soft btn-sm" onClick={() => begin(a)} disabled={starting === a.package.id}>
                           {starting === a.package.id ? <Spinner /> : <Icon name="retry" size={14} />} Təkrar
