@@ -154,9 +154,11 @@ export default function StudentHome() {
                   href={`/u/${t.id}`}
                   className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
                 >
-                  <Avatar src={t.photo} name={t.name} size={40} className="bg-sun" />
-                  <span className="text-sm font-bold group-hover:underline">{t.name}</span>
-                  <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>
+                  <Avatar src={t.photo} name={t.name} size={56} className="bg-sun" />
+                  <span className="flex min-h-[56px] flex-col justify-between py-0.5">
+                    <span className="text-sm font-bold leading-tight group-hover:underline">{t.name}</span>
+                    <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>
+                  </span>
                 </Link>
               ))}
             </div>
