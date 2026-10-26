@@ -73,6 +73,14 @@ export function CoverArt({ value, seed, className }: { value?: string | null; se
     const p = COVER_PRESETS.find((c) => c.id === value.slice(PRESET_PREFIX.length));
     if (p) return <div className={`h-full w-full overflow-hidden ${className ?? ""}`}>{p.svg}</div>;
   }
-  if (value) return <Img src={value} className={`h-full w-full object-cover ${className ?? ""}`} />;
+  if (value) {
+    // Yüklənmiş şəkil kəsilmir: tam görünür (object-contain), kənarlar eyni şəklin bulanıq nüsxəsi ilə dolur
+    return (
+      <div className={`relative h-full w-full overflow-hidden bg-surface-2 ${className ?? ""}`}>
+        <Img src={value} className="absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-2xl" />
+        <Img src={value} className="relative h-full w-full object-contain" />
+      </div>
+    );
+  }
   return <div className={`h-full w-full bg-surface-2 ${className ?? ""}`} />;
 }
