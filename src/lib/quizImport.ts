@@ -20,6 +20,11 @@ const QUESTION_RE = /^\s*(\d{1,3})\s*[.)]\s*(\S.*)$/;
 const OPTION_RE = /^\s*[(]?([A-Ea-e])\s*[.)]\s*(\S.*)$/;
 const ANSWER_RE = /^\s*(?:düzgün\s+cavab|cavab|ответ|answer|ans|correct)\s*[:\-–=]?\s*[(]?([A-Ea-e])\b/i;
 const KEY_HEADER_RE = /^\s*(?:cavablar|cavab\s+açarı|açar|ответы|answers?|answer\s+key|key)\s*[:\-–]?\s*(.*)$/i;
+// Radio/qutu işarələri: ○ boş, ● dolu (dolu olan düzgün cavabdır)
+const GLYPH = "○◯⚪●◉⚫☐☑✔✅";
+const GLYPH_RE = new RegExp("^\\s*([" + GLYPH + "])\\s*");
+const GLYPH_BEFORE_OPTION_RE = new RegExp("\\s*([" + GLYPH + "])\\s*(?=[(]?[A-Ea-e]\\s*[.)])", "g");
+const FILLED_RE = /[●◉⚫☑✔✅]/;
 const MARK_RE = /(^\s*[*✓✔✅]\s*)|(\s*[*✓✔✅]\s*$)/;
 
 function clean(s: string) {
@@ -35,7 +40,13 @@ function splitInlineOptions(line: string): string[] {
 }
 
 export function parseQuiz(raw: string): ParsedQuestion[] {
-  const lines = raw.replace(/\r/g, "").split("\n").map(clean).filter(Boolean);
+  const lines = raw
+    .replace(/\r/g, "")
+    // Hər "○ A)" / "● C)" yeni sətirdən başlasın (bütün sual bir sətirdə olsa belə)
+    .replace(GLYPH_BEFORE_OPTION_RE, "\n$1 ")
+    .split("\n")
+    .map(clean)
+    .filter(Boolean);
 
   type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean };
   const drafts: Draft[] = [];
@@ -59,7 +70,9 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    for (const line of splitInlineOptions(rawLine)) {
+    for (const piece of splitInlineOptions(rawLine.replace(GLYPH_RE, ""))) {
+      const filled = FILLED_RE.test(rawLine.match(GLYPH_RE)?.[1] ?? "") && piece === splitInlineOptions(rawLine.replace(GLYPH_RE, ""))[0];
+      const line = piece;
       const ans = line.match(ANSWER_RE);
       if (ans && cur) {
         cur.correct = LETTERS.indexOf(ans[1].toUpperCase());
@@ -69,7 +82,7 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       const opt = line.match(OPTION_RE);
       // Sual yoxdursa variant sayılmır; A–E ardıcıllığı pozulursa mətnin davamıdır
       if (opt && cur && LETTERS.indexOf(opt[1].toUpperCase()) === cur.options.length && cur.options.length < MAX_OPTIONS) {
-        const marked = MARK_RE.test(opt[2]);
+        const marked = filled || MARK_RE.test(opt[2]);
         cur.options.push(clean(opt[2].replace(MARK_RE, "")));
         cur.opt = cur.options.length - 1;
         if (marked) {
@@ -118,7 +131,19 @@ export async function extractText(file: File): Promise<string> {
     // HTML-ə çevirib qalın/altından xətli variantları düzgün cavab kimi işarələyirik (sətir sonuna *)
     const mammoth = await import("mammoth");
     const { value: html } = await mammoth.convertToHtml({ buffer: Buffer.from(buf) });
-    return html
+    // Word-un avtomatik nömrələməsi (1. 2. 3.) mətndə itir: nömrələnmiş siyahı elementlərinə əlavə edirik
+    const stack: { ordered: boolean; n: number }[] = [];
+    const numbered = html.replace(/<(\/?)(ol|ul|li)>/gi, (m, close: string, tag: string) => {
+      const t = tag.toLowerCase();
+      if (t !== "li") {
+        if (close) stack.pop();
+        else stack.push({ ordered: t === "ol", n: 0 });
+        return m;
+      }
+      const top = stack[stack.length - 1];
+      return !close && top?.ordered && stack.length === 1 ? `${m}${++top.n}. ` : m;
+    });
+    return numbered
       .replace(/<\/(p|li|h\d|tr)>/gi, (m) => m + "\n")
       .replace(/<br\s*\/?>/gi, "\n")
       .split("\n")
