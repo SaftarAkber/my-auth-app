@@ -252,7 +252,7 @@ export default function TeacherGroupPage() {
                   <div key={m.id} className="flex items-center gap-3 px-4 py-3">
                     <Avatar src={m.student.photo} name={m.student.name} size={40} />
                     <div className="min-w-0 flex-1">
-                      <Link href={`/teacher/students/${m.student.id}`} className="block truncate font-semibold hover:text-brand">{m.student.name}</Link>
+                      <Link href={`/u/${m.student.id}`} className="block truncate font-semibold hover:text-brand">{m.student.name}</Link>
                       <p className="truncate text-xs text-muted">{m.student.phone ?? m.student.email ?? "—"} · {fmtDate(m.createdAt)}</p>
                     </div>
                     <button className="btn-icon hover:!text-bad" title="Qrupdan çıxar" onClick={() => removeMember(m)}><Icon name="logout" size={17} /></button>

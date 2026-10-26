@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx } from "@/lib/format";
+import ImportQuestions from "@/components/ImportQuestions";
 import {
   Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
 } from "@/components/ui";
@@ -118,11 +119,11 @@ export default function PackageQuestionsPage() {
         title={pkg.name}
         subtitle={`${qs.filter((q) => q.isActive).length} aktiv sual · ${pkg.isPublished ? "Dərc olunub" : "Qaralama"}`}
         back={`/teacher/tests/${id}`}
-        actions={<button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button>}
+        actions={<div className="flex flex-wrap gap-2"><ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
       />
 
       {qs.length === 0 ? (
-        <Empty icon="file" title="Hələ sual yoxdur" text="Test seçimli və ya açıq suallardan ibarət ola bilər." action={<button className="btn-primary" onClick={() => open("new")}>İlk sualı yaz</button>} />
+        <Empty icon="file" title="Hələ sual yoxdur" text="Test seçimli və ya açıq suallardan ibarət ola bilər." action={<div className="flex flex-wrap justify-center gap-2"><ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}>İlk sualı yaz</button></div>} />
       ) : (
         <div className="space-y-3">
           {qs.map((q, i) => (

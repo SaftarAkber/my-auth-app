@@ -83,7 +83,7 @@ export default function TeacherStudentsPage() {
               <button className="btn-secondary btn-sm shrink-0" onClick={() => setGift({ id: s.id, name: s.name })} aria-label={`${s.name} adlı tələbəyə coin göndər`}>
                 <Icon name="coin" size={14} /> Coin
               </button>
-              <Link href={`/teacher/students/${s.id}`} className="btn-icon shrink-0" aria-label="Ətraflı"><Icon name="right" /></Link>
+              <Link href={`/u/${s.id}`} className="btn-icon shrink-0" aria-label="Ətraflı"><Icon name="right" /></Link>
             </div>
           ))}
         </div>

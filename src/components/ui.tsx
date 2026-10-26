@@ -278,7 +278,7 @@ export function Toggle({
         {hint && <span className="mt-0.5 block text-xs text-muted">{hint}</span>}
       </span>
       <span className={cx("relative h-6 w-11 shrink-0 rounded-full border-2 border-ink transition", checked ? "bg-sun" : "bg-white")}>
-        <span className={cx("absolute top-[1px] h-4 w-4 rounded-full bg-ink transition-all", checked ? "left-[22px]" : "left-[2px]")} />
+        <span className={cx("absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-ink transition-all", checked ? "left-[22px]" : "left-[2px]")} />
       </span>
     </button>
   );
