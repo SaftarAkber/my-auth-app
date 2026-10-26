@@ -251,6 +251,7 @@ model TestPackage {
   questions    Question[]
   attempts     StudentAttempt[]
   allowRetry   Boolean @default(false)
+  shareAnswers Boolean @default(false)
   testPackageGroups TestPackageGroup[]
   // Müəllimin istəyə bağlı coin mükafatı qaydası
   rewardEnabled    Boolean @default(false)

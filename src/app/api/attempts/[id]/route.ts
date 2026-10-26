@@ -108,7 +108,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         student: { select: { id: true, name: true, photo: true } },
         package: {
           select: {
-            id: true, name: true, isTimed: true, duration: true,
+            id: true, name: true, isTimed: true, duration: true, shareAnswers: true,
             group: { select: { id: true, name: true, teacherId: true } },
           },
         },
@@ -129,7 +129,14 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       currentUser.role === "TEACHER" &&
       (attempt.package.group?.teacherId === currentUser.id ||
         (await teacherOwnsTestPackage(currentUser.id, attempt.package.id)));
-    if (!isOwner && !isTeacher) return forbidden();
+    // Müəllim icazə veribsə, testi özü bitirmiş tələbələr bir-birinin bitmiş cavablarına baxa bilər
+    const isPeer =
+      !isOwner && !isTeacher && currentUser.role === "STUDENT" && attempt.package.shareAnswers && !!attempt.finishedAt &&
+      !!(await prisma.studentAttempt.findFirst({
+        where: { packageId: attempt.package.id, studentId: currentUser.id, finishedAt: { not: null } },
+        select: { id: true },
+      }));
+    if (!isOwner && !isTeacher && !isPeer) return forbidden();
 
     // Davam edən testdə cavab açarı açıqlanmasın
     if (isOwner && !isTeacher && !attempt.finishedAt) {

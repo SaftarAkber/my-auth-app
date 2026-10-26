@@ -21,6 +21,7 @@ interface Pkg {
   startsAt: string | null;
   endsAt: string | null;
   allowRetry: boolean;
+  shareAnswers: boolean;
   rewardEnabled: boolean;
   rewardMinCorrect: number | null;
   rewardCoins: number | null;
@@ -37,7 +38,7 @@ interface Collection {
 
 const EMPTY = {
   name: "", description: "", isPublic: false, groupIds: [] as string[],
-  isTimed: false, durationMin: "", startsAt: "", endsAt: "", allowRetry: false,
+  isTimed: false, durationMin: "", startsAt: "", endsAt: "", allowRetry: false, shareAnswers: false,
   rewardEnabled: false, rewardMinCorrect: "", rewardCoins: "", rewardAuto: true,
 };
 
@@ -67,6 +68,7 @@ export default function CollectionPage() {
             startsAt: toInputDateTime(p.startsAt),
             endsAt: toInputDateTime(p.endsAt),
             allowRetry: p.allowRetry,
+            shareAnswers: p.shareAnswers,
             rewardEnabled: p.rewardEnabled,
             rewardMinCorrect: p.rewardMinCorrect ? String(p.rewardMinCorrect) : "",
             rewardCoins: p.rewardCoins ? String(p.rewardCoins) : "",
@@ -94,6 +96,7 @@ export default function CollectionPage() {
         startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
         endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
         allowRetry: form.allowRetry,
+        shareAnswers: form.shareAnswers,
         rewardEnabled: form.rewardEnabled,
         rewardMinCorrect: form.rewardEnabled ? parseInt(form.rewardMinCorrect) : null,
         rewardCoins: form.rewardEnabled ? parseInt(form.rewardCoins) : null,
@@ -248,6 +251,7 @@ export default function CollectionPage() {
             <Field label="Bitmə vaxtı"><input className="input" type="datetime-local" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} /></Field>
           </div>
           <Toggle checked={form.allowRetry} onChange={(v) => setForm({ ...form, allowRetry: v })} label="Təkrar həll icazəsi" hint="Tələbə testi bir neçə dəfə həll edə bilər (coin yalnız ilk dəfə verilir)" />
+          <Toggle checked={form.shareAnswers} onChange={(v) => setForm({ ...form, shareAnswers: v })} label="Cavablar hamıya açıq" hint="Testi bitirən tələbələr nəticə cədvəlində bir-birinin cavab kitabçasına baxa bilər" />
 
           <div className="rounded-2xl border-[2.5px] border-ink bg-sun/25 p-4">
             <Toggle

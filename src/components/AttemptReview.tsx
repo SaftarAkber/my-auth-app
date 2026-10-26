@@ -1,6 +1,7 @@
 "use client";
 
 import { useFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { Avatar, ErrorBox, Icon, PageHeader, ProgressBar, SkeletonList } from "@/components/ui";
 
@@ -25,6 +26,7 @@ interface ReviewAttempt {
 }
 
 export default function AttemptReview({ id, back, viewer = "student" }: { id: string; back: string; viewer?: "student" | "teacher" }) {
+  const { user } = useAuth();
   const { data: a, loading, error, reload } = useFetch<ReviewAttempt>(`/api/attempts/${id}`);
 
   if (loading) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
@@ -99,14 +101,14 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
                         <span className="flex-1">{opt}</span>
                         {right && <Icon name="check" size={16} className="text-ok" />}
                         {mine && !right && <Icon name="x" size={16} className="text-bad" />}
-                        {mine && <span className="text-xs font-semibold text-muted">{viewer === "student" ? "Sizin cavab" : "Cavab"}</span>}
+                        {mine && <span className="text-xs font-semibold text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</span>}
                       </li>
                     );
                   })}
                 </ul>
               ) : (
                 <div className="mt-3 rounded-xl bg-surface-2 p-3.5 text-sm">
-                  <p className="mb-1 text-xs font-semibold uppercase text-muted">{viewer === "student" ? "Sizin cavab" : "Cavab"}</p>
+                  <p className="mb-1 text-xs font-semibold uppercase text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</p>
                   <p className="whitespace-pre-wrap">{r.answer}</p>
                 </div>
               )}

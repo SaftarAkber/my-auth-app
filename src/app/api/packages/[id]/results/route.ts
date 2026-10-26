@@ -15,7 +15,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const pkg = await prisma.testPackage.findUnique({
       where: { id },
       select: {
-        id: true, name: true,
+        id: true, name: true, shareAnswers: true,
         questions: { where: { isActive: true }, orderBy: { order: "asc" }, select: { id: true } },
       },
     });
@@ -73,7 +73,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     return NextResponse.json({
       package: { id: pkg.id, name: pkg.name },
       total: pkg.questions.length,
-      canOpenAll: isTeacher || isAdmin,
+      canOpenAll: isTeacher || isAdmin || pkg.shareAnswers,
       rows,
     });
   } catch (error) {

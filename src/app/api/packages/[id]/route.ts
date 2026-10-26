@@ -68,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const {
       name, description, isPublished, isPublic,
       isTimed, duration, startsAt, endsAt,
-      visibility, groupIds, allowRetry,
+      visibility, groupIds, allowRetry, shareAnswers,
     } = body;
 
     if (Array.isArray(groupIds) && !(await teacherOwnsGroups(auth.user.id, groupIds))) {
@@ -103,6 +103,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
           ...(visibility !== undefined && { visibility }),
           ...(allowRetry !== undefined && { allowRetry }),
+          ...(shareAnswers !== undefined && { shareAnswers: !!shareAnswers }),
           ...rewardData(body),
           ...(Array.isArray(groupIds) && groupIds.length
             ? { testPackageGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }

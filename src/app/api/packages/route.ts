@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if ("response" in auth) return auth.response;
 
     const body = await req.json();
-    const { name, description, collectionId, isTimed, duration, startsAt, endsAt, allowRetry } = body;
+    const { name, description, collectionId, isTimed, duration, startsAt, endsAt, allowRetry, shareAnswers } = body;
 
     if (!name || !collectionId) {
       return NextResponse.json({ error: "Ad və kolleksiya məcburidir" }, { status: 400 });
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         startsAt: startsAt ? new Date(startsAt) : null,
         endsAt: endsAt ? new Date(endsAt) : null,
         allowRetry: !!allowRetry,
+        shareAnswers: !!shareAnswers,
         ...rewardData(body),
       },
     });
