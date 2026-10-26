@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { cx, initials } from "@/lib/format";
 import { errMsg, uploadImage } from "@/lib/api";
 
@@ -417,13 +418,14 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
   const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
+  // Portal: yuxarı səviyyəli qatda açılır ki, naviqasiya paneli pəncərənin üstünə çıxmasın
+  return createPortal(
+    <div className="fixed inset-0 z-[500] flex items-end justify-center sm:items-center sm:p-8" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-ink/60" onClick={onClose} />
-      <div className={cx("card relative flex max-h-[92vh] w-full animate-pop flex-col rounded-b-none sm:rounded-b-2xl", width)}>
+      <div className={cx("card relative flex max-h-[calc(100dvh-4.5rem)] w-full animate-pop flex-col rounded-b-none sm:max-h-[calc(100dvh-4rem)] sm:rounded-b-2xl", width)}>
         {title && (
           <div className="flex items-center justify-between gap-3 border-b-[2.5px] border-ink px-5 py-4">
             <h2 className="text-lg font-bold">{title}</h2>
@@ -433,7 +435,8 @@ export function Modal({
         <div className="overflow-y-auto px-5 py-5">{children}</div>
         {footer && <div className="flex justify-end gap-2 border-t-[2.5px] border-ink px-5 py-4">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
