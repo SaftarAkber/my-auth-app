@@ -130,7 +130,7 @@ function ProfileInner() {
   return (
     <div className="page space-y-6">
       <section className="card overflow-hidden">
-        <div className="relative h-44 border-b-[3px] border-ink bg-surface-2 sm:h-64">
+        <div className="relative h-44 overflow-hidden border-b-[3px] border-ink bg-surface-2 sm:h-64">
           <CoverArt value={user.coverPhoto} seed={user.id} />
           {isOwn && me?.role !== "ADMIN" && (
             <button
@@ -142,7 +142,7 @@ function ProfileInner() {
             </button>
           )}
         </div>
-        <div className="relative px-5 pb-6 sm:px-8">
+        <div className="relative flow-root px-5 pb-6 sm:px-8">
           {isOwn && me?.role !== "ADMIN" && (
             <button
               onClick={() => setEdit(true)}

@@ -68,10 +68,10 @@ function pickDefault(seed?: string) {
 }
 
 export function CoverArt({ value, seed, className }: { value?: string | null; seed?: string; className?: string }) {
-  if (!value && seed) return <div className={className}>{pickDefault(seed).svg}</div>;
+  if (!value && seed) return <div className={`h-full w-full overflow-hidden ${className ?? ""}`}>{pickDefault(seed).svg}</div>;
   if (value?.startsWith(PRESET_PREFIX)) {
     const p = COVER_PRESETS.find((c) => c.id === value.slice(PRESET_PREFIX.length));
-    if (p) return <div className={className}>{p.svg}</div>;
+    if (p) return <div className={`h-full w-full overflow-hidden ${className ?? ""}`}>{p.svg}</div>;
   }
   if (value) return <Img src={value} className={`h-full w-full object-cover ${className ?? ""}`} />;
   return <div className={`h-full w-full bg-surface-2 ${className ?? ""}`} />;
