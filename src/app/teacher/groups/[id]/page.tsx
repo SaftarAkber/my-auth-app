@@ -10,6 +10,7 @@ import {
   type PostLite, type TestPackageLite, type VideoLite, type VideoPackageLite,
 } from "@/components/content";
 import { VideoPlayer } from "@/components/video";
+import GroupHeader from "@/components/GroupHeader";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
 } from "@/components/ui";
@@ -174,25 +175,15 @@ export default function TeacherGroupPage() {
 
   return (
     <div className="pb-8">
-      <div className="relative h-36 bg-gradient-to-br from-brand/80 to-brand/30 sm:h-48">
-        {g.coverPhoto && <Img src={g.coverPhoto} className="h-full w-full object-cover" />}
+      <div className="page !pb-0">
+        <GroupHeader
+          group={g}
+          members={g.members.length}
+          back={{ href: "/teacher/groups", label: "Qruplar" }}
+          badges={!g.isActive ? <span className="badge-warn">Deaktiv</span> : undefined}
+        />
       </div>
       <div className="page !pt-0">
-        <div className="-mt-10 flex flex-wrap items-end gap-4">
-          <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border-4 border-bg bg-surface text-brand shadow-soft">
-            {g.photo ? <Img src={g.photo} className="h-full w-full object-cover" /> : <Icon name="users" size={36} />}
-          </span>
-          <div className="pb-1">
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{g.name}</h1>
-            <Link href="/teacher/groups" className="text-sm font-medium text-muted hover:text-ink">← Qruplar</Link>
-          </div>
-        </div>
-        {g.description && <p className="mt-4 max-w-3xl whitespace-pre-wrap text-muted">{g.description}</p>}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="badge-muted"><Icon name="users" size={12} /> {g.members.length} üzv</span>
-          {g.schedule && <span className="badge-muted"><Icon name="calendar" size={12} /> {g.schedule}</span>}
-          {!g.isActive && <span className="badge-warn">Deaktiv</span>}
-        </div>
 
         <div className="mt-8">
           <Tabs

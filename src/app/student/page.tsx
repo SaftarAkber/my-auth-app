@@ -145,16 +145,15 @@ export default function StudentHome() {
           ) : (teachers.data?.teachers ?? []).length === 0 ? (
             <Empty icon="grad" title="Müəllim tapılmadı" />
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {teachers.data!.teachers.map((t) => (
-                <Link key={t.id} href={`/u/${t.id}`} className="card flex items-center gap-4 p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5">
-                  <Avatar src={t.photo} name={t.name} size={52} />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold">{t.name}</p>
-                    <p className="line-clamp-1 text-sm text-muted">{t.bio || "Müəllim"}</p>
-                  </div>
-                  <span className="badge-brand">{t._count.groups} qrup</span>
-                  <Icon name="right" className="text-muted" />
+                <Link
+                  key={t.id}
+                  href={`/u/${t.id}`}
+                  className="card group flex flex-col items-center gap-2 p-4 text-center transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
+                >
+                  <Avatar src={t.photo} name={t.name} size={64} className="bg-sun" />
+                  <span className="line-clamp-2 text-sm font-bold group-hover:underline">{t.name}</span>
                 </Link>
               ))}
             </div>

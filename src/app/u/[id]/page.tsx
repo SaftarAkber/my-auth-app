@@ -442,11 +442,6 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
         ))
       )}
 
-      {data.hiddenPosts > 0 && (
-        <div className="card-flat flex items-center gap-3 border-dashed bg-sun/30 p-4 text-sm font-semibold">
-          <Icon name="lock" size={18} /> {data.hiddenPosts} paylaşım yalnız qrup üzvlərinə görünür.
-        </div>
-      )}
     </div>
   );
 }

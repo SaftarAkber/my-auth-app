@@ -10,9 +10,10 @@ import {
   type PostLite, type TestPackageLite, type VideoLite, type VideoPackageLite,
 } from "@/components/content";
 import {
-  Avatar, Empty, ErrorBox, Icon, Img, SkeletonList, Tabs, useConfirm, useToast,
+  Avatar, Empty, ErrorBox, Icon, SkeletonList, Tabs, useConfirm, useToast,
 } from "@/components/ui";
 import { VideoPlayer } from "@/components/video";
+import GroupHeader from "@/components/GroupHeader";
 
 interface GroupData {
   id: string;
@@ -71,35 +72,18 @@ export default function StudentGroupPage() {
 
   return (
     <div className="pb-8">
-      <div className="relative h-36 bg-gradient-to-br from-brand/80 to-brand/30 sm:h-52">
-        {g.coverPhoto && <Img src={g.coverPhoto} className="h-full w-full object-cover" />}
+      <div className="page !pb-0">
+        <GroupHeader
+          group={g}
+          members={g._count.members}
+          back={{ href: "/student/teacher", label: "Qruplar" }}
+          teacher={g.teacher}
+          badges={!g.hasAccess ? <span className="badge-warn"><Icon name="lock" size={12} /> Üzv deyilsiniz, yalnız açıq məzmun görünür</span> : undefined}
+          actions={g.isMember ? <button className="btn-secondary btn-sm" onClick={leave}><Icon name="logout" size={14} /> Qrupdan çıx</button> : undefined}
+        />
       </div>
 
       <div className="page !pt-0">
-        <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-end gap-4">
-            <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border-4 border-bg bg-surface text-brand shadow-soft">
-              {g.photo ? <Img src={g.photo} className="h-full w-full object-cover" /> : <Icon name="users" size={36} />}
-            </span>
-            <div className="pb-1">
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{g.name}</h1>
-              <Link href={`/student/teacher/${g.teacher.id}`} className="mt-0.5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink">
-                <Avatar src={g.teacher.photo} name={g.teacher.name} size={20} /> {g.teacher.name}
-              </Link>
-            </div>
-          </div>
-          {g.isMember && (
-            <button className="btn-secondary btn-sm" onClick={leave}><Icon name="logout" size={14} /> Qrupdan çıx</button>
-          )}
-        </div>
-
-        {g.description && <p className="mt-4 max-w-3xl whitespace-pre-wrap text-muted">{g.description}</p>}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="badge-muted"><Icon name="users" size={12} /> {g._count.members} üzv</span>
-          {g.schedule && <span className="badge-muted"><Icon name="calendar" size={12} /> {g.schedule}</span>}
-          {!g.hasAccess && <span className="badge-warn"><Icon name="lock" size={12} /> Üzv deyilsiniz — yalnız açıq məzmun görünür</span>}
-        </div>
-
         {!g.hasAccess && (
           <div className="card mt-6 flex flex-wrap items-center justify-between gap-3 border-brand/30 bg-brand/5 p-5">
             <p className="text-sm font-medium">
@@ -108,7 +92,7 @@ export default function StudentGroupPage() {
                 : "Bütün məzmuna çıxış üçün qrupa qoşulun."}
             </p>
             {g.enrollmentStatus !== "PENDING" && (
-              <Link href={`/student/teacher/${g.teacher.id}`} className="btn-primary btn-sm">Müraciət et</Link>
+              <Link href={`/u/${g.teacher.id}?tab=groups`} className="btn-primary btn-sm">Müraciət et</Link>
             )}
           </div>
         )}

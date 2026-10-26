@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useFetch } from "@/lib/api";
-import { CoverArt } from "@/components/covers";
 import { Avatar, Empty, Icon, PageHeader, SkeletonList } from "@/components/ui";
 
 interface Enrollment {
@@ -80,21 +79,15 @@ export default function TeachersPage() {
       ) : list.length === 0 ? (
         <Empty icon="grad" title="Müəllim tapılmadı" />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {list.map((t) => (
-            <Link key={t.id} href={`/u/${t.id}`} className="card group overflow-hidden transition hover:-translate-x-0.5 hover:-translate-y-0.5">
-              <div className="relative h-28 border-b-[2.5px] border-ink bg-surface-2">
-                <CoverArt value={t.coverPhoto} seed={t.id} />
-              </div>
-              <div className="relative px-5 pb-5">
-                <Avatar src={t.photo} name={t.name} size={72} className="-mt-9 border-4 border-ink bg-sun" />
-                <h3 className="mt-3 text-lg font-bold group-hover:text-brand">{t.name}</h3>
-                <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{t.bio || "Haqqında məlumat yoxdur."}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="badge-brand"><Icon name="users" size={13} /> {t._count.groups} qrup</span>
-                  <span className="text-sm font-semibold text-brand">Profilə bax →</span>
-                </div>
-              </div>
+            <Link
+              key={t.id}
+              href={`/u/${t.id}`}
+              className="card group flex flex-col items-center gap-3 p-5 text-center transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
+            >
+              <Avatar src={t.photo} name={t.name} size={84} className="bg-sun" />
+              <span className="line-clamp-2 font-bold group-hover:underline">{t.name}</span>
             </Link>
           ))}
         </div>
