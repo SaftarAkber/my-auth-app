@@ -59,6 +59,10 @@ export const COVER_PRESETS: { id: string; name: string; svg: React.ReactNode }[]
 
 export const PRESET_PREFIX = "preset:";
 
+/** Divar kağızının sabit nisbəti (5:1): redaktə önbaxışı ilə profildəki görünüş eyni olsun deyə hər yerdə eyni istifadə olunur. */
+export const COVER_RATIO = "aspect-[5/1]";
+export const COVER_BOX = `${COVER_RATIO} min-h-[140px] max-h-[360px]`;
+
 /** Yüklənmiş şəklin URL-i və şaquli mövqeyi ("#y=NN" fraqmenti serverə getmir, yalnız brauzerdə istifadə olunur). */
 export function splitCover(value: string) {
   const m = value.match(/^(.*)#y=(\d{1,3})$/);

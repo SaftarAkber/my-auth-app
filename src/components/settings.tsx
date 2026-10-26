@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg } from "@/lib/api";
 import { Field, Icon, ImageUpload, Modal, PasswordInput, Spinner, useToast } from "@/components/ui";
-import { COVER_PRESETS, CoverArt, PRESET_PREFIX, splitCover, withCoverPos } from "@/components/covers";
+import { COVER_PRESETS, COVER_RATIO, CoverArt, PRESET_PREFIX, splitCover, withCoverPos } from "@/components/covers";
 import { cx } from "@/lib/format";
 import { SubjectPicker } from "@/components/Subjects";
 
@@ -80,7 +80,7 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
             {cover && !cover.startsWith(PRESET_PREFIX) && (
               <div className="mt-4">
                 <span className="label">Şəklin mövqeyi (yuxarı ↔ aşağı)</span>
-                <div className="mb-2 h-24 overflow-hidden rounded-xl border-[2.5px] border-ink">
+                <div className={`mb-2 w-full overflow-hidden rounded-xl border-[2.5px] border-ink ${COVER_RATIO}`}>
                   <CoverArt value={cover} />
                 </div>
                 <input

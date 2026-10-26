@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CoverArt } from "@/components/covers";
+import { CoverArt, COVER_BOX } from "@/components/covers";
 import { Avatar, Icon, Img } from "@/components/ui";
 
 interface GroupLite {
@@ -26,7 +26,7 @@ export default function GroupHeader({
 }) {
   return (
     <section className="card overflow-hidden">
-      <div className="relative h-40 overflow-hidden border-b-[3px] border-ink bg-surface-2 sm:h-60">
+      <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
         <CoverArt value={group.coverPhoto} seed={group.id} />
         {back && (
           <Link

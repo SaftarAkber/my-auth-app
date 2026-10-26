@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api, errMsg, uploadImage, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent, timeAgo } from "@/lib/format";
 import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings";
-import { CoverArt } from "@/components/covers";
+import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
 import { VideoPlayer } from "@/components/video";
 import { SubjectBadges } from "@/components/Subjects";
@@ -131,7 +131,7 @@ function ProfileInner() {
   return (
     <div className="page space-y-6">
       <section className="card overflow-hidden">
-        <div className="relative h-44 overflow-hidden border-b-[3px] border-ink bg-surface-2 sm:h-64">
+        <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
           <CoverArt value={user.coverPhoto} seed={user.id} />
           {isOwn && me?.role !== "ADMIN" && (
             <button
