@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg } from "@/lib/api";
 import { Field, Icon, ImageUpload, Modal, PasswordInput, Spinner, useToast } from "@/components/ui";
-import { COVER_PRESETS, PRESET_PREFIX } from "@/components/covers";
+import { COVER_PRESETS, CoverArt, PRESET_PREFIX, splitCover, withCoverPos } from "@/components/covers";
 import { cx } from "@/lib/format";
 
 /* ───────── Profil redaktəsi ───────── */
@@ -73,6 +73,24 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
               value={cover && !cover.startsWith(PRESET_PREFIX) ? cover : null}
               onChange={(u) => setCover(u)}
             />
+            {cover && !cover.startsWith(PRESET_PREFIX) && (
+              <div className="mt-4">
+                <span className="label">Şəklin mövqeyi (yuxarı ↔ aşağı)</span>
+                <div className="mb-2 h-24 overflow-hidden rounded-xl border-[2.5px] border-ink">
+                  <CoverArt value={cover} />
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={splitCover(cover).pos}
+                  onChange={(e) => setCover(withCoverPos(cover, Number(e.target.value)))}
+                  className="w-full accent-ink"
+                  aria-label="Divar kağızının şaquli mövqeyi"
+                />
+                <p className="mt-1 text-xs text-muted">Şəkil çərçivəni doldurur. Görünən hissəni sürüşdürərək seçin.</p>
+              </div>
+            )}
           </div>
         )}
         <ImageUpload label="Profil şəkli" value={photo} onChange={setPhoto} shape="round" />

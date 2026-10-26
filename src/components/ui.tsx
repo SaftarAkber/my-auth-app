@@ -113,9 +113,9 @@ export function Avatar({
   );
 }
 
-export function Img({ src, alt = "", className }: { src: string; alt?: string; className?: string }) {
+export function Img({ src, alt = "", className, style }: { src: string; alt?: string; className?: string; style?: React.CSSProperties }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading="lazy" className={className} />;
+  return <img src={src} alt={alt} loading="lazy" className={className} style={style} />;
 }
 
 export function Skeleton({ className }: { className?: string }) {

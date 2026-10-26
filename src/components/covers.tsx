@@ -59,6 +59,13 @@ export const COVER_PRESETS: { id: string; name: string; svg: React.ReactNode }[]
 
 export const PRESET_PREFIX = "preset:";
 
+/** Yüklənmiş şəklin URL-i və şaquli mövqeyi ("#y=NN" fraqmenti serverə getmir, yalnız brauzerdə istifadə olunur). */
+export function splitCover(value: string) {
+  const m = value.match(/^(.*)#y=(\d{1,3})$/);
+  return m ? { url: m[1], pos: Math.min(100, Number(m[2])) } : { url: value, pos: 50 };
+}
+export const withCoverPos = (value: string, pos: number) => `${splitCover(value).url}#y=${Math.round(pos)}`;
+
 /** Profilin divar kağızı: hazır mənzərə, yüklənmiş şəkil və ya boş fon. */
 /** Divar kağızı seçməyənlər üçün istifadəçiyə görə sabit hazır mənzərə. */
 function pickDefault(seed?: string) {
@@ -74,11 +81,12 @@ export function CoverArt({ value, seed, className }: { value?: string | null; se
     if (p) return <div className={`h-full w-full overflow-hidden ${className ?? ""}`}>{p.svg}</div>;
   }
   if (value) {
-    // Yüklənmiş şəkil kəsilmir: tam görünür (object-contain), kənarlar eyni şəklin bulanıq nüsxəsi ilə dolur
+    // Şəkil çərçivəni tam doldurur; böyükdürsə yuxarıdan-aşağıdan bərabər kəsilir (mərkəz görünür).
+    // Mövqe istifadəçi tərəfindən tənzimlənir: URL-in sonunda "#y=NN" (0 yuxarı, 100 aşağı).
+    const { url, pos } = splitCover(value);
     return (
-      <div className={`relative h-full w-full overflow-hidden bg-surface-2 ${className ?? ""}`}>
-        <Img src={value} className="absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-2xl" />
-        <Img src={value} className="relative h-full w-full object-contain" />
+      <div className={`h-full w-full overflow-hidden bg-surface-2 ${className ?? ""}`}>
+        <Img src={url} className="h-full w-full object-cover" style={{ objectPosition: `50% ${pos}%` }} />
       </div>
     );
   }
