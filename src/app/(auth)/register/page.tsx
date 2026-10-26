@@ -6,11 +6,13 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { cx } from "@/lib/format";
 import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
+import { SubjectPicker } from "@/components/Subjects";
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [teacherOpen, setTeacherOpen] = useState(true);
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [form, setForm] = useState({ name: "", phone: "", email: "", password: "", confirm: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,6 +29,7 @@ export default function RegisterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (role === "TEACHER" && subjects.length === 0) return setError("Tədris etdiyiniz fənni seçin (ən çoxu 2)");
     if (!form.phone.trim() && !form.email.trim()) return setError("Telefon və ya email daxil edin");
     if (form.password.length < 6) return setError("Şifrə ən azı 6 simvol olmalıdır");
     if (form.password !== form.confirm) return setError("Şifrələr uyğun gəlmir");
@@ -39,6 +42,7 @@ export default function RegisterPage() {
         email: form.email.trim() || undefined,
         password: form.password,
         role,
+        ...(role === "TEACHER" ? { subjects } : {}),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xəta baş verdi");
@@ -85,6 +89,13 @@ export default function RegisterPage() {
             );
           })}
         </div>
+
+        {role === "TEACHER" && (
+          <div>
+            <span className="label">Hansı fənn üzrə tədris edirsiniz?</span>
+            <SubjectPicker value={subjects} onChange={setSubjects} />
+          </div>
+        )}
 
         <Field label="Ad və soyad">
           <input className="input" value={form.name} onChange={set("name")} autoComplete="name" required placeholder="Ad Soyad" />

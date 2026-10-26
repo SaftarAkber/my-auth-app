@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { subjectLabel } from "@/lib/subjects";
 import { serverError, unauthorized } from "@/lib/guards";
 
 // Ümumi axtarış: yalnız hamıya açıq məzmun (admin üçün hər şey)
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     const [people, groups, tests, videos, posts] = await Promise.all([
       prisma.user.findMany({
         where: { name: contains, ...(admin ? {} : { role: { in: ["TEACHER", "STUDENT"] } }) },
-        select: { id: true, name: true, role: true, photo: true },
+        select: { id: true, name: true, role: true, photo: true, subjects: true },
         take: 6,
       }),
       prisma.group.findMany({
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
     const results = [
       ...people.map((p) => ({
         kind: "people" as const, id: p.id, title: p.name, photo: p.photo,
-        sub: p.role === "TEACHER" ? "Müəllim" : p.role === "ADMIN" ? "Admin" : "Tələbə",
+        sub: p.role === "TEACHER" ? ["Müəllim", ...p.subjects.map(subjectLabel)].join(" · ") : p.role === "ADMIN" ? "Admin" : "Tələbə",
         href: `/u/${p.id}`,
       })),
       ...groups.map((g) => ({

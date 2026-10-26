@@ -7,6 +7,7 @@ import { useFetch } from "@/lib/api";
 import { fmtDate, percent } from "@/lib/format";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
 import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
+import { SubjectBadges } from "@/components/Subjects";
 
 interface Enrollment {
   id: string;
@@ -24,6 +25,7 @@ interface Attempt {
 }
 interface Teacher {
   id: string;
+  subjects?: string[];
   name: string;
   bio: string | null;
   photo: string | null;
@@ -145,15 +147,16 @@ export default function StudentHome() {
           ) : (teachers.data?.teachers ?? []).length === 0 ? (
             <Empty icon="grad" title="Müəllim tapılmadı" />
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="flex flex-wrap gap-3">
               {teachers.data!.teachers.map((t) => (
                 <Link
                   key={t.id}
                   href={`/u/${t.id}`}
-                  className="card group flex flex-col items-center gap-2 p-4 text-center transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
+                  className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
                 >
-                  <Avatar src={t.photo} name={t.name} size={64} className="bg-sun" />
-                  <span className="line-clamp-2 text-sm font-bold group-hover:underline">{t.name}</span>
+                  <Avatar src={t.photo} name={t.name} size={40} className="bg-sun" />
+                  <span className="text-sm font-bold group-hover:underline">{t.name}</span>
+                  <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>
                 </Link>
               ))}
             </div>

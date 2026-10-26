@@ -17,6 +17,7 @@ export async function GET() {
         bio: true,
         photo: true,
         coverPhoto: true,
+        subjects: true,
         _count: {
           select: { groups: true },
         },

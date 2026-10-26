@@ -6,6 +6,7 @@ import { api, errMsg } from "@/lib/api";
 import { Field, Icon, ImageUpload, Modal, PasswordInput, Spinner, useToast } from "@/components/ui";
 import { COVER_PRESETS, CoverArt, PRESET_PREFIX, splitCover, withCoverPos } from "@/components/covers";
 import { cx } from "@/lib/format";
+import { SubjectPicker } from "@/components/Subjects";
 
 /* ───────── Profil redaktəsi ───────── */
 export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onClose: () => void; withCover?: boolean }) {
@@ -15,15 +16,18 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
   const [bio, setBio] = useState(user?.bio ?? "");
   const [photo, setPhoto] = useState<string | null>(user?.photo ?? null);
   const [cover, setCover] = useState<string | null>(user?.coverPhoto ?? null);
+  const [subjects, setSubjects] = useState<string[]>(user?.subjects ?? []);
   const [busy, setBusy] = useState(false);
+  const isTeacher = user?.role === "TEACHER";
 
   async function save() {
     if (!name.trim()) return toast.error("Ad boş ola bilməz");
+    if (isTeacher && subjects.length === 0) return toast.error("Ən azı 1 fənn seçin (ən çoxu 2)");
     setBusy(true);
     try {
       await api("/api/auth/me", {
         method: "PATCH",
-        body: { name, bio, photo: photo ?? "", ...(withCover ? { coverPhoto: cover ?? "" } : {}) },
+        body: { name, bio, photo: photo ?? "", ...(withCover ? { coverPhoto: cover ?? "" } : {}), ...(isTeacher ? { subjects } : {}) },
       });
       await refreshUser();
       toast.success("Profil yeniləndi");
@@ -97,6 +101,12 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
         <Field label="Ad və soyad">
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
+        {isTeacher && (
+          <div>
+            <span className="label">Tədris etdiyiniz fənlər</span>
+            <SubjectPicker value={subjects} onChange={setSubjects} />
+          </div>
+        )}
         <Field label="Haqqında" hint="Qısa təqdimat — profilinizdə görünür">
           <textarea className="input min-h-28" value={bio ?? ""} onChange={(e) => setBio(e.target.value)} maxLength={500} />
         </Field>

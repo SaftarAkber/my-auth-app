@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
+import { cleanSubjects } from "@/lib/subjects";
 import {
   AUTH_COOKIE,
   AUTH_COOKIE_OPTIONS,
@@ -19,9 +20,13 @@ export async function POST(req: NextRequest) {
     const email = body.email ? String(body.email).trim().toLowerCase() : "";
     const password = String(body.password ?? "");
     const role = body.role === "TEACHER" ? "TEACHER" : "STUDENT";
+    const subjects = role === "TEACHER" ? cleanSubjects(body.subjects) : [];
 
     if (!name || !password) {
       return NextResponse.json({ error: "Ad və şifrə məcburidir" }, { status: 400 });
+    }
+    if (role === "TEACHER" && subjects.length === 0) {
+      return NextResponse.json({ error: "Tədris etdiyiniz fənni seçin (ən çoxu 2)" }, { status: 400 });
     }
     if (!phone && !email) {
       return NextResponse.json({ error: "Telefon və ya email məcburidir" }, { status: 400 });
@@ -58,10 +63,11 @@ export async function POST(req: NextRequest) {
           password: hashedPassword,
           role,
           coinBalance: role === "TEACHER" ? TEACHER_START_COINS : 0,
+          subjects,
         },
         select: {
           id: true, name: true, phone: true, email: true,
-          role: true, bio: true, photo: true, coinBalance: true,
+          role: true, bio: true, photo: true, coinBalance: true, subjects: true,
         },
       });
       if (role === "TEACHER") {

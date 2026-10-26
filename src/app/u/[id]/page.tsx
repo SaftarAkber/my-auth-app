@@ -10,6 +10,7 @@ import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings"
 import { CoverArt } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
 import { VideoPlayer } from "@/components/video";
+import { SubjectBadges } from "@/components/Subjects";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
   type IconName,
@@ -41,7 +42,7 @@ interface TestCard {
   member: boolean;
 }
 interface Profile {
-  user: { id: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; bio: string | null; photo: string | null; coverPhoto: string | null; createdAt: string };
+  user: { id: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; bio: string | null; photo: string | null; coverPhoto: string | null; subjects?: string[]; createdAt: string };
   isOwn: boolean;
   stats: { students?: number; groups?: number; posts?: number; attempts?: number };
   groups: GroupCard[];
@@ -158,6 +159,7 @@ function ProfileInner() {
             <span className={user.role === "TEACHER" ? "badge-brand" : user.role === "ADMIN" ? "badge-bad" : "badge-warn"}>
               {user.role === "TEACHER" ? "Müəllim" : user.role === "ADMIN" ? "Admin" : "Tələbə"}
             </span>
+            {isTeacher && <SubjectBadges subjects={user.subjects} />}
           </div>
           {user.bio ? (
             <p className="mt-2 max-w-3xl whitespace-pre-wrap">{user.bio}</p>

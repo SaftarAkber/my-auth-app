@@ -11,6 +11,7 @@ export interface User {
   bio: string | null;
   photo: string | null;
   coverPhoto?: string | null;
+  subjects?: string[];
   coinBalance: number;
   createdAt?: string;
 }
@@ -31,6 +32,7 @@ export interface RegisterData {
   email?: string;
   password: string;
   role: "STUDENT" | "TEACHER";
+  subjects?: string[];
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);

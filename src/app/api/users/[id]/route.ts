@@ -14,7 +14,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const { id } = await params;
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, role: true, bio: true, photo: true, coverPhoto: true, createdAt: true },
+      select: { id: true, name: true, role: true, bio: true, photo: true, coverPhoto: true, subjects: true, createdAt: true },
     });
     if (!target) return notFound("Profil tapılmadı");
     // Admin hesabı yalnız adminlərə görünür

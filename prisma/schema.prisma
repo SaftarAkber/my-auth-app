@@ -31,6 +31,7 @@ model User {
   groupPosts       GroupPost[]
   videoComments    VideoComment[]
   coinBalance Int    @default(0) 
+  subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
   orders           Order[] 
 

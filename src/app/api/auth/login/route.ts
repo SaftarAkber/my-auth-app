@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         bio: user.bio,
         photo: user.photo,
         coinBalance: user.coinBalance,
+        subjects: user.subjects,
       },
     });
   } catch (error) {
