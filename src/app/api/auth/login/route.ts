@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
     const isEmail = id.includes("@");
 
     const user = await prisma.user.findFirst({
-      where: isEmail ? { email: id.toLowerCase() } : { phone: id },
+      // Email → email; "+" ilə başlayan → telefon; qalanı admin istifadəçi adıdır (phone sütununda saxlanılır)
+      where: isEmail
+        ? { email: id.toLowerCase() }
+        : id.startsWith("+")
+          ? { phone: id }
+          : { phone: { equals: id, mode: "insensitive" } },
     });
 
     const valid = user ? await bcrypt.compare(password, user.password) : false;

@@ -36,7 +36,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <Field label="Telefon və ya email" hint="Telefon beynəlxalq formatda: +994501234567">
+        <Field label="Telefon, email və ya istifadəçi adı" hint="Telefon beynəlxalq formatda: +994501234567">
           <input
             className="input"
             value={identifier}

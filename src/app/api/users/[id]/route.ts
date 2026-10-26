@@ -17,6 +17,8 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       select: { id: true, name: true, role: true, bio: true, photo: true, coverPhoto: true, createdAt: true },
     });
     if (!target) return notFound("Profil tapılmadı");
+    // Admin hesabı yalnız adminlərə görünür
+    if (target.role === "ADMIN" && me.role !== "ADMIN") return notFound("Profil tapılmadı");
 
     const isOwn = me.id === target.id;
     const isAdmin = me.role === "ADMIN";
