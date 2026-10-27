@@ -25,13 +25,13 @@ export default function GroupHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="card overflow-hidden">
+    <section className="card overflow-hidden max-sm:-mx-4 max-sm:-mt-6 max-sm:rounded-none max-sm:border-x-0 max-sm:border-t-0 max-sm:shadow-none">
       <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
         <CoverArt value={group.coverPhoto} seed={group.id} />
         {back && (
           <Link
             href={back.href}
-            className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink bg-white px-3.5 py-1.5 text-sm font-semibold shadow-hard transition hover:bg-sun"
+            className="absolute left-4 top-4 hidden sm:inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink bg-white px-3.5 py-1.5 text-sm font-semibold shadow-hard transition hover:bg-sun"
           >
             <Icon name="left" size={15} /> {back.label}
           </Link>

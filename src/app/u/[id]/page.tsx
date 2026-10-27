@@ -130,7 +130,7 @@ function ProfileInner() {
 
   return (
     <div className="page space-y-6">
-      <section className="card overflow-hidden">
+      <section className="card overflow-hidden max-sm:-mx-4 max-sm:-mt-6 max-sm:rounded-none max-sm:border-x-0 max-sm:border-t-0 max-sm:shadow-none">
         <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
           <CoverArt value={user.coverPhoto} seed={user.id} />
           {isOwn && me?.role !== "ADMIN" && (
