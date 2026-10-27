@@ -41,7 +41,7 @@ export default function GroupHeader({
       <div className="relative flow-root px-5 pb-6 sm:px-8">
         {actions && <div className="absolute right-5 top-4 flex gap-2 sm:right-8">{actions}</div>}
 
-        <span className="-mt-[66px] grid h-[132px] w-[132px] place-items-center overflow-hidden rounded-full border-4 border-ink bg-sun text-ink shadow-hard">
+        <span className="-mt-[44px] grid h-[88px] w-[88px] place-items-center sm:-mt-[66px] sm:h-[132px] sm:w-[132px] overflow-hidden rounded-full border-4 border-ink bg-sun text-ink shadow-hard">
           {group.photo ? <Img src={group.photo} className="h-full w-full object-cover" /> : <Icon name="users" size={46} />}
         </span>
 

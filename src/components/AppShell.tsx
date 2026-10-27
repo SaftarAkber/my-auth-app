@@ -157,7 +157,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
       <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border-2 border-ink bg-sun px-1.5 text-xs font-semibold sm:block">/</kbd>
 
       {open && q.trim().length >= 2 && (
-        <div className="pop-menu left-0 right-0 max-h-[70vh] overflow-y-auto p-1.5">
+        <div className="pop-menu pop-search left-0 right-0 max-h-[70vh] overflow-y-auto p-1.5">
           {busy && hits.length === 0 && <p className="px-3 py-4 text-sm text-muted">…</p>}
           {!busy && hits.length === 0 && <p className="px-3 py-4 text-sm text-muted">{t("searchNone")}</p>}
           {Object.entries(groups).map(([kind, list]) => (

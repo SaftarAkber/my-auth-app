@@ -153,7 +153,7 @@ function ProfileInner() {
               <Icon name="edit" size={17} />
             </button>
           )}
-          <Avatar src={user.photo} name={user.name} size={132} className="-mt-[66px] border-4 border-ink bg-sun text-ink shadow-hard" />
+          <Avatar src={user.photo} name={user.name} size={132} className="-mt-[44px] !h-[88px] !w-[88px] !text-[32px] border-4 border-ink bg-sun text-ink shadow-hard sm:-mt-[66px] sm:!h-[132px] sm:!w-[132px] sm:!text-[50px]" />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{user.name}</h1>
             <span className={user.role === "TEACHER" ? "badge-brand" : user.role === "ADMIN" ? "badge-bad" : "badge-warn"}>

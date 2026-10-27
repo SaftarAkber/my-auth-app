@@ -45,34 +45,34 @@ export default function ResultsMatrix({ packageId, back, attemptBase }: { packag
       ) : (
         <>
           <div className="card overflow-x-auto">
-            <table className="w-full border-collapse text-center text-sm">
+            <table className="w-full border-separate border-spacing-0 text-center text-sm">
               <thead>
-                <tr className="border-b-[3px] border-ink bg-sun/40">
-                  <th className="sticky left-0 z-10 min-w-[200px] bg-sun/40 px-4 py-3 text-left font-extrabold">İştirakçı</th>
+                <tr className="bg-[#fbe5a1]">
+                  <th className="sticky left-0 z-20 w-[118px] min-w-[118px] border-b-[3px] border-r-[3px] border-b-ink border-r-ink bg-[#fbe5a1] px-3 py-3 text-left font-extrabold sm:min-w-[200px] sm:px-4">İştirakçı</th>
                   {nums.map((n) => (
-                    <th key={n} className="min-w-[38px] px-2 py-3 font-extrabold tabular-nums">{n}</th>
+                    <th key={n} className="min-w-[38px] border-b-[3px] border-ink px-2 py-3 font-extrabold tabular-nums">{n}</th>
                   ))}
-                  <th className="min-w-[80px] border-l-[3px] border-ink px-3 py-3 font-extrabold">Düzgün</th>
+                  <th className="min-w-[80px] border-b-[3px] border-l-[3px] border-ink px-3 py-3 font-extrabold">Düzgün</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.map((r) => {
                   const clickable = data.canOpenAll || r.mine;
                   const name = (
-                    <span className="flex items-center gap-2.5">
-                      <Avatar src={r.student.photo} name={r.student.name} size={30} />
-                      <span className="truncate font-bold">{r.student.name}{r.mine && " (siz)"}</span>
+                    <span className="flex w-[94px] items-center gap-2.5 sm:w-auto">
+                      <Avatar src={r.student.photo} name={r.student.name} size={28} className="hidden sm:inline-flex" />
+                      <span className="min-w-0 truncate text-sm font-bold">{r.student.name}{r.mine && " (siz)"}</span>
                     </span>
                   );
                   return (
-                    <tr key={r.attemptId} className={cx("group border-b-2 border-ink/15 last:border-b-0", clickable && "hover:bg-sun/25", r.mine && "bg-iris/10")}>
-                      <td className="sticky left-0 z-10 bg-inherit px-4 py-2.5 text-left">
+                    <tr key={r.attemptId} className="group">
+                      <td className={cx("sticky left-0 z-10 border-b-2 border-r-[3px] border-b-ink/15 border-r-ink px-3 py-2.5 text-left sm:px-4", r.mine ? "bg-[#ecebfc]" : "bg-white", clickable && "group-hover:bg-[#fdf1c6]")}>
                         {clickable ? (
                           <Link href={`${attemptBase}/${r.attemptId}`} className="block hover:underline">{name}</Link>
                         ) : name}
                       </td>
                       {r.cells.map((c, i) => (
-                        <td key={i} className="px-2 py-2.5">
+                        <td key={i} className="border-b-2 border-ink/15 px-2 py-2.5">
                           {clickable ? (
                             <Link href={`${attemptBase}/${r.attemptId}`} className="inline-flex h-6 items-center justify-center" aria-label={`Sual ${i + 1}`}>
                               <CellMark c={c} />
@@ -80,7 +80,7 @@ export default function ResultsMatrix({ packageId, back, attemptBase }: { packag
                           ) : <CellMark c={c} />}
                         </td>
                       ))}
-                      <td className="border-l-[3px] border-ink px-3 py-2.5 font-extrabold tabular-nums">
+                      <td className="border-b-2 border-l-[3px] border-b-ink/15 border-l-ink px-3 py-2.5 font-extrabold tabular-nums">
                         {r.correct} <span className="font-semibold text-muted">/ {data.total}</span>
                       </td>
                     </tr>

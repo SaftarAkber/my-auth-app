@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, errMsg } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtClock, percent } from "@/lib/format";
@@ -155,7 +156,7 @@ export default function TestTaker({
     const hasOpen = questions.some((x) => x.type === "OPEN_ENDED");
     return (
       <Overlay>
-        <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-4 py-10 text-center">
+        <div className="mx-auto flex min-h-0 w-full flex-1 overflow-y-auto max-w-md flex-col items-center justify-center px-4 py-10 text-center">
           <div
             className={cx(
               "flex h-32 w-32 items-center justify-center rounded-full border-8 text-4xl font-extrabold",
@@ -194,7 +195,7 @@ export default function TestTaker({
   if (!q) {
     return (
       <Overlay>
-        <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
           <p className="text-muted">Bu testdə sual yoxdur.</p>
           <button className="btn-secondary" onClick={() => onClose(false)}>Bağla</button>
         </div>
@@ -206,7 +207,7 @@ export default function TestTaker({
 
   return (
     <Overlay>
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
+      <header className="shrink-0 border-b-[3px] border-ink bg-surface pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <button className="btn-icon -ml-2" onClick={leave} aria-label="Çıx"><Icon name="x" /></button>
           <div className="min-w-0 flex-1">
@@ -227,6 +228,7 @@ export default function TestTaker({
         <ProgressBar value={((index + 1) / questions.length) * 100} />
       </header>
 
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="card animate-fade-up p-5 sm:p-7" key={q.id}>
           <div className="mb-4 flex items-center justify-between">
@@ -291,21 +293,25 @@ export default function TestTaker({
           ))}
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <button className="btn-secondary" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
-            <Icon name="left" size={16} /> Əvvəlki
-          </button>
-          {index < questions.length - 1 ? (
-            <button className="btn-primary" onClick={() => setIndex((i) => i + 1)}>
-              Növbəti <Icon name="right" size={16} />
-            </button>
-          ) : (
-            <button className="btn-primary" onClick={finish} disabled={submitting}>
-              {submitting ? <Spinner /> : <Icon name="check" size={16} />} Testi bitir
-            </button>
-          )}
-        </div>
       </div>
+      </div>
+
+      <footer className="shrink-0 border-t-[3px] border-ink bg-surface pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+            <button className="btn-secondary" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
+              <Icon name="left" size={16} /> Əvvəlki
+            </button>
+            {index < questions.length - 1 ? (
+              <button className="btn-primary" onClick={() => setIndex((i) => i + 1)}>
+                Növbəti <Icon name="right" size={16} />
+              </button>
+            ) : (
+              <button className="btn-primary" onClick={finish} disabled={submitting}>
+                {submitting ? <Spinner /> : <Icon name="check" size={16} />} Testi bitir
+              </button>
+            )}
+          </div>
+      </footer>
     </Overlay>
   );
 }
@@ -318,5 +324,7 @@ function Overlay({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = prev;
     };
   }, []);
-  return <div className="fixed inset-0 z-[150] overflow-y-auto bg-bg">{children}</div>;
+  // Portal: səhifənin içində yox, ən üst qatda açılır ki, yuxarı panel və alt menyu testin üstünü örtməsin
+  if (typeof document === "undefined") return null;
+  return createPortal(<div className="fixed inset-0 z-[400] flex h-[100dvh] flex-col bg-bg">{children}</div>, document.body);
 }
