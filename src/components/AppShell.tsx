@@ -223,7 +223,7 @@ function RightBtn({
   return href ? (
     <Link href={href} className={cls} style={style} aria-label={ariaLabel ?? label}>{inner}</Link>
   ) : (
-    <button type="button" onClick={onClick} className={cls} style={style} aria-label={ariaLabel ?? label} aria-expanded={open}>{inner}</button>
+    <button type="button" onClick={(e) => { onClick?.(); if (open) e.currentTarget.blur(); }} className={cls} style={style} aria-label={ariaLabel ?? label} aria-expanded={open}>{inner}</button>
   );
 }
 
@@ -267,11 +267,15 @@ export default function AppShell({ role, children }: { role: ShellRole; children
   }, [pathname]);
 
   useEffect(() => {
-    const click = (e: MouseEvent) => {
-      if (bar.current && !bar.current.contains(e.target as Node)) setMenu(null);
+    // pointerdown: iPhone-da boş yerə toxunuş mousedown yaratmır, ona görə pəncərə bağlanmırdı
+    const click = (e: PointerEvent) => {
+      if (bar.current && !bar.current.contains(e.target as Node)) {
+        setMenu(null);
+        if (bar.current.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+      }
     };
-    document.addEventListener("mousedown", click);
-    return () => document.removeEventListener("mousedown", click);
+    document.addEventListener("pointerdown", click);
+    return () => document.removeEventListener("pointerdown", click);
   }, []);
 
   if (loading || !user || (role !== "ANY" && user.role !== role)) return <FullPageLoader />;
@@ -366,7 +370,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
               aria-label={t("profile")}
               aria-current={onProfile ? "page" : undefined}
               className={cx(
-                "flex items-center gap-2 rounded-full border-[2.5px] border-ink py-0.5 pl-0.5 pr-3 text-sm font-semibold transition",
+                "flex items-center gap-2 rounded-full border-[2.5px] border-ink p-0.5 text-sm font-semibold transition sm:pr-3",
                 onProfile ? "bg-ink text-white" : "bg-white hover:bg-ink hover:text-white",
               )}
             >
