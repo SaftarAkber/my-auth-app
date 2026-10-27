@@ -107,8 +107,8 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
             <SubjectPicker value={subjects} onChange={setSubjects} />
           </div>
         )}
-        <Field label="Haqqında" hint="Qısa təqdimat — profilinizdə görünür">
-          <textarea className="input min-h-28" value={bio ?? ""} onChange={(e) => setBio(e.target.value)} maxLength={500} />
+        <Field label="Haqqında" hint="Qısa təqdimat — ən çoxu 4 sətir, profilinizdə görünür">
+          <textarea className="input min-h-28" rows={4} value={bio ?? ""} onChange={(e) => setBio(e.target.value.split("\n").slice(0, 4).join("\n"))} maxLength={240} />
         </Field>
       </div>
     </Modal>

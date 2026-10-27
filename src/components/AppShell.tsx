@@ -234,7 +234,10 @@ export default function AppShell({ role, children }: { role: ShellRole; children
   const router = useRouter();
   const pathname = usePathname();
   const { lang, setLang, t } = useLang();
-  const [menu, setMenu] = useState<"lang" | "bell" | null>(null);
+  const [menu, setMenu] = useState<"lang" | "bell" | "coin" | null>(null);
+  // Bildirimlər: "son baxış" vaxtı brauzerdə saxlanılır; ondan yeni olanlar oxunmamış sayılır
+  const [seenTick, setSeenTick] = useState(0);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState(0);
   const [notes, setNotes] = useState<Notice[]>([]);
   const bar = useRef<HTMLDivElement>(null);
@@ -285,6 +288,17 @@ export default function AppShell({ role, children }: { role: ShellRole; children
     i.match.some((m) => (i.exact ? pathname === m : pathname === m || pathname.startsWith(m + "/")));
   const onProfile = pathname === `/u/${user.id}`;
   const showCoin = user.role !== "ADMIN";
+  const seenKey = `notif-seen:${user.id}`;
+  let seen = 0;
+  try {
+    seen = seenTick >= 0 ? Number(localStorage.getItem(seenKey) ?? 0) : 0;
+  } catch { /* brauzer yaddaşı bağlıdırsa hamısı oxunmamış sayılır */ }
+  const unread = notes.filter((n) => new Date(n.at).getTime() > seen);
+  function markSeen() {
+    const newest = Math.max(0, ...notes.map((n) => new Date(n.at).getTime()));
+    try { localStorage.setItem(seenKey, String(newest)); } catch { /* ignore */ }
+    setSeenTick((t) => t + 1);
+  }
 
   return (
     <div className="min-h-screen">
@@ -339,14 +353,20 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             </div>
 
             <div className="relative">
-              <RightBtn icon="bell" label={t("notifications")} hover={hw(t("notifications"))} open={menu === "bell"} dot={notes.length > 0} onClick={() => { setMenu(menu === "bell" ? null : "bell"); loadNotes(); }} />
+              <RightBtn icon="bell" label={t("notifications")} hover={hw(t("notifications"))} open={menu === "bell"} dot={unread.length > 0} onClick={() => {
+                if (menu === "bell") { setMenu(null); return; }
+                setFresh(new Set(unread.map((n) => n.id)));
+                setMenu("bell");
+                loadNotes();
+                markSeen();
+              }} />
               {menu === "bell" && (
                 <div className="pop-menu -right-16 w-[min(22rem,calc(100vw-1.5rem))] sm:right-0">
                   <p className="border-b-2 border-ink px-4 py-3 text-sm font-bold">{t("notifications")}</p>
                   <div className="max-h-96 overflow-y-auto">
                     {notes.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted">{t("noNotifications")}</p>}
                     {notes.map((n) => (
-                      <Link key={n.id} href={n.href} className="block border-b border-line px-4 py-3 transition last:border-0 hover:bg-sun/30">
+                      <Link key={n.id} href={n.href} className={cx("block border-b border-line px-4 py-3 transition last:border-0 hover:bg-sun/30", fresh.has(n.id) && "bg-sun/40")}>
                         <p className="text-sm font-medium">{n.text}</p>
                         <p className="mt-0.5 text-xs text-muted">{timeAgo(n.at)}</p>
                       </Link>
@@ -357,11 +377,35 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             </div>
 
             {showCoin && (
-              <RightBtn href={`/u/${user.id}`} label={t("coin")} width={Math.max(76, 52 + String(user.coinBalance).length * 10)} hover={hw(t("coin")) + 40} ariaLabel={`${t("coin")}: ${user.coinBalance}`}>
-                <span className="coin-ic" />
-              </RightBtn>
+              <div className="hidden items-center gap-1.5 sm:flex">
+                <RightBtn href={`/u/${user.id}`} label={t("coin")} width={Math.max(76, 52 + String(user.coinBalance).length * 10)} hover={hw(t("coin")) + 40} ariaLabel={`${t("coin")}: ${user.coinBalance}`}>
+                  <span className="coin-ic" />
+                </RightBtn>
+                <span className="-ml-1 mr-1 text-sm font-extrabold tabular-nums" aria-hidden>{user.coinBalance.toLocaleString("az-AZ")}</span>
+              </div>
             )}
-            {showCoin && <span className="-ml-1 mr-1 hidden text-sm font-extrabold tabular-nums sm:inline" aria-hidden>{user.coinBalance.toLocaleString("az-AZ")}</span>}
+            {showCoin && (
+              <div className="relative sm:hidden">
+                <RightBtn
+                  label={`${user.coinBalance.toLocaleString("az-AZ")} coin`}
+                  hover={hw(`${user.coinBalance.toLocaleString("az-AZ")} coin`)}
+                  open={menu === "coin"}
+                  onClick={() => setMenu(menu === "coin" ? null : "coin")}
+                  ariaLabel={`${t("coin")}: ${user.coinBalance}`}
+                >
+                  <span className="coin-ic" />
+                </RightBtn>
+                {menu === "coin" && (
+                  <div className="pop-menu p-4" role="status">
+                    <p className="text-xs font-bold text-muted">{t("coin")}</p>
+                    <p className="mt-1 flex items-center gap-2 text-2xl font-extrabold tabular-nums">
+                      <span className="coin-ic" /> {user.coinBalance.toLocaleString("az-AZ")} coin
+                    </p>
+                    <Link href={`/u/${user.id}?tab=coins`} className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Tarixçə →</Link>
+                  </div>
+                )}
+              </div>
+            )}
 
             <span className="mx-1 hidden h-6 w-0.5 bg-ink sm:block" />
 

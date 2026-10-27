@@ -37,7 +37,7 @@ export async function PATCH(req: Request) {
       where: { id: currentUser.id },
       data: {
         ...(name !== undefined && { name: String(name).trim() }),
-        ...(bio !== undefined && { bio }),
+        ...(bio !== undefined && { bio: String(bio).split("\n").slice(0, 4).join("\n").slice(0, 240) }),
         ...(photo !== undefined && { photo }),
         ...(coverPhoto !== undefined && { coverPhoto }),
         ...(cleaned && { subjects: cleaned }),

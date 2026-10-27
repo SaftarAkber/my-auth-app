@@ -162,7 +162,7 @@ function ProfileInner() {
             {isTeacher && <SubjectBadges subjects={user.subjects} />}
           </div>
           {user.bio ? (
-            <p className="mt-2 max-w-3xl whitespace-pre-wrap">{user.bio}</p>
+            <p className="mt-2 line-clamp-4 max-w-3xl whitespace-pre-wrap">{user.bio}</p>
           ) : isOwn && me?.role !== "ADMIN" ? (
             <p className="mt-2 text-muted">Haqqında bir şey yaz: qələmə bas.</p>
           ) : null}
