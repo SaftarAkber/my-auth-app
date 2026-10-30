@@ -11,6 +11,7 @@ import {
 } from "@/components/content";
 import { VideoPlayer } from "@/components/video";
 import GroupHeader from "@/components/GroupHeader";
+import GroupEditModal from "@/components/GroupEditModal";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
 } from "@/components/ui";
@@ -49,6 +50,7 @@ export default function TeacherGroupPage() {
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
   const [tab, setTab] = useState<"feed" | "members" | "tests" | "videos" | "requests">("feed");
+  const [editOpen, setEditOpen] = useState(false);
   const [video, setVideo] = useState<VideoLite | null>(null);
 
   // Post yazma
@@ -181,7 +183,13 @@ export default function TeacherGroupPage() {
           members={g.members.length}
           back={{ href: "/teacher/groups", label: "Qruplar" }}
           badges={!g.isActive ? <span className="badge-warn">Deaktiv</span> : undefined}
+          actions={
+            <button className="btn-icon" title="Qrupu redaktə et" aria-label="Qrupu redaktə et" onClick={() => setEditOpen(true)}>
+              <Icon name="edit" size={18} />
+            </button>
+          }
         />
+        {editOpen && <GroupEditModal editing={g} onClose={() => setEditOpen(false)} onSaved={reload} />}
       </div>
       <div className="page !pt-0">
 
@@ -247,9 +255,9 @@ export default function TeacherGroupPage() {
             (g.members.length === 0 ? (
               <Empty icon="users" title="Hələ üzv yoxdur" text="Tələbələr müraciət göndərdikdə burada görünəcək." />
             ) : (
-              <div className="card divide-y divide-line">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {g.members.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                  <div key={m.id} className="card-flat flex items-center gap-3 px-3.5 py-3">
                     <Avatar src={m.student.photo} name={m.student.name} size={40} />
                     <div className="min-w-0 flex-1">
                       <Link href={`/u/${m.student.id}`} className="block truncate font-semibold hover:text-brand">{m.student.name}</Link>

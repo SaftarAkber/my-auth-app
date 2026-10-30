@@ -35,7 +35,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
           where: { studentId: target.id },
           select: { group: { select: { id: true, name: true, description: true, schedule: true, teacherId: true, teacher: { select: { name: true } } } } },
         }),
-        prisma.studentAttempt.count({ where: { studentId: target.id, finishedAt: { not: null } } }),
+        prisma.studentAttempt.count({ where: { studentId: target.id, finishedAt: { not: null }, package: { deletedAt: null } } }),
       ]);
       return NextResponse.json({
         user: target,

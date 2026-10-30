@@ -34,6 +34,7 @@ export async function GET() {
             status: "PENDING",
             question: { type: "OPEN_ENDED" },
             attempt: {
+              package: { deletedAt: null },
               OR: [
                 { package: { collection: { teacherId: user.id } } },
                 { package: { group: { teacherId: user.id } } },

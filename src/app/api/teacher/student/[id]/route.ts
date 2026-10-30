@@ -37,7 +37,7 @@ export async function GET(
 
     // Tamamladığı testler
     const attempts = await prisma.studentAttempt.findMany({
-      where: { studentId: id, finishedAt: { not: null } },
+      where: { studentId: id, finishedAt: { not: null }, package: { deletedAt: null } },
       include: {
         package: {
           select: {

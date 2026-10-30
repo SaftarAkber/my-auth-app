@@ -73,6 +73,8 @@ model Group {
   videoGroups          VideoGroup[]
   testPackageGroups    TestPackageGroup[]
 
+  collectionGroups CollectionGroup[]
+
   @@map("groups")
 }
 
@@ -85,6 +87,17 @@ model VideoPackageGroup {
 
   @@unique([packageId, groupId])
   @@map("video_package_groups")
+}
+
+model CollectionGroup {
+  id           String     @id @default(cuid())
+  collectionId String
+  groupId      String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, groupId])
+  @@map("collection_groups")
 }
 
 model TestPackageGroup {
@@ -161,6 +174,12 @@ model Collection {
   teacher     User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   packages    TestPackage[]
   videoPackages VideoPackage[]
+  // GROUP_ONLY: kolleksiya yalnız seçilmiş qruplarda görünür (PUBLIC: məhdudiyyət yoxdur)
+  visibility  ContentVisibility @default(PUBLIC)
+  groups      CollectionGroup[]
+  // Yumşaq silmə: müəllim siləndə bazadan çıxmır, admin bərpa edə bilir
+  deletedAt   DateTime?
+  deletedById String?
 
   @@map("collections")
 }
@@ -252,6 +271,8 @@ model TestPackage {
   attempts     StudentAttempt[]
   allowRetry   Boolean @default(false)
   shareAnswers Boolean @default(false)
+  deletedAt    DateTime?
+  deletedById  String?
   testPackageGroups TestPackageGroup[]
   // Müəllimin istəyə bağlı coin mükafatı qaydası
   rewardEnabled    Boolean @default(false)

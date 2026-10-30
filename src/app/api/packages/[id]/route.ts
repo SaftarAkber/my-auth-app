@@ -77,17 +77,41 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
     const existing = await prisma.testPackage.findUnique({
       where: { id },
-      include: { _count: { select: { questions: true } } },
+      include: {
+        _count: { select: { questions: true } },
+        collection: { select: { visibility: true, groups: { select: { groupId: true } } } },
+        testPackageGroups: { select: { groupId: true } },
+      },
     });
     if (!existing) return notFound();
 
-    if (isPublished === true && existing._count.questions === 0) {
+    // Məhdud kolleksiyada paket yalnız kolleksiyanın qruplarına dərc oluna bilər, hər qrup üçün ayrıca
+    const restricted = existing.collection?.visibility === "GROUP_ONLY";
+    const linkIds: string[] | undefined = Array.isArray(groupIds) ? groupIds : undefined;
+    let pub = isPublished;
+    let vis = visibility;
+    let open = isPublic;
+    if (restricted) {
+      const allowed = new Set(existing.collection!.groups.map((g) => g.groupId));
+      if (linkIds && linkIds.some((g: string) => !allowed.has(g))) {
+        return NextResponse.json({ error: "Qrup bu kolleksiyaya açıq deyil" }, { status: 400 });
+      }
+      vis = "GROUP_ONLY";
+      open = false;
+      const finalLinks = linkIds ?? existing.testPackageGroups.map((g) => g.groupId);
+      if (linkIds) pub = finalLinks.length > 0 ? (isPublished ?? true) : false;
+      if (pub === true && finalLinks.length === 0) {
+        return NextResponse.json({ error: "Əvvəlcə dərc ediləcək qrupu seçin" }, { status: 400 });
+      }
+    }
+
+    if ((restricted ? pub : isPublished) === true && existing._count.questions === 0) {
       return NextResponse.json({ error: "Sualsız testi dərc etmək olmaz" }, { status: 400 });
     }
 
     const pkg = await prisma.$transaction(async (tx) => {
       // Qrup bağlantıları yalnız siyahı göndərildikdə yenilənir
-      if (Array.isArray(groupIds)) {
+      if (linkIds) {
         await tx.testPackageGroup.deleteMany({ where: { packageId: id } });
       }
       return tx.testPackage.update({
@@ -95,18 +119,18 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         data: {
           ...(name && { name }),
           ...(description !== undefined && { description }),
-          ...(isPublished !== undefined && { isPublished }),
-          ...(isPublic !== undefined && { isPublic }),
+          ...((restricted ? pub : isPublished) !== undefined && { isPublished: restricted ? pub : isPublished }),
+          ...((restricted ? open : isPublic) !== undefined && { isPublic: restricted ? open : isPublic }),
           ...(isTimed !== undefined && { isTimed, ...(isTimed ? {} : { duration: null }) }),
           ...(duration !== undefined && isTimed !== false && { duration }),
           ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
           ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
-          ...(visibility !== undefined && { visibility }),
+          ...((restricted ? vis : visibility) !== undefined && { visibility: restricted ? vis : visibility }),
           ...(allowRetry !== undefined && { allowRetry }),
           ...(shareAnswers !== undefined && { shareAnswers: !!shareAnswers }),
           ...rewardData(body),
-          ...(Array.isArray(groupIds) && groupIds.length
-            ? { testPackageGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }
+          ...(linkIds && linkIds.length
+            ? { testPackageGroups: { create: [...new Set<string>(linkIds)].map((groupId) => ({ groupId })) } }
             : {}),
         },
         include: {
@@ -129,7 +153,8 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
     const { id } = await params;
     if (!(await teacherOwnsTestPackage(auth.user.id, id))) return forbidden();
 
-    await prisma.testPackage.delete({ where: { id } });
+    // Yumşaq silmə: hər yerdən gizlənir, admin silinənlərdən bərpa edə bilir
+    await prisma.testPackage.update({ where: { id }, data: { deletedAt: new Date(), deletedById: auth.user.id } });
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
     return serverError(error);

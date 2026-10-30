@@ -17,7 +17,7 @@ export async function GET(
     const attempts = await prisma.studentAttempt.findMany({
       where: {
         studentId,
-        package: { collection: { teacherId: currentUser.id } },
+        package: { deletedAt: null, collection: { teacherId: currentUser.id } },
       },
       include: {
         package: { select: { name: true } },

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const collection = await prisma.collection.findFirst({
       where: { id: collectionId, teacherId: auth.user.id },
-      select: { id: true },
+      select: { id: true, visibility: true },
     });
     if (!collection) {
       return NextResponse.json({ error: "Kolleksiya tapılmadı" }, { status: 404 });
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
         name,
         description: description || null,
         collectionId,
+        // Məhdud kolleksiyada yeni test əvvəlcə heç bir qrupa dərc olunmur
+        ...(collection.visibility === "GROUP_ONLY" ? { visibility: "GROUP_ONLY" as const } : {}),
         isTimed: !!isTimed,
         duration: isTimed ? duration : null,
         startsAt: startsAt ? new Date(startsAt) : null,

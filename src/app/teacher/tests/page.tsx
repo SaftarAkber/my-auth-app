@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import {
-  Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
+  ChipSelect, Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
 } from "@/components/ui";
 import { SubNav, TESTS_NAV } from "@/components/SubNav";
 
@@ -13,6 +13,7 @@ interface Collection {
   name: string;
   description: string | null;
   _count: { packages: number; videoPackages: number };
+  groups?: { groupId: string; group: { id: string; name: string } }[];
 }
 
 export default function TeacherTestsPage() {
@@ -20,12 +21,17 @@ export default function TeacherTestsPage() {
   const confirm = useConfirm();
   const { data, loading, error, reload } = useFetch<{ collections: Collection[] }>("/api/collections");
   const [editing, setEditing] = useState<Collection | "new" | null>(null);
-  const [form, setForm] = useState({ name: "", description: "" });
+  const groups = useFetch<{ groups: { id: string; name: string }[] }>("/api/groups");
+  const [form, setForm] = useState({ name: "", description: "", groupIds: [] as string[] });
   const [busy, setBusy] = useState(false);
 
   function open(c: Collection | "new") {
     setEditing(c);
-    setForm(c === "new" ? { name: "", description: "" } : { name: c.name, description: c.description ?? "" });
+    setForm(
+      c === "new"
+        ? { name: "", description: "", groupIds: [] }
+        : { name: c.name, description: c.description ?? "", groupIds: (c.groups ?? []).map((g) => g.groupId) },
+    );
   }
 
   async function save() {
@@ -47,7 +53,7 @@ export default function TeacherTestsPage() {
   async function remove(c: Collection) {
     const ok = await confirm({
       title: `“${c.name}” kolleksiyası silinsin?`,
-      message: "İçindəki bütün testlər, suallar və tələbə cəhdləri də silinəcək.",
+      message: "İçindəki bütün test paketləri də silinəcək. Yanlışlıqla silsəniz, admin onları bərpa edə bilər.",
       confirmText: "Sil",
       danger: true,
     });
@@ -91,7 +97,14 @@ export default function TeacherTestsPage() {
                 <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand"><Icon name="folder" size={22} /></span>
                 <h3 className="text-lg font-bold hover:text-brand">{c.name}</h3>
                 <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{c.description || "Təsvir yoxdur."}</p>
-                <span className="badge-muted mt-3"><Icon name="file" size={12} /> {c._count.packages} test</span>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <span className="badge-muted"><Icon name="file" size={12} /> {c._count.packages} test</span>
+                  {(c.groups ?? []).length === 0 ? (
+                    <span className="badge-muted"><Icon name="globe" size={12} /> Məhdudiyyət yoxdur</span>
+                  ) : (
+                    c.groups!.map((g) => <span key={g.groupId} className="badge-brand">{g.group.name}</span>)
+                  )}
+                </div>
               </Link>
               <div className="mt-4 flex items-center gap-1 border-t border-line pt-3">
                 <Link href={`/teacher/tests/${c.id}`} className="btn-soft btn-sm flex-1">Aç</Link>
@@ -117,6 +130,20 @@ export default function TeacherTestsPage() {
         <div className="space-y-4">
           <Field label="Ad *"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="məs. Riyaziyyat — Triqonometriya" autoFocus /></Field>
           <Field label="Təsvir"><textarea className="input min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+          <div>
+            <span className="label">Hansı qruplara açıq olsun?</span>
+            <ChipSelect
+              options={(groups.data?.groups ?? []).map((g) => ({ id: g.id, label: g.name }))}
+              value={form.groupIds}
+              onChange={(v) => setForm({ ...form, groupIds: v })}
+              empty="Əvvəlcə qrup yaradın"
+            />
+            <p className="mt-1.5 text-xs text-muted">
+              {form.groupIds.length
+                ? "Kolleksiya yalnız seçilmiş qruplarda olacaq. Hər testi hansı qrup üçün dərc edəcəyinizi kolleksiyanın içində ayrıca seçirsiniz. Başqa qrup və profil üçün görünməz."
+                : "Qrup seçilməsə, kolleksiya əvvəlki kimi (hər testin öz ayarı ilə) işləyir."}
+            </p>
+          </div>
         </div>
       </Modal>
     </div>

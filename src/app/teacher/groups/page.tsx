@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
-import {
-  Empty, ErrorBox, Field, Icon, Img, ImageUpload, Modal, PageHeader, SkeletonList, Spinner, Toggle,
-  useConfirm, useToast,
-} from "@/components/ui";
+import { Empty, ErrorBox, Icon, Img, PageHeader, SkeletonList, useConfirm, useToast } from "@/components/ui";
+import GroupEditModal from "@/components/GroupEditModal";
 
 interface Group {
   id: string;
@@ -19,41 +17,12 @@ interface Group {
   _count: { members: number; posts: number };
 }
 
-const EMPTY = { name: "", description: "", schedule: "", photo: null as string | null, coverPhoto: null as string | null, isActive: true };
-
 export default function TeacherGroupsPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data, loading, error, reload } = useFetch<{ groups: Group[] }>("/api/groups");
   const [editing, setEditing] = useState<Group | "new" | null>(null);
-  const [form, setForm] = useState(EMPTY);
-  const [busy, setBusy] = useState(false);
-
-  function open(g: Group | "new") {
-    setEditing(g);
-    setForm(
-      g === "new"
-        ? EMPTY
-        : { name: g.name, description: g.description ?? "", schedule: g.schedule ?? "", photo: g.photo, coverPhoto: g.coverPhoto, isActive: g.isActive },
-    );
-  }
-
-  async function save() {
-    if (!form.name.trim()) return toast.error("Qrup adı məcburidir");
-    setBusy(true);
-    try {
-      const body = { ...form, photo: form.photo ?? "", coverPhoto: form.coverPhoto ?? "" };
-      if (editing === "new") await api("/api/groups", { body });
-      else if (editing) await api(`/api/groups/${editing.id}`, { method: "PATCH", body });
-      toast.success(editing === "new" ? "Qrup yaradıldı" : "Qrup yeniləndi");
-      setEditing(null);
-      reload();
-    } catch (e) {
-      toast.error(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const open = (g: Group | "new") => setEditing(g);
 
   async function remove(g: Group) {
     const ok = await confirm({
@@ -134,34 +103,7 @@ export default function TeacherGroupsPage() {
         </div>
       )}
 
-      <Modal
-        open={!!editing}
-        onClose={() => setEditing(null)}
-        title={editing === "new" ? "Yeni qrup" : "Qrupu redaktə et"}
-        footer={
-          <>
-            <button className="btn-secondary" onClick={() => setEditing(null)}>Ləğv et</button>
-            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <ImageUpload label="Üz qabığı" value={form.coverPhoto} onChange={(u) => setForm({ ...form, coverPhoto: u })} />
-          <ImageUpload label="Qrup şəkli" shape="square" value={form.photo} onChange={(u) => setForm({ ...form, photo: u })} />
-          <Field label="Ad *">
-            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="məs. 11-ci sinif Riyaziyyat" />
-          </Field>
-          <Field label="Təsvir">
-            <textarea className="input min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </Field>
-          <Field label="Dərs cədvəli">
-            <input className="input" value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value })} placeholder="B.e, Çər — 18:00" />
-          </Field>
-          {editing !== "new" && (
-            <Toggle checked={form.isActive} onChange={(v) => setForm({ ...form, isActive: v })} label="Aktiv" hint="Deaktiv qruplara yeni müraciət göndərilə bilməz" />
-          )}
-        </div>
-      </Modal>
+      {editing && <GroupEditModal editing={editing} onClose={() => setEditing(null)} onSaved={reload} />}
     </div>
   );
 }

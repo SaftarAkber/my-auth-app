@@ -38,6 +38,7 @@ const NAV: Record<"STUDENT" | "TEACHER" | "ADMIN", NavItem[]> = {
     { href: "/admin", key: "dashboard", icon: "chart", match: ["/admin"], exact: true },
     { href: "/admin/users", key: "users", icon: "users", match: ["/admin/users"] },
     { href: "/admin/content", key: "content", icon: "file", match: ["/admin/content"] },
+    { href: "/admin/deleted", key: "deleted", icon: "trash", match: ["/admin/deleted"] },
     { href: "/admin/site", key: "site", icon: "globe", match: ["/admin/site"] },
   ],
 };

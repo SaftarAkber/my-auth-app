@@ -13,6 +13,7 @@ export async function GET() {
       where: {
         finishedAt: { not: null },
         package: {
+          deletedAt: null,
           OR: [
             { collection: { teacherId: currentUser.id } },
             { group: { teacherId: currentUser.id } },

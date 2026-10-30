@@ -34,6 +34,7 @@ export async function GET() {
         prisma.studentAttempt.count({
           where: {
             package: {
+              deletedAt: null,
               OR: [
                 { collection: { teacherId: currentUser.id } },
                 { group: { teacherId: currentUser.id } },

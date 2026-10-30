@@ -34,6 +34,7 @@ interface Collection {
   name: string;
   description: string | null;
   packages: Pkg[];
+  groups: { groupId: string; group: { id: string; name: string } }[];
 }
 
 const EMPTY = {
@@ -52,6 +53,46 @@ export default function CollectionPage() {
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [now] = useState(() => Date.now());
+  const [colOpen, setColOpen] = useState(false);
+  const [colGroups, setColGroups] = useState<string[]>([]);
+  const [pubBusy, setPubBusy] = useState<string | null>(null);
+
+  const shared = col.data?.collection.groups ?? [];
+  const restricted = shared.length > 0;
+
+  function openColSettings() {
+    setColGroups(shared.map((g) => g.groupId));
+    setColOpen(true);
+  }
+
+  async function saveColSettings() {
+    setBusy(true);
+    try {
+      await api(`/api/collections/${id}`, { method: "PATCH", body: { groupIds: colGroups } });
+      toast.success("Kolleksiyanın qrupları yadda saxlanıldı");
+      setColOpen(false);
+      col.reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Məhdud kolleksiyada: testi bir qrup üçün dərc et / dərcdən çıxar
+  async function togglePublishFor(p: Pkg, groupId: string) {
+    const current = p.testPackageGroups.map((g) => g.groupId);
+    const next = current.includes(groupId) ? current.filter((x) => x !== groupId) : [...current, groupId];
+    setPubBusy(p.id + groupId);
+    try {
+      await api(`/api/packages/${p.id}`, { method: "PATCH", body: { groupIds: next, isPublished: next.length > 0 } });
+      col.reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setPubBusy(null);
+    }
+  }
 
   function open(p: Pkg | "new") {
     setEditing(p);
@@ -102,16 +143,18 @@ export default function CollectionPage() {
         rewardCoins: form.rewardEnabled ? parseInt(form.rewardCoins) : null,
         rewardAuto: form.rewardAuto,
       };
-      const links = {
-        isPublic: form.isPublic,
-        groupIds: form.groupIds,
-        visibility: form.groupIds.length > 0 ? "GROUP_ONLY" : "PUBLIC",
-      };
+      const links = restricted
+        ? {}
+        : {
+            isPublic: form.isPublic,
+            groupIds: form.groupIds,
+            visibility: form.groupIds.length > 0 ? "GROUP_ONLY" : "PUBLIC",
+          };
       if (editing === "new") {
         const { package: created } = await api<{ package: { id: string } }>("/api/packages", {
           body: { ...common, collectionId: id },
         });
-        await api(`/api/packages/${created.id}`, { method: "PATCH", body: links });
+        if (!restricted) await api(`/api/packages/${created.id}`, { method: "PATCH", body: links });
       } else if (editing) {
         await api(`/api/packages/${editing.id}`, { method: "PATCH", body: { ...common, ...links } });
       }
@@ -138,7 +181,7 @@ export default function CollectionPage() {
   async function remove(p: Pkg) {
     const ok = await confirm({
       title: `“${p.name}” testi silinsin?`,
-      message: "Suallar və tələbə cəhdləri də silinəcək.",
+      message: "Test hər yerdən silinəcək (suallar və tələbə cəhdləri də görünməyəcək). Yanlışlıqla silsəniz, admin bərpa edə bilər.",
       confirmText: "Sil",
       danger: true,
     });
@@ -161,8 +204,24 @@ export default function CollectionPage() {
         title={c.name}
         subtitle={c.description || "Bu kolleksiyadakı testlər"}
         back="/teacher/tests"
-        actions={<button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni test</button>}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary" onClick={openColSettings}><Icon name="users" size={16} /> Qruplar</button>
+            <button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni test</button>
+          </div>
+        }
       />
+
+      <div className="mb-5 flex flex-wrap items-center gap-2 text-sm">
+        {restricted ? (
+          <>
+            <span className="font-semibold">Bu kolleksiya yalnız bu qruplarda:</span>
+            {shared.map((g) => <span key={g.groupId} className="badge-brand">{g.group.name}</span>)}
+          </>
+        ) : (
+          <span className="text-muted">Kolleksiya qruplarla məhdudlaşdırılmayıb. “Qruplar” düyməsi ilə yalnız seçilmiş qruplara açıq edə bilərsiniz.</span>
+        )}
+      </div>
 
       {c.packages.length === 0 ? (
         <Empty icon="file" title="Bu kolleksiyada test yoxdur" action={<button className="btn-primary" onClick={() => open("new")}>Test yarat</button>} />
@@ -178,8 +237,10 @@ export default function CollectionPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/teacher/tests/${id}/${p.id}`} className="text-lg font-bold hover:text-brand">{p.name}</Link>
-                      {p.isPublished ? <span className="badge-ok">Dərc olunub</span> : <span className="badge-muted">Qaralama</span>}
-                      {p.isPublic && <span className="badge-info"><Icon name="globe" size={12} /> Açıq</span>}
+                      {restricted ? (
+                        p.testPackageGroups.length > 0 ? <span className="badge-ok">{p.testPackageGroups.length} qrupa dərc olunub</span> : <span className="badge-muted">Heç bir qrupa dərc olunmayıb</span>
+                      ) : p.isPublished ? <span className="badge-ok">Dərc olunub</span> : <span className="badge-muted">Qaralama</span>}
+                      {!restricted && p.isPublic && <span className="badge-info"><Icon name="globe" size={12} /> Açıq</span>}
                       {upcoming && <span className="badge-info">Tezliklə</span>}
                       {ended && <span className="badge-bad">Bitib</span>}
                     </div>
@@ -191,15 +252,39 @@ export default function CollectionPage() {
                       {p.allowRetry && <span className="badge-muted"><Icon name="retry" size={12} /> Təkrar</span>}
                       {p.rewardEnabled && p.rewardCoins && <span className="badge-warn"><Icon name="coin" size={12} /> {p.rewardMinCorrect}+ düz = {p.rewardCoins}</span>}
                       {p.startsAt && <span className="badge-muted"><Icon name="calendar" size={12} /> {fmtDate(p.startsAt)}</span>}
-                      {p.testPackageGroups.map((g) => <span key={g.groupId} className="badge-brand">{g.group.name}</span>)}
+                      {!restricted && p.testPackageGroups.map((g) => <span key={g.groupId} className="badge-brand">{g.group.name}</span>)}
                     </div>
+                    {restricted && (
+                      <div className="mt-3">
+                        <p className="mb-1.5 text-xs font-semibold text-muted">Qruplar üzrə dərc (qrupa toxunaraq aç / bağla):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {shared.map((g) => {
+                            const on = p.testPackageGroups.some((x) => x.groupId === g.groupId);
+                            return (
+                              <button
+                                key={g.groupId}
+                                type="button"
+                                disabled={pubBusy === p.id + g.groupId}
+                                aria-pressed={on}
+                                onClick={() => togglePublishFor(p, g.groupId)}
+                                className={`inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1 text-sm font-semibold transition ${on ? "bg-sun" : "bg-white hover:bg-sun/30"}`}
+                              >
+                                {on && <Icon name="check" size={13} />} {g.group.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex w-full items-center gap-1 sm:w-auto">
                     <Link href={`/teacher/tests/${id}/${p.id}`} className="btn-secondary btn-sm">Suallar</Link>
                     <Link href={`/teacher/results/${p.id}`} className="btn-soft btn-sm">Nəticələr</Link>
-                    <button className={p.isPublished ? "btn-ghost btn-sm" : "btn-primary btn-sm"} onClick={() => togglePublish(p)}>
-                      {p.isPublished ? "Dərcdən çıxar" : "Dərc et"}
-                    </button>
+                    {!restricted && (
+                      <button className={p.isPublished ? "btn-ghost btn-sm" : "btn-primary btn-sm"} onClick={() => togglePublish(p)}>
+                        {p.isPublished ? "Dərcdən çıxar" : "Dərc et"}
+                      </button>
+                    )}
                     <button className="btn-icon" onClick={() => open(p)} title="Redaktə"><Icon name="edit" size={17} /></button>
                     <button className="btn-icon hover:!text-bad" onClick={() => remove(p)} title="Sil"><Icon name="trash" size={17} /></button>
                   </div>
@@ -209,6 +294,37 @@ export default function CollectionPage() {
           })}
         </div>
       )}
+
+      <Modal
+        open={colOpen}
+        onClose={() => setColOpen(false)}
+        title="Kolleksiya hansı qruplara açıqdır?"
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setColOpen(false)}>Ləğv et</button>
+            <button className="btn-primary" onClick={saveColSettings} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <ChipSelect
+            options={(groups.data?.groups ?? []).map((g) => ({ id: g.id, label: g.name }))}
+            value={colGroups}
+            onChange={setColGroups}
+            empty="Əvvəlcə qrup yaradın"
+          />
+          <p className="text-xs text-muted">
+            {colGroups.length
+              ? "Kolleksiya yalnız seçilmiş qruplarda olacaq. Testlər qrup üzrə ayrıca dərc olunur: məsələn A qrupu 3 testi görür, B qrupu isə başqa sayda. Qrupdan çıxarsanız, o qrup üçün dərc olunan testlər də gizlənir."
+              : "Qrup seçilməsə, kolleksiya məhdudiyyətsizdir və testlərin hər biri öz ayarı ilə dərc olunur."}
+          </p>
+          {colGroups.length > 0 && !restricted && (
+            <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+              Diqqət: indi dərc olunmuş testlər qrup üzrə dərc üçün yenidən seçilməlidir, əks halda qrupda görünməyəcək.
+            </p>
+          )}
+        </div>
+      </Modal>
 
       <Modal
         open={!!editing}
@@ -226,6 +342,7 @@ export default function CollectionPage() {
           <Field label="Ad *"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus /></Field>
           <Field label="Təsvir"><textarea className="input min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
 
+          {!restricted && (
           <div>
             <span className="label">Hansı qruplar görsün?</span>
             <ChipSelect
@@ -238,8 +355,14 @@ export default function CollectionPage() {
               {form.groupIds.length ? "Yalnız seçilmiş qrupların üzvləri həll edə bilər." : "Qrup seçilməsə, hamı həll edə bilər."}
             </p>
           </div>
+          )}
 
-          <Toggle checked={form.isPublic} onChange={(v) => setForm({ ...form, isPublic: v })} label="Müəllim profilində açıq göstər" hint="Qrupda olmayan tələbələr də profilinizdə testi görə bilər" />
+          {restricted && (
+            <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+              Bu kolleksiya qruplarla məhdudlaşdırılıb. Testi hansı qrup üçün dərc edəcəyinizi test kartında qrup adına toxunaraq seçirsiniz.
+            </p>
+          )}
+          {!restricted && <Toggle checked={form.isPublic} onChange={(v) => setForm({ ...form, isPublic: v })} label="Müəllim profilində açıq göstər" hint="Qrupda olmayan tələbələr də profilinizdə testi görə bilər" />}
           <Toggle checked={form.isTimed} onChange={(v) => setForm({ ...form, isTimed: v })} label="Vaxt məhdudiyyəti" hint="Vaxt bitdikdə test avtomatik təhvil verilir" />
           {form.isTimed && (
             <Field label="Müddət (dəqiqə)">

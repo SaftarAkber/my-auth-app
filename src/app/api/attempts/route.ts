@@ -96,7 +96,7 @@ export async function GET() {
 
     if (currentUser.role === "STUDENT") {
       const attempts = await prisma.studentAttempt.findMany({
-        where: { studentId: currentUser.id },
+        where: { studentId: currentUser.id, package: { deletedAt: null } },
         include: {
           package: {
             select: {
@@ -115,6 +115,7 @@ export async function GET() {
     const attempts = await prisma.studentAttempt.findMany({
       where: {
         package: {
+          deletedAt: null,
           OR: [
             { collection: { teacherId: currentUser.id } },
             { group: { teacherId: currentUser.id } },

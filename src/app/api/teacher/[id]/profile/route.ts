@@ -53,7 +53,7 @@ export async function GET(
       include: {
         _count: { select: { members: true } },
         testPackages: {
-          where: { isPublished: true },
+          where: { isPublished: true, deletedAt: null },
           select: {
             id: true, name: true, isTimed: true, duration: true,
             isPublic: true,
