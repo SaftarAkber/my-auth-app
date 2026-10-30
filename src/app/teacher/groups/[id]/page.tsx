@@ -305,13 +305,19 @@ export default function TeacherGroupPage() {
             ) : (
               <div className="space-y-3">
                 {g.testPackages.map((p) => (
-                  <div key={p.id} className="card-flat flex flex-wrap items-center gap-3 p-4">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name="file" /></span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold">{p.name}</p>
-                      <p className="text-xs text-muted">{p._count.questions} sual</p>
-                    </div>
+                  <div key={p.id} className="card-flat flex flex-wrap items-center gap-3 p-4 transition hover:bg-sun/20">
+                    <Link
+                      href={p.collectionId ? `/teacher/tests/${p.collectionId}/${p.id}` : `/teacher/results/${p.id}`}
+                      className="group flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name="file" /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold group-hover:underline">{p.name}</p>
+                        <p className="text-xs text-muted">{p._count.questions} sual</p>
+                      </div>
+                    </Link>
                     <TestWindowBadge pkg={p} />
+                    <Link href={`/teacher/results/${p.id}`} className="btn-soft btn-sm">Nəticələr</Link>
                   </div>
                 ))}
               </div>

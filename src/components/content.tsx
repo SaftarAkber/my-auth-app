@@ -29,6 +29,7 @@ export interface AttemptLite {
 export interface TestPackageLite {
   id: string;
   name: string;
+  collectionId?: string | null;
   description?: string | null;
   isTimed: boolean;
   duration: number | null;
