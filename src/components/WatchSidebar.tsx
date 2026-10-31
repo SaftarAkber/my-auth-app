@@ -14,6 +14,8 @@ interface Card {
   createdAt: string;
   teacher: { id: string; name: string };
   views: number;
+  duration: number | null;
+  draft?: boolean;
 }
 interface Pkg { id: string; name: string; videos: Card[] }
 interface Side {
@@ -24,23 +26,29 @@ interface Side {
   hasMore: boolean;
 }
 
-/** Sağ siyahının bir sətri: miniatür + sabit ölçülü qutuda ən çoxu 2 sətir ad (YouTube kimi) */
+const clock = (sec: number | null) => {
+  if (!sec) return null;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = String(sec % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+};
+
+/** Sağ siyahının bir sətri (YouTube kimi): qutusuz, solda miniatür, sağda ad (ən çoxu 2 sətir) və məlumat; üzərinə gələndə rəng dəyişir */
 function Row({ v, active, pinned }: { v: Card; active?: boolean; pinned?: boolean }) {
   return (
     <Link
       href={`/watch/${v.id}`}
       aria-current={active ? "true" : undefined}
-      className={cx(
-        "group flex gap-2.5 rounded-xl p-1.5 transition",
-        active ? "bg-sun/50 ring-2 ring-ink" : "hover:bg-sun/20",
-      )}
+      className={cx("group flex gap-2.5 rounded-xl p-1.5 transition-colors", active ? "bg-sun/50" : "hover:bg-sun/30")}
     >
-      <VideoThumb url={v.url} className="w-[150px] shrink-0 rounded-lg border-2 border-ink/20" />
-      <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 block h-[2.6rem] text-sm font-bold leading-[1.3] group-hover:underline">{v.title}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted">{v.teacher.name}</span>
-        <span className="block text-xs text-muted">
+      <VideoThumb url={v.url} plain badge={clock(v.duration)} className="w-[168px] shrink-0 rounded-lg" />
+      <span className="min-w-0 flex-1 py-0.5">
+        <span className="line-clamp-2 block h-[2.5rem] text-sm font-bold leading-tight">{v.title}</span>
+        <span className="mt-1 block truncate text-xs text-muted">{v.teacher.name}</span>
+        <span className="block truncate text-xs text-muted">
           {v.views.toLocaleString("az-AZ")} baxış
+          {v.draft && <span className="ml-2 rounded bg-ink px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Qaralama</span>}
           {pinned && <span className="ml-2 inline-flex items-center gap-1 font-semibold text-ink"><Icon name="pin" size={11} /> Sancılmış</span>}
         </span>
       </span>
@@ -52,8 +60,8 @@ function Row({ v, active, pinned }: { v: Card; active?: boolean; pinned?: boolea
 function PackageBlock({ pkg, activeId, defaultOpen }: { pkg: Pkg; activeId: string; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="rounded-2xl border-[2.5px] border-ink bg-white">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left" aria-expanded={open}>
+    <section className="rounded-2xl border-2 border-ink/30 bg-white/60">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-sun/20" aria-expanded={open}>
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sun/50"><Icon name="video" size={16} /></span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-extrabold">{pkg.name}</span>
@@ -62,7 +70,7 @@ function PackageBlock({ pkg, activeId, defaultOpen }: { pkg: Pkg; activeId: stri
         <Icon name="down" size={18} className={cx("shrink-0 transition", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="space-y-0.5 border-t-2 border-ink/15 p-1.5">
+        <div className="border-t-2 border-ink/10 p-1">
           {pkg.videos.map((v) => <Row key={v.id} v={v} active={v.id === activeId} />)}
         </div>
       )}
@@ -104,9 +112,9 @@ export default function WatchSidebar({ videoId }: { videoId: string }) {
   if (loading) return <div className="flex justify-center py-10"><Spinner className="text-brand" /></div>;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {(side?.pinned ?? []).length > 0 && (
-        <div className="space-y-0.5 rounded-2xl border-[2.5px] border-ink bg-sun/30 p-1.5">
+        <div>
           {side!.pinned.map((v) => <Row key={v.id} v={v} pinned />)}
         </div>
       )}
@@ -115,7 +123,7 @@ export default function WatchSidebar({ videoId }: { videoId: string }) {
         <PackageBlock key={p.id} pkg={p} activeId={videoId} defaultOpen={false} />
       ))}
       {feed.length > 0 && (
-        <div className="space-y-0.5">
+        <div>
           {feed.map((v) => <Row key={v.id} v={v} />)}
         </div>
       )}

@@ -58,16 +58,23 @@ export const ORDER_STATUS = {
 
 /* ───────── Video ───────── */
 /** Video miniatürü: YouTube/Cloudinary şəkli, yoxdursa rəngli fon; üstündə oynat işarəsi */
-export function VideoThumb({ url, className }: { url: string; className?: string }) {
+export function VideoThumb({
+  url, className, plain, badge,
+}: { url: string; className?: string; plain?: boolean; badge?: string | null }) {
   const thumb = videoThumb(url);
   return (
     <span className={cx("group/thumb relative block aspect-video overflow-hidden bg-ink/90", className)}>
       {thumb ? <Img src={thumb} className="h-full w-full object-cover" /> : <span className="absolute inset-0 bg-gradient-to-br from-iris/60 to-sun/60" />}
-      <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover/thumb:bg-black/35">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand">
-          <Icon name="play" size={16} />
+      {!plain && (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover/thumb:bg-black/35">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand">
+            <Icon name="play" size={16} />
+          </span>
         </span>
-      </span>
+      )}
+      {badge && (
+        <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{badge}</span>
+      )}
     </span>
   );
 }

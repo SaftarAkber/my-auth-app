@@ -55,7 +55,8 @@ export function videoThumb(url: string) {
   const id = youtubeId(url);
   if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
   // Cloudinary-yə yüklənmiş video: ilk kadrdan miniatür
-  const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.+)\.\w+(?:\?.*)?$/);
+  // transformasiya hissəsi (məs. f_mp4,vc_h264,…) varsa atılır, yalnız v123/ad.* qalır
+  const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/.+)\.\w+(?:\?.*)?$/);
   return m ? `${m[1]}so_0,w_480,h_270,c_fill/${m[2]}.jpg` : null;
 }
 

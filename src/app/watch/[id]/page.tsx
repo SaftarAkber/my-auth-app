@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
-import { fmtDate, videoEmbed } from "@/lib/format";
-import { Avatar, Empty, ErrorBox, Icon, SkeletonList, useToast } from "@/components/ui";
+import { fmtDate, videoEmbed, videoThumb } from "@/lib/format";
+import { Avatar, Empty, ErrorBox, Icon, SkeletonList, Spinner, useToast } from "@/components/ui";
 import { SubjectBadges } from "@/components/Subjects";
 import VideoComments from "@/components/VideoComments";
 import WatchSidebar from "@/components/WatchSidebar";
@@ -25,13 +25,24 @@ interface Detail {
   liked: boolean;
   isOwner: boolean;
   groupAccess: boolean;
+  uploaded: boolean;
+  ready: boolean;
+  duration: number | null;
 }
 
 function WatchView({ id }: { id: string }) {
   const toast = useToast();
   const router = useRouter();
-  const { data, loading, error } = useFetch<{ video: Detail }>(`/api/watch/${id}`);
+  const { data, loading, error, reload } = useFetch<{ video: Detail }>(`/api/watch/${id}`);
   const v = data?.video;
+  const processing = !!v && v.uploaded && !v.ready;
+
+  // Yüklənmiş video hələ çevrilirsə, hazır olana qədər 10 saniyədən bir yoxla
+  useEffect(() => {
+    if (!processing) return;
+    const t = setInterval(reload, 10_000);
+    return () => clearInterval(t);
+  }, [processing, reload]);
   const [views, setViews] = useState<number | null>(null);
   const [likes, setLikes] = useState<{ n: number; liked: boolean } | null>(null);
   const [more, setMore] = useState(false);
@@ -82,7 +93,26 @@ function WatchView({ id }: { id: string }) {
       <div className="grid gap-x-6 gap-y-6 xl:grid-cols-[minmax(0,1fr)_430px]">
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           <div className="aspect-video w-full overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-hard">
-            {embed ? (
+            {v.uploaded ? (
+              processing ? (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-ink px-6 text-center text-white">
+                  <Spinner className="text-sun" />
+                  <p className="text-lg font-extrabold">Video işlənir</p>
+                  <p className="max-w-md text-sm text-white/80">Hər cihazda oynasın deyə video çevrilir. Bir neçə dəqiqə çəkə bilər, səhifə avtomatik yenilənəcək.</p>
+                </div>
+              ) : (
+                <video
+                  src={v.url}
+                  poster={videoThumb(v.url) ?? undefined}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  // Telefonlarda səsli avtomatik oynatma bloklanır, orada istifadəçi özü başladır
+                  autoPlay={typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches}
+                  className="h-full w-full bg-black"
+                />
+              )
+            ) : embed ? (
               <iframe
                 src={embed}
                 className="h-full w-full"
@@ -91,7 +121,7 @@ function WatchView({ id }: { id: string }) {
                 title={v.title}
               />
             ) : (
-              <video src={v.url} controls autoPlay className="h-full w-full" />
+              <video src={v.url} controls playsInline className="h-full w-full" />
             )}
           </div>
 

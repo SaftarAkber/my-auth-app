@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { destroyVideo } from "@/lib/videoUpload";
 
 export interface FieldSpec {
   key: string;
@@ -177,7 +178,12 @@ export const ADMIN_KINDS: Record<string, Spec> = {
         where: { id },
         data: clean({ title: str(d.title, 160) || undefined, description: str(d.description), url: str(d.url, 500) || undefined, isActive: bool(d.isActive), isPublished: bool(d.isPublished) }),
       }),
-    remove: (id) => prisma.video.delete({ where: { id } }),
+    remove: async (id) => {
+      const v = await prisma.video.findUnique({ where: { id }, select: { publicId: true } });
+      const r = await prisma.video.delete({ where: { id } });
+      await destroyVideo(v?.publicId);
+      return r;
+    },
   },
 
   posts: {

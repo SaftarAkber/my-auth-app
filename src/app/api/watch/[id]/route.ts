@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { forbidden, notFound, optionalUser, serverError, unauthorized } from "@/lib/guards";
 import { canWatchVideo, stateOf } from "@/lib/videoAccess";
+import { isVideoReady } from "@/lib/videoUpload";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -27,8 +28,15 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     });
     if (!v) return notFound("Video tapılmadı");
 
+    // Yüklənmiş video: Cloudinary çevirməni bitirənə qədər oynatmaq olmur
+    const uploaded = !!v.publicId;
+    const ready = uploaded ? await isVideoReady(v.url) : true;
+
     return NextResponse.json({
       video: {
+        uploaded,
+        ready,
+        duration: v.duration,
         id: v.id,
         title: v.title,
         description: v.description,

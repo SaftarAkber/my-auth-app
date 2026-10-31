@@ -213,6 +213,9 @@ model Video {
   description  String?
   url          String
   publicId     String?
+  // Yüklənmiş videolar üçün (publicId dolu): ölçü (bayt) və müddət (saniyə) — yer limiti və göstərmək üçün
+  bytes        Int?
+  duration     Int?
   isActive     Boolean      @default(true)
   visibility   ContentVisibility @default(PUBLIC)
   order        Int          @default(0)

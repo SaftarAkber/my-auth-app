@@ -9,6 +9,7 @@ import {
   teacherOwnsVideoPackage,
 } from "@/lib/guards";
 import { applyVideoState, isVideoState } from "@/lib/videoState";
+import { destroyVideo } from "@/lib/videoUpload";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -62,8 +63,10 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
     if ("response" in auth) return auth.response;
 
     const { id } = await params;
-    const result = await prisma.video.deleteMany({ where: { id, teacherId: auth.user.id } });
-    if (result.count === 0) return notFound();
+    const v = await prisma.video.findFirst({ where: { id, teacherId: auth.user.id }, select: { publicId: true } });
+    if (!v) return notFound();
+    await prisma.video.delete({ where: { id } });
+    await destroyVideo(v.publicId);
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
     return serverError(error);
