@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 export interface User {
   id: string;
@@ -51,6 +51,10 @@ async function post(url: string, body: unknown) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const currentId = useRef<string | null>(null);
+  useEffect(() => {
+    currentId.current = user?.id ?? null;
+  }, [user]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -73,18 +77,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
+  // Brauzerdə bir giriş cookie-si var: başqa tabda hesab dəyişəndə bu tab köhnə hesabı göstərir, amma sorğular yeni hesabdan gedir
+  // (məs. bəyənmə başqa istifadəçi adından geri alınır). Tab aktiv olanda və ya başqa tab giriş/çıxış edəndə hesabı yoxlayıb yeniləyirik.
+  useEffect(() => {
+    if (loading) return;
+    const check = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        const id = res.ok ? ((await res.json()).user?.id ?? null) : null;
+        if (id !== currentId.current) window.location.reload();
+      } catch { /* şəbəkə xətası: toxunma */ }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", check);
+    let chan: BroadcastChannel | null = null;
+    try {
+      chan = new BroadcastChannel("eduflow-auth");
+      chan.onmessage = () => void check();
+    } catch { /* köhnə brauzer */ }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", check);
+      chan?.close();
+    };
+  }, [loading]);
+
+  const announce = () => {
+    try {
+      const c = new BroadcastChannel("eduflow-auth");
+      c.postMessage("changed");
+      c.close();
+    } catch { /* ignore */ }
+  };
+
   const goHome = (role: User["role"]) =>
     window.location.replace(role === "TEACHER" ? "/teacher" : role === "ADMIN" ? "/admin" : "/student");
 
   async function login(identifier: string, password: string) {
     const data = await post("/api/auth/login", { identifier, password });
     setUser(data.user);
+    announce();
     goHome(data.user.role);
   }
 
   async function register(form: RegisterData) {
     const data = await post("/api/auth/register", form);
     setUser(data.user);
+    announce();
     goHome(data.user.role);
   }
 
@@ -92,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const wasAdmin = user?.role === "ADMIN";
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
+    announce();
     window.location.replace(wasAdmin ? "/admin" : "/login");
   }
 
