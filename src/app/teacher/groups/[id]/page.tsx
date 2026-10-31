@@ -7,9 +7,8 @@ import { api, errMsg, uploadImage, useFetch } from "@/lib/api";
 import { cx, fmtDate, timeAgo } from "@/lib/format";
 import {
   PostCard, TestWindowBadge, VideoPackageBlock,
-  type PostLite, type TestPackageLite, type VideoLite, type VideoPackageLite,
+  type PostLite, type TestPackageLite, type VideoPackageLite,
 } from "@/components/content";
-import { VideoPlayer } from "@/components/video";
 import GroupHeader from "@/components/GroupHeader";
 import GroupEditModal from "@/components/GroupEditModal";
 import {
@@ -51,7 +50,6 @@ export default function TeacherGroupPage() {
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
   const [tab, setTab] = useState<"feed" | "members" | "tests" | "videos" | "requests">("feed");
   const [editOpen, setEditOpen] = useState(false);
-  const [video, setVideo] = useState<VideoLite | null>(null);
 
   // Post yazma
   const [content, setContent] = useState("");
@@ -158,7 +156,7 @@ export default function TeacherGroupPage() {
     if (!videoForm.title.trim() || !videoForm.url.trim()) return toast.error("Başlıq və link məcburidir");
     setBusy(true);
     try {
-      await api(`/api/video-packages/${videoModal}/videos`, { body: videoForm });
+      await api(`/api/video-packages/${videoModal}/videos`, { body: { ...videoForm, state: "groups", groupIds: [id] } });
       toast.success("Video əlavə edildi");
       setVideoModal(null);
       setVideoForm({ title: "", url: "", description: "" });
@@ -333,7 +331,7 @@ export default function TeacherGroupPage() {
               ) : (
                 g.videoPackages.map((p) => (
                   <div key={p.id}>
-                    <VideoPackageBlock pkg={p} onPlay={setVideo} />
+                    <VideoPackageBlock pkg={p} />
                     <button className="btn-ghost btn-sm mt-1" onClick={() => setVideoModal(p.id)}><Icon name="plus" size={14} /> “{p.name}” paketinə video əlavə et</button>
                   </div>
                 ))
@@ -343,7 +341,6 @@ export default function TeacherGroupPage() {
         </div>
       </div>
 
-      <VideoPlayer video={video} onClose={() => setVideo(null)} />
 
       <Modal
         open={pkgModal}

@@ -87,11 +87,30 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
     // Məhdud kolleksiyada paket yalnız kolleksiyanın qruplarına dərc oluna bilər, hər qrup üçün ayrıca
     const restricted = existing.collection?.visibility === "GROUP_ONLY";
-    const linkIds: string[] | undefined = Array.isArray(groupIds) ? groupIds : undefined;
+    let linkIds: string[] | undefined = Array.isArray(groupIds) ? groupIds : undefined;
     let pub = isPublished;
     let vis = visibility;
     let open = isPublic;
-    if (restricted) {
+    // Hər testin üç vəziyyəti var: qaralama / hamıya açıq / seçilmiş qruplar
+    const st = body.state;
+    if (st !== undefined) {
+      if (st !== "draft" && st !== "public" && st !== "groups") {
+        return NextResponse.json({ error: "Naməlum vəziyyət" }, { status: 400 });
+      }
+      if (st === "draft") pub = false;
+      if (st === "public") {
+        pub = true; vis = "PUBLIC"; open = true; linkIds = [];
+      }
+      if (st === "groups") {
+        const ids: string[] = Array.isArray(groupIds) ? groupIds : [];
+        if (ids.length === 0) return NextResponse.json({ error: "Ən azı bir qrup seçin" }, { status: 400 });
+        if (restricted) {
+          const allowed = new Set(existing.collection!.groups.map((g) => g.groupId));
+          if (ids.some((g) => !allowed.has(g))) return NextResponse.json({ error: "Qrup bu kolleksiyaya açıq deyil" }, { status: 400 });
+        }
+        pub = true; vis = "GROUP_ONLY"; open = false; linkIds = ids;
+      }
+    } else if (restricted) {
       const allowed = new Set(existing.collection!.groups.map((g) => g.groupId));
       if (linkIds && linkIds.some((g: string) => !allowed.has(g))) {
         return NextResponse.json({ error: "Qrup bu kolleksiyaya açıq deyil" }, { status: 400 });
@@ -105,7 +124,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       }
     }
 
-    if ((restricted ? pub : isPublished) === true && existing._count.questions === 0) {
+    if (pub === true && existing._count.questions === 0) {
       return NextResponse.json({ error: "Sualsız testi dərc etmək olmaz" }, { status: 400 });
     }
 
@@ -119,13 +138,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         data: {
           ...(name && { name }),
           ...(description !== undefined && { description }),
-          ...((restricted ? pub : isPublished) !== undefined && { isPublished: restricted ? pub : isPublished }),
-          ...((restricted ? open : isPublic) !== undefined && { isPublic: restricted ? open : isPublic }),
+          ...(pub !== undefined && { isPublished: pub }),
+          ...(open !== undefined && { isPublic: open }),
           ...(isTimed !== undefined && { isTimed, ...(isTimed ? {} : { duration: null }) }),
           ...(duration !== undefined && isTimed !== false && { duration }),
           ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
           ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
-          ...((restricted ? vis : visibility) !== undefined && { visibility: restricted ? vis : visibility }),
+          ...(vis !== undefined && { visibility: vis }),
           ...(allowRetry !== undefined && { allowRetry }),
           ...(shareAnswers !== undefined && { shareAnswers: !!shareAnswers }),
           ...rewardData(body),

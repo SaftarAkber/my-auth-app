@@ -62,22 +62,29 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    // Video paketlər — həm groupId ilə həm videoPackageGroups ilə bağlı olanlar
+    // Video paketlər: bu qrupa açılmış (dərc olunmuş) videosu olan paketlər.
+    // Paketdə qrup üzvü hamıya açıq + bu qrupa açılmış videoları görür; kənar ziyarətçi yalnız hamıya açıq olanları.
+    const groupVideo = { isActive: true, isPublished: true, videoGroups: { some: { groupId: id } } };
     const videoPackages = await prisma.videoPackage.findMany({
       where: {
-        isPublished: true,
         OR: [
           { groupId: id },
-          { videoPackageGroups: { some: { groupId: id } } },
+          { videos: { some: hasAccess ? groupVideo : { ...groupVideo, visibility: "PUBLIC" as const } } },
         ],
-        ...(hasAccess ? {} : { visibility: "PUBLIC" }),
       },
       include: {
-        videos: { where: { isActive: true }, orderBy: { order: "asc" } },
-        videoPackageGroups: {
-          include: { group: { select: { id: true, name: true } } },
+        videos: {
+          where: {
+            isActive: true,
+            isPublished: true,
+            OR: hasAccess
+              ? [{ visibility: "PUBLIC" as const }, { videoGroups: { some: { groupId: id } } }]
+              : [{ visibility: "PUBLIC" as const }],
+          },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         },
       },
+      orderBy: { updatedAt: "desc" },
     });
 
     // Test paketlər — həm groupId ilə həm testPackageGroups ilə bağlı olanlar
@@ -87,6 +94,7 @@ export async function GET(
         OR: [
           { groupId: id },
           { testPackageGroups: { some: { groupId: id } } },
+          { visibility: "PUBLIC", collection: { groups: { some: { groupId: id } } } },
         ],
         ...(hasAccess ? {} : { visibility: "PUBLIC" }),
       },

@@ -21,6 +21,7 @@ const DICT = {
   content: { AZ: "Məzmun", RU: "Контент", EN: "Content" },
   site: { AZ: "Sayt", RU: "Сайт", EN: "Site" },
   deleted: { AZ: "Silinənlər", RU: "Удалённое", EN: "Deleted" },
+  pins: { AZ: "Sancaqlar", RU: "Закреплённые", EN: "Pinned" },
   search: { AZ: "Müəllim, tələbə, test, video axtar…", RU: "Поиск: учитель, студент, тест, видео…", EN: "Search teachers, students, tests, videos…" },
   searchNone: { AZ: "Nəticə tapılmadı", RU: "Ничего не найдено", EN: "No results" },
   language: { AZ: "Dil", RU: "Язык", EN: "Language" },

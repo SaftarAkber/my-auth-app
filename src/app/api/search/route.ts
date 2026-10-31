@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       prisma.video.findMany({
         where: {
           title: contains,
-          ...(admin ? {} : { isActive: true, package: { isPublished: true, isPublic: true } }),
+          ...(admin ? {} : { isActive: true, isPublished: true, OR: [{ visibility: "PUBLIC" }, { pinOrder: { not: null } }] }),
         },
         select: { id: true, title: true, teacherId: true, teacher: { select: { name: true } } },
         take: 5,

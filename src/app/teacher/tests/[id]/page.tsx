@@ -16,6 +16,7 @@ interface Pkg {
   description: string | null;
   isPublished: boolean;
   isPublic: boolean;
+  visibility: "PUBLIC" | "GROUP_ONLY";
   isTimed: boolean;
   duration: number | null;
   startsAt: string | null;
@@ -79,18 +80,55 @@ export default function CollectionPage() {
     }
   }
 
-  // Məhdud kolleksiyada: testi bir qrup üçün dərc et / dərcdən çıxar
+  // Məhdud kolleksiyada: testi bir qrup üçün dərc et / dərcdən çıxar (hamıya açıq olubsa, əvvəlcə həmin qrupa keçir)
   async function togglePublishFor(p: Pkg, groupId: string) {
-    const current = p.testPackageGroups.map((g) => g.groupId);
+    const current = p.isPublished && p.visibility === "PUBLIC" ? [] : p.testPackageGroups.map((g) => g.groupId);
     const next = current.includes(groupId) ? current.filter((x) => x !== groupId) : [...current, groupId];
     setPubBusy(p.id + groupId);
     try {
-      await api(`/api/packages/${p.id}`, { method: "PATCH", body: { groupIds: next, isPublished: next.length > 0 } });
+      await api(`/api/packages/${p.id}`, {
+        method: "PATCH",
+        body: next.length ? { state: "groups", groupIds: next } : { state: "draft" },
+      });
       col.reload();
     } catch (e) {
       toast.error(errMsg(e));
     } finally {
       setPubBusy(null);
+    }
+  }
+
+  // Testi hamıya açıq et / geri qaytar
+  async function togglePublic(p: Pkg) {
+    const isPub = p.isPublished && p.visibility === "PUBLIC";
+    setPubBusy(p.id + "*");
+    try {
+      await api(`/api/packages/${p.id}`, { method: "PATCH", body: { state: isPub ? "draft" : "public" } });
+      col.reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setPubBusy(null);
+    }
+  }
+
+  // Qısayol: kolleksiyadakı bütün testlər üçün eyni vəziyyət
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulk, setBulk] = useState<{ state: "draft" | "public" | "groups"; groupIds: string[] }>({ state: "public", groupIds: [] });
+  async function applyBulk() {
+    if (bulk.state === "groups" && bulk.groupIds.length === 0) return toast.error("Ən azı bir qrup seçin");
+    setBusy(true);
+    try {
+      const r = await api<{ updated: number; skipped: number }>(`/api/collections/${id}/publish`, {
+        body: { state: bulk.state, groupIds: bulk.state === "groups" ? bulk.groupIds : [] },
+      });
+      toast.success(`${r.updated} test yeniləndi${r.skipped ? `, ${r.skipped} sualsız test atlandı` : ""}`);
+      setBulkOpen(false);
+      col.reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -207,6 +245,11 @@ export default function CollectionPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <button className="btn-secondary" onClick={openColSettings}><Icon name="users" size={16} /> Qruplar</button>
+            {c.packages.length > 0 && (
+              <button className="btn-secondary" onClick={() => { setBulk({ state: "public", groupIds: [] }); setBulkOpen(true); }} title="Kolleksiyadakı bütün testləri birdən dərc et">
+                <Icon name="globe" size={16} /> Hamısını dərc et
+              </button>
+            )}
             <button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Yeni test</button>
           </div>
         }
@@ -238,7 +281,9 @@ export default function CollectionPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/teacher/tests/${id}/${p.id}`} className="text-lg font-bold hover:text-brand">{p.name}</Link>
                       {restricted ? (
-                        p.testPackageGroups.length > 0 ? <span className="badge-ok">{p.testPackageGroups.length} qrupa dərc olunub</span> : <span className="badge-muted">Heç bir qrupa dərc olunmayıb</span>
+                        p.isPublished && p.visibility === "PUBLIC" ? <span className="badge-info"><Icon name="globe" size={12} /> Hamıya açıq</span>
+                          : p.isPublished && p.testPackageGroups.length > 0 ? <span className="badge-ok">{p.testPackageGroups.length} qrupa dərc olunub</span>
+                          : <span className="badge-muted">Qaralama</span>
                       ) : p.isPublished ? <span className="badge-ok">Dərc olunub</span> : <span className="badge-muted">Qaralama</span>}
                       {!restricted && p.isPublic && <span className="badge-info"><Icon name="globe" size={12} /> Açıq</span>}
                       {upcoming && <span className="badge-info">Tezliklə</span>}
@@ -256,10 +301,19 @@ export default function CollectionPage() {
                     </div>
                     {restricted && (
                       <div className="mt-3">
-                        <p className="mb-1.5 text-xs font-semibold text-muted">Qruplar üzrə dərc (qrupa toxunaraq aç / bağla):</p>
+                        <p className="mb-1.5 text-xs font-semibold text-muted">Kimlər görsün? (toxunaraq aç / bağla):</p>
                         <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={pubBusy === p.id + "*"}
+                            aria-pressed={p.isPublished && p.visibility === "PUBLIC"}
+                            onClick={() => togglePublic(p)}
+                            className={`inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1 text-sm font-semibold transition ${p.isPublished && p.visibility === "PUBLIC" ? "bg-ok/30" : "bg-white hover:bg-sun/30"}`}
+                          >
+                            <Icon name="globe" size={13} /> Hamıya açıq
+                          </button>
                           {shared.map((g) => {
-                            const on = p.testPackageGroups.some((x) => x.groupId === g.groupId);
+                            const on = p.isPublished && p.visibility !== "PUBLIC" && p.testPackageGroups.some((x) => x.groupId === g.groupId);
                             return (
                               <button
                                 key={g.groupId}
@@ -296,6 +350,49 @@ export default function CollectionPage() {
       )}
 
       <Modal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bütün testləri dərc et"
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setBulkOpen(false)}>Ləğv et</button>
+            <button className="btn-primary" onClick={applyBulk} disabled={busy}>{busy ? <Spinner /> : "Tətbiq et"}</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+            Seçim kolleksiyadakı bütün testlərə tətbiq olunacaq (sualı olmayan testlər dərc olunmur). Sonra hər birini ayrıca dəyişə bilərsiniz.
+          </p>
+          {([["draft", "Qaralama", "Heç kim görmür"], ["public", "Hamıya açıq", "Bütün istifadəçilər həll edə bilər"], ["groups", "Seçilmiş qruplar", "Yalnız seçdiyiniz qrupların üzvləri"]] as const).map(([sid, label, hint]) => (
+            <button
+              key={sid}
+              type="button"
+              onClick={() => setBulk({ ...bulk, state: sid })}
+              aria-pressed={bulk.state === sid}
+              className={`flex w-full items-start gap-3 rounded-xl border-[2.5px] border-ink p-3 text-left transition ${bulk.state === sid ? "bg-sun" : "bg-white hover:bg-sun/30"}`}
+            >
+              <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-ink ${bulk.state === sid ? "bg-ink text-white" : ""}`}>
+                {bulk.state === sid && <Icon name="check" size={12} />}
+              </span>
+              <span><span className="block text-sm font-bold">{label}</span><span className="block text-xs text-muted">{hint}</span></span>
+            </button>
+          ))}
+          {bulk.state === "groups" && (
+            <div>
+              <span className="label">Hansı qruplar görsün?</span>
+              <ChipSelect
+                options={(restricted ? shared.map((g) => ({ id: g.groupId, label: g.group.name })) : (groups.data?.groups ?? []).map((g) => ({ id: g.id, label: g.name })))}
+                value={bulk.groupIds}
+                onChange={(v) => setBulk({ ...bulk, groupIds: v })}
+                empty="Qrup yoxdur"
+              />
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
         open={colOpen}
         onClose={() => setColOpen(false)}
         title="Kolleksiya hansı qruplara açıqdır?"
@@ -320,7 +417,7 @@ export default function CollectionPage() {
           </p>
           {colGroups.length > 0 && !restricted && (
             <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
-              Diqqət: indi dərc olunmuş testlər qrup üzrə dərc üçün yenidən seçilməlidir, əks halda qrupda görünməyəcək.
+              Diqqət: hamıya açıq testlər hamıya açıq qalır. Qrupa bağlı olmayan dərc olunmuş testlər isə qaralamaya keçir, onları qrup üzrə yenidən dərc edin.
             </p>
           )}
         </div>
@@ -359,7 +456,7 @@ export default function CollectionPage() {
 
           {restricted && (
             <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
-              Bu kolleksiya qruplarla məhdudlaşdırılıb. Testi hansı qrup üçün dərc edəcəyinizi test kartında qrup adına toxunaraq seçirsiniz.
+              Bu kolleksiya qruplarla məhdudlaşdırılıb. Testin kimlərə açıq olacağını (hamıya və ya seçilmiş qruplara) test kartında seçirsiniz.
             </p>
           )}
           {!restricted && <Toggle checked={form.isPublic} onChange={(v) => setForm({ ...form, isPublic: v })} label="Müəllim profilində açıq göstər" hint="Qrupda olmayan tələbələr də profilinizdə testi görə bilər" />}

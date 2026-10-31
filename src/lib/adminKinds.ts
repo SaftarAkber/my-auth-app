@@ -157,6 +157,7 @@ export const ADMIN_KINDS: Record<string, Spec> = {
       { key: "description", label: "Təsvir", type: "textarea" },
       { key: "url", label: "Link", type: "text" },
       { key: "isActive", label: "Aktiv", type: "bool" },
+      { key: "isPublished", label: "Dərc olunub", type: "bool" },
     ],
     async list(q) {
       const rows = await prisma.video.findMany({
@@ -168,13 +169,13 @@ export const ADMIN_KINDS: Record<string, Spec> = {
       return rows.map((v) => ({
         id: v.id, title: v.title, sub: `${v.package?.name ?? "paketsiz"} · ${v.url}`,
         owner: v.teacher.name,
-        values: { title: v.title, description: v.description, url: v.url, isActive: v.isActive },
+        values: { title: v.title, description: v.description, url: v.url, isActive: v.isActive, isPublished: v.isPublished },
       }));
     },
     update: (id, d) =>
       prisma.video.update({
         where: { id },
-        data: clean({ title: str(d.title, 160) || undefined, description: str(d.description), url: str(d.url, 500) || undefined, isActive: bool(d.isActive) }),
+        data: clean({ title: str(d.title, 160) || undefined, description: str(d.description), url: str(d.url, 500) || undefined, isActive: bool(d.isActive), isPublished: bool(d.isPublished) }),
       }),
     remove: (id) => prisma.video.delete({ where: { id } }),
   },

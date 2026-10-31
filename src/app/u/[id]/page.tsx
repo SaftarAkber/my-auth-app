@@ -9,7 +9,6 @@ import { cx, fmtDateTime, percent, timeAgo } from "@/lib/format";
 import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings";
 import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
-import { VideoPlayer } from "@/components/video";
 import { SubjectBadges } from "@/components/Subjects";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
@@ -83,7 +82,6 @@ function ProfileInner() {
   const { data, loading, error, reload } = useFetch<Profile>(`/api/users/${id}`);
   const [edit, setEdit] = useState(false);
   const [join, setJoin] = useState<GroupCard | null>(null);
-  const [video, setVideo] = useState<VideoLite | null>(null);
 
   if (loading) return <div className="page"><SkeletonList rows={3} className="h-40" /></div>;
   if (error || !data) return <div className="page"><ErrorBox message={error ?? "Profil tapılmadı"} onRetry={reload} /></div>;
@@ -270,11 +268,10 @@ function ProfileInner() {
           <Empty icon="video" title="Açıq video yoxdur" />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
-            {data.videos.map((p) => <VideoPackageBlock key={p.id} pkg={p} onPlay={setVideo} />)}
+            {data.videos.map((p) => <VideoPackageBlock key={p.id} pkg={p} />)}
           </div>
         )
       )}
-      <VideoPlayer video={video} onClose={() => setVideo(null)} />
 
       {tab === "results" && <ResultsTab />}
       {tab === "coins" && <CoinsTab />}

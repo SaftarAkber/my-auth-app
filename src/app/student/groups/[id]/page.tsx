@@ -7,12 +7,11 @@ import { api, errMsg, useFetch } from "@/lib/api";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
 import {
   PostCard, TestRow, VideoPackageBlock,
-  type PostLite, type TestPackageLite, type VideoLite, type VideoPackageLite,
+  type PostLite, type TestPackageLite, type VideoPackageLite,
 } from "@/components/content";
 import {
   Avatar, Empty, ErrorBox, Icon, SkeletonList, Tabs, useConfirm, useToast,
 } from "@/components/ui";
-import { VideoPlayer } from "@/components/video";
 import GroupHeader from "@/components/GroupHeader";
 
 interface GroupData {
@@ -41,7 +40,6 @@ export default function StudentGroupPage() {
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
   const [tab, setTab] = useState<"feed" | "tests" | "videos" | "members">("feed");
-  const [video, setVideo] = useState<VideoLite | null>(null);
   const { start, starting } = useStartTest();
   const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
 
@@ -134,7 +132,7 @@ export default function StudentGroupPage() {
               <Empty icon="video" title="Hələ video yoxdur" />
             ) : (
               <div className="space-y-4">
-                {g.videoPackages.map((p) => <VideoPackageBlock key={p.id} pkg={p} onPlay={setVideo} />)}
+                {g.videoPackages.map((p) => <VideoPackageBlock key={p.id} pkg={p} />)}
               </div>
             ))}
 
@@ -154,7 +152,6 @@ export default function StudentGroupPage() {
         </div>
       </div>
 
-      <VideoPlayer video={video} onClose={() => setVideo(null)} />
       {taking && <TestTaker name={taking.name} data={taking.data} onClose={() => { setTaking(null); reload(); }} />}
     </div>
   );

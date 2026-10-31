@@ -43,7 +43,7 @@ export async function GET(
         },
       }),
       prisma.video.count({
-        where: { teacherId, isActive: true },
+        where: { teacherId, isActive: true, isPublished: true, visibility: "PUBLIC" },
       }),
     ]);
 
@@ -62,9 +62,10 @@ export async function GET(
           },
         },
         videoPackages: {
-          where: { isPublished: true },
+          where: { videos: { some: { isActive: true, isPublished: true, videoGroups: { some: { group: { teacherId } } } } } },
           select: {
-            id: true, name: true, isPublic: true,
+            id: true, name: true,
+            isPublic: true,
             _count: { select: { videos: true } },
             videoPackageGroups: { select: { groupId: true } },
           },
@@ -116,15 +117,7 @@ export async function GET(
 
     // PUBLIC video packages (isPublic=true)
     const publicVideoPackages = await prisma.videoPackage.findMany({
-      where: {
-        isPublished: true,
-        isPublic: true,
-        OR: [
-          { collection: { teacherId } },
-          { group: { teacherId } },
-          { videoPackageGroups: { some: { group: { teacherId } } } },
-        ],
-      },
+      where: { videos: { some: { teacherId, isActive: true, isPublished: true, visibility: "PUBLIC" } } },
       select: {
         id: true, name: true,
         _count: { select: { videos: true } },

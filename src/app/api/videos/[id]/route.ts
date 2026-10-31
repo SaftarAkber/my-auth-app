@@ -8,6 +8,7 @@ import {
   teacherOwnsGroups,
   teacherOwnsVideoPackage,
 } from "@/lib/guards";
+import { applyVideoState, isVideoState } from "@/lib/videoState";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,31 +24,27 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     });
     if (!owned) return notFound();
 
-    const { title, description, url, visibility, groupIds, packageId, isActive, order } = await req.json();
+    const { title, description, url, state, groupIds, packageId, isActive, order } = await req.json();
 
-    if (Array.isArray(groupIds) && !(await teacherOwnsGroups(auth.user.id, groupIds))) {
-      return forbidden();
+    const gids: string[] = Array.isArray(groupIds) ? groupIds.filter((g) => typeof g === "string") : [];
+    if (state !== undefined && !isVideoState(state)) return NextResponse.json({ error: "Naməlum vəziyyət" }, { status: 400 });
+    if (state === "groups") {
+      if (gids.length === 0) return NextResponse.json({ error: "Ən azı bir qrup seçin" }, { status: 400 });
+      if (!(await teacherOwnsGroups(auth.user.id, gids))) return forbidden();
     }
     if (packageId && !(await teacherOwnsVideoPackage(auth.user.id, packageId))) return forbidden();
 
     const video = await prisma.$transaction(async (tx) => {
-      // Qrup bağlantıları yalnız siyahı və ya görünürlük dəyişdikdə yenilənir
-      if (Array.isArray(groupIds) || visibility === "PUBLIC") {
-        await tx.videoGroup.deleteMany({ where: { videoId: id } });
-      }
+      if (state) await applyVideoState(tx, [id], state, gids);
       return tx.video.update({
         where: { id },
         data: {
           ...(title && { title }),
           ...(description !== undefined && { description }),
           ...(url && { url }),
-          ...(visibility && { visibility }),
           ...(packageId !== undefined && { packageId: packageId || null }),
           ...(isActive !== undefined && { isActive }),
           ...(order !== undefined && { order }),
-          ...(visibility !== "PUBLIC" && Array.isArray(groupIds) && groupIds.length
-            ? { videoGroups: { create: groupIds.map((groupId: string) => ({ groupId })) } }
-            : {}),
         },
         include: { videoGroups: { include: { group: { select: { id: true, name: true } } } } },
       });

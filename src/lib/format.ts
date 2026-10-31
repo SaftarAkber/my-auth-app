@@ -53,7 +53,10 @@ export function videoEmbed(url: string) {
 }
 export function videoThumb(url: string) {
   const id = youtubeId(url);
-  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+  if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+  // Cloudinary-yə yüklənmiş video: ilk kadrdan miniatür
+  const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.+)\.\w+(?:\?.*)?$/);
+  return m ? `${m[1]}so_0,w_480,h_270,c_fill/${m[2]}.jpg` : null;
 }
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");

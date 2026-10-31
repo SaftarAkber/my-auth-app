@@ -107,23 +107,28 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       take: 50,
     });
 
-    const videoWhere = {
-      OR: [
-        { teacherId: target.id },
-        { collection: { teacherId: target.id } },
-        { group: { teacherId: target.id } },
-        { videoPackageGroups: { some: { group: { teacherId: target.id } } } },
-      ],
-    };
-    const packs = await prisma.videoPackage.findMany({
-      where: full ? { ...videoWhere } : { ...videoWhere, isPublished: true, isPublic: true },
-      select: {
-        id: true, name: true, description: true, isPublished: true, isPublic: true,
-        videos: { where: { isActive: true }, select: { id: true, title: true, url: true }, orderBy: { order: "asc" } },
+    // Müəllimin videoları: sahibi və admin hamısını (qaralamalar daxil), qalanlar yalnız hamıya açıq olanları görür
+    const vids = await prisma.video.findMany({
+      where: {
+        teacherId: target.id,
+        isActive: true,
+        ...(full ? {} : { isPublished: true, visibility: "PUBLIC" }),
       },
-      orderBy: { createdAt: "desc" },
-      take: 30,
+      select: { id: true, title: true, url: true, order: true, isPublished: true, visibility: true, package: { select: { id: true, name: true, description: true } } },
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      take: 300,
     });
+    const byPkg = new Map<string, { id: string; name: string; description: string | null; isPublished: boolean; isPublic: boolean; videos: { id: string; title: string; url: string }[] }>();
+    for (const v of vids) {
+      const key = v.package?.id ?? "_single";
+      let entry = byPkg.get(key);
+      if (!entry) {
+        entry = { id: key, name: v.package?.name ?? "Ayrıca videolar", description: v.package?.description ?? null, isPublished: true, isPublic: true, videos: [] };
+        byPkg.set(key, entry);
+      }
+      entry.videos.push({ id: v.id, title: v.title, url: v.url });
+    }
+    const packs = [...byPkg.values()];
 
     const studentCount = await prisma.groupMember.count({ where: { group: { teacherId: target.id } } });
 

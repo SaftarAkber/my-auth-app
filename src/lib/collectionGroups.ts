@@ -23,11 +23,8 @@ export async function setCollectionGroups(tx: Prisma.TransactionClient, collecti
   // Kolleksiyadan çıxarılan qruplarda paketlər də görünməsin
   await tx.testPackageGroup.deleteMany({ where: { package: { collectionId }, groupId: { notIn: ids } } });
 
-  if (ids.length) {
-    // Məhdud kolleksiyada paketlər açıq profildə göstərilmir və yalnız qrup bağlantısı ilə görünür
-    await tx.testPackage.updateMany({ where: { collectionId }, data: { visibility: "GROUP_ONLY", isPublic: false } });
-  }
-  // Heç bir qrupa dərc olunmayan qrup-paketləri dərcdən çıxar (təsadüfən hamıya açıq qalmasın)
+  // Heç bir qrupa dərc olunmayan qrup-paketləri dərcdən çıxar (təsadüfən hamıya açıq qalmasın).
+  // "Hamıya açıq" seçilmiş testlər isə müəllimin seçimi olaraq hamıya açıq qalır.
   await tx.testPackage.updateMany({
     where: { collectionId, visibility: "GROUP_ONLY", testPackageGroups: { none: {} } },
     data: { isPublished: false },

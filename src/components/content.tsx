@@ -57,30 +57,38 @@ export const ORDER_STATUS = {
 } as const;
 
 /* ───────── Video ───────── */
-export function VideoTile({ video, onPlay }: { video: VideoLite; onPlay: (v: VideoLite) => void }) {
-  const thumb = videoThumb(video.url);
+/** Video miniatürü: YouTube/Cloudinary şəkli, yoxdursa rəngli fon; üstündə oynat işarəsi */
+export function VideoThumb({ url, className }: { url: string; className?: string }) {
+  const thumb = videoThumb(url);
   return (
-    <button
-      onClick={() => onPlay(video)}
-      className="group card-flat flex w-full gap-3 overflow-hidden p-2.5 text-left transition hover:border-brand/40"
-    >
-      <span className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-xl bg-surface-2 sm:w-40">
-        {thumb ? <Img src={thumb} className="h-full w-full object-cover" /> : null}
-        <span className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-80 transition group-hover:bg-black/40">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand">
-            <Icon name="play" size={16} />
-          </span>
+    <span className={cx("group/thumb relative block aspect-video overflow-hidden bg-ink/90", className)}>
+      {thumb ? <Img src={thumb} className="h-full w-full object-cover" /> : <span className="absolute inset-0 bg-gradient-to-br from-iris/60 to-sun/60" />}
+      <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover/thumb:bg-black/35">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand">
+          <Icon name="play" size={16} />
         </span>
       </span>
+    </span>
+  );
+}
+
+/** Video kartı: yeni "baxış" səhifəsinə aparır */
+export function VideoTile({ video }: { video: VideoLite; onPlay?: (v: VideoLite) => void }) {
+  return (
+    <Link
+      href={`/watch/${video.id}`}
+      className="group card-flat flex w-full gap-3 overflow-hidden p-2.5 text-left transition hover:border-brand/40"
+    >
+      <VideoThumb url={video.url} className="w-32 shrink-0 rounded-xl sm:w-40" />
       <span className="min-w-0 py-1">
         <span className="line-clamp-2 block font-semibold">{video.title}</span>
         {video.description && <span className="mt-1 line-clamp-2 block text-xs text-muted">{video.description}</span>}
       </span>
-    </button>
+    </Link>
   );
 }
 
-export function VideoPackageBlock({ pkg, onPlay }: { pkg: VideoPackageLite; onPlay: (v: VideoLite) => void }) {
+export function VideoPackageBlock({ pkg }: { pkg: VideoPackageLite; onPlay?: (v: VideoLite) => void }) {
   const [open, setOpen] = useState(true);
   return (
     <section className="card overflow-hidden">
@@ -99,7 +107,7 @@ export function VideoPackageBlock({ pkg, onPlay }: { pkg: VideoPackageLite; onPl
           {pkg.videos.length === 0 ? (
             <p className="p-3 text-sm text-muted">Bu paketdə hələ video yoxdur.</p>
           ) : (
-            pkg.videos.map((v) => <VideoTile key={v.id} video={v} onPlay={onPlay} />)
+            pkg.videos.map((v) => <VideoTile key={v.id} video={v} />)
           )}
         </div>
       )}

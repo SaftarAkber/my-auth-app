@@ -30,6 +30,8 @@ model User {
   attempts         StudentAttempt[]
   groupPosts       GroupPost[]
   videoComments    VideoComment[]
+  videoViews       VideoView[]
+  videoLikes       VideoLike[]
   coinBalance Int    @default(0) 
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
@@ -222,6 +224,12 @@ model Video {
   package      VideoPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   comments     VideoComment[]
   videoGroups  VideoGroup[]
+  // Hər video öz vəziyyətindədir: qaralama (isPublished=false), hamıya açıq (PUBLIC) və ya seçilmiş qruplar (GROUP_ONLY + videoGroups)
+  isPublished  Boolean      @default(false)
+  // Admin sancağı (1-3): sancılmış video bütün istifadəçilərə sağ siyahının yuxarısında göstərilir
+  pinOrder     Int?
+  views        VideoView[]
+  likes        VideoLike[]
 
   @@map("videos")
 }
@@ -246,8 +254,39 @@ model VideoComment {
   userId     String
   video      Video            @relation(fields: [videoId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Cavab: yalnız bir səviyyə (YouTube kimi); əsas şərh silinəndə cavabları da silinir
+  parentId   String?
+  parent     VideoComment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    VideoComment[]   @relation("CommentReplies")
 
+  @@index([videoId, parentId, createdAt])
   @@map("video_comments")
+}
+
+// Hər istifadəçidən hər video üçün bir baxış sayılır (F5 ilə şişirdilməsin)
+model VideoView {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  videoId   String
+  userId    String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@index([createdAt])
+  @@map("video_views")
+}
+
+model VideoLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  videoId   String
+  userId    String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@map("video_likes")
 }
 
 model TestPackage {

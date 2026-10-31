@@ -1,0 +1,129 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { api, errMsg } from "@/lib/api";
+import { cx } from "@/lib/format";
+import { Icon, Spinner, useToast } from "@/components/ui";
+import { VideoThumb } from "@/components/content";
+
+interface Card {
+  id: string;
+  title: string;
+  url: string;
+  createdAt: string;
+  teacher: { id: string; name: string };
+  views: number;
+}
+interface Pkg { id: string; name: string; videos: Card[] }
+interface Side {
+  pinned: Card[];
+  currentPackage: Pkg | null;
+  groupPackages: Pkg[];
+  feed: Card[];
+  hasMore: boolean;
+}
+
+/** Sağ siyahının bir sətri: miniatür + sabit ölçülü qutuda ən çoxu 2 sətir ad (YouTube kimi) */
+function Row({ v, active, pinned }: { v: Card; active?: boolean; pinned?: boolean }) {
+  return (
+    <Link
+      href={`/watch/${v.id}`}
+      aria-current={active ? "true" : undefined}
+      className={cx(
+        "group flex gap-2.5 rounded-xl p-1.5 transition",
+        active ? "bg-sun/50 ring-2 ring-ink" : "hover:bg-sun/20",
+      )}
+    >
+      <VideoThumb url={v.url} className="w-[150px] shrink-0 rounded-lg border-2 border-ink/20" />
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-2 block h-[2.6rem] text-sm font-bold leading-[1.3] group-hover:underline">{v.title}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted">{v.teacher.name}</span>
+        <span className="block text-xs text-muted">
+          {v.views.toLocaleString("az-AZ")} baxış
+          {pinned && <span className="ml-2 inline-flex items-center gap-1 font-semibold text-ink"><Icon name="pin" size={11} /> Sancılmış</span>}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/** Açılıb-bağlanan paket bloku (ox ilə) */
+function PackageBlock({ pkg, activeId, defaultOpen }: { pkg: Pkg; activeId: string; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="rounded-2xl border-[2.5px] border-ink bg-white">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left" aria-expanded={open}>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sun/50"><Icon name="video" size={16} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-extrabold">{pkg.name}</span>
+          <span className="block text-xs text-muted">{pkg.videos.length} video</span>
+        </span>
+        <Icon name="down" size={18} className={cx("shrink-0 transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="space-y-0.5 border-t-2 border-ink/15 p-1.5">
+          {pkg.videos.map((v) => <Row key={v.id} v={v} active={v.id === activeId} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function WatchSidebar({ videoId }: { videoId: string }) {
+  const toast = useToast();
+  const [seed] = useState(() => Math.random().toString(36).slice(2, 8));
+  const [side, setSide] = useState<Side | null>(null);
+  const [feed, setFeed] = useState<Card[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [more, setMore] = useState(false);
+
+  const load = useCallback(async (p: number) => {
+    if (p > 0) setMore(true);
+    try {
+      const d = await api<Side>(`/api/watch/${videoId}/sidebar?page=${p}&seed=${seed}`);
+      if (p === 0) setSide(d);
+      setFeed((f) => (p === 0 ? d.feed : [...f, ...d.feed]));
+      setHasMore(d.hasMore);
+      setPage(p);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setLoading(false);
+      setMore(false);
+    }
+  }, [videoId, seed, toast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load(0);
+  }, [load]);
+
+  if (loading) return <div className="flex justify-center py-10"><Spinner className="text-brand" /></div>;
+
+  return (
+    <div className="space-y-3">
+      {(side?.pinned ?? []).length > 0 && (
+        <div className="space-y-0.5 rounded-2xl border-[2.5px] border-ink bg-sun/30 p-1.5">
+          {side!.pinned.map((v) => <Row key={v.id} v={v} pinned />)}
+        </div>
+      )}
+      {side?.currentPackage && <PackageBlock pkg={side.currentPackage} activeId={videoId} defaultOpen />}
+      {(side?.groupPackages ?? []).map((p) => (
+        <PackageBlock key={p.id} pkg={p} activeId={videoId} defaultOpen={false} />
+      ))}
+      {feed.length > 0 && (
+        <div className="space-y-0.5">
+          {feed.map((v) => <Row key={v.id} v={v} />)}
+        </div>
+      )}
+      {hasMore && (
+        <button className="btn-secondary w-full" onClick={() => load(page + 1)} disabled={more}>
+          {more ? <Spinner /> : <Icon name="down" size={15} />} Daha çox video
+        </button>
+      )}
+    </div>
+  );
+}
