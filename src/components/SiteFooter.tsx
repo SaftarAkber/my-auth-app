@@ -118,7 +118,7 @@ export default function SiteFooter({ site, preview = false }: { site: SiteConten
                 <li key={c.id}>
                   <a href={c.href!} target={c.id === "mail" ? undefined : "_blank"} rel="noopener noreferrer" className="flex items-center gap-2.5 py-1.5 text-sm text-muted transition-colors hover:text-brand">
                     {c.icon}
-                    <span className="min-w-0 truncate">{/^https?:///i.test(c.value) ? c.label : c.value}</span>
+                    <span className="min-w-0 truncate">{c.value.toLowerCase().startsWith("http") ? c.label : c.value}</span>
                   </a>
                 </li>
               ))}
