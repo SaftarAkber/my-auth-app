@@ -251,34 +251,34 @@ export default function LandingCarousel() {
           if (Math.abs(dx) > 48) go(dx < 0 ? 1 : -1);
         }}
       >
-        {/* Vaxt xətləri: həm irəliləyiş göstəricisi, həm də hekayəyə keçid (klik) */}
-        <div className="flex gap-1.5 px-3 pt-1" role="tablist" aria-label="Hekayə seçimi">
-          {STORIES.map((s, idx) => (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={idx === i}
-              aria-label={s.label}
-              title={s.label}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => { setI(idx); setProgress(0); }}
-              className="group relative z-10 flex h-8 flex-1 items-center focus-visible:outline-none"
-            >
-              <span className="block h-1 w-full overflow-hidden rounded-full bg-surface-2 transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-iris">
-                <span className="block h-full rounded-full bg-accent" style={{ width: idx < i ? "100%" : idx === i ? `${progress * 100}%` : "0%" }} />
-              </span>
-            </button>
-          ))}
-        </div>
-
         <div key={STORIES[i].id} className="story-in flex min-h-0 flex-1 flex-col" aria-live={running ? "off" : "polite"}>
           {STORIES[i].node}
         </div>
 
         {/* Toxunma sahələri: sol/sağ */}
-        <button type="button" className="absolute inset-y-14 left-0 w-1/4 cursor-w-resize" onClick={() => go(-1)} aria-label="Əvvəlki hekayə" tabIndex={-1} />
-        <button type="button" className="absolute inset-y-14 right-0 w-1/4 cursor-e-resize" onClick={() => go(1)} aria-label="Növbəti hekayə" tabIndex={-1} />
+        <button type="button" className="absolute inset-y-4 left-0 w-1/4 cursor-w-resize" onClick={() => go(-1)} aria-label="Əvvəlki hekayə" tabIndex={-1} />
+        <button type="button" className="absolute inset-y-4 right-0 w-1/4 cursor-e-resize" onClick={() => go(1)} aria-label="Növbəti hekayə" tabIndex={-1} />
+      </div>
+
+      {/* Vaxt xətləri: həm irəliləyiş göstəricisi, həm də hekayəyə keçid (klik) */}
+      <div className="mt-3 flex gap-1.5 px-1" role="tablist" aria-label="Hekayə seçimi">
+        {STORIES.map((s, idx) => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            aria-selected={idx === i}
+            aria-label={s.label}
+            title={s.label}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => { setI(idx); setProgress(0); }}
+            className="group relative z-10 flex h-8 flex-1 items-center focus-visible:outline-none"
+          >
+            <span className="block h-1 w-full overflow-hidden rounded-full bg-line-strong transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-iris">
+              <span className="block h-full rounded-full bg-accent" style={{ width: idx < i ? "100%" : idx === i ? `${progress * 100}%` : "0%" }} />
+            </span>
+          </button>
+        ))}
       </div>
 
       <CarouselArrow dir="prev" onClick={() => go(-1)} className="absolute -left-14 top-1/2 hidden -translate-y-1/2 sm:grid" />
