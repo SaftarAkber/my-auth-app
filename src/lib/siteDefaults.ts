@@ -9,6 +9,7 @@ export interface SiteContent {
   closeTitle: string;
   closeText: string;
   footer: string;
+  contact: { whatsapp: string; instagram: string; youtube: string; email: string };
   show: { features: boolean; steps: boolean; close: boolean; subjects: boolean; teachers: boolean; videos: boolean; contests: boolean };
 }
 
@@ -33,12 +34,16 @@ export const DEFAULT_SITE: SiteContent = {
   ],
   closeTitle: "Bu gün başla.",
   closeText: "Hesab yaratmaq bir dəqiqə çəkir. Tələbə kimi qrupa qoşul, müəllim kimi qrupunu qur.",
-  footer: "© EduFlow",
+  footer: "Müəllim və tələbələr üçün testlər, video dərslər və qruplar bir yerdə.",
+  contact: { whatsapp: "", instagram: "", youtube: "", email: "" },
   show: { features: true, steps: true, close: true, subjects: true, teachers: true, videos: true, contests: true },
 };
 
 export function mergeSite(d: Partial<SiteContent> | null | undefined): SiteContent {
   const x = d ?? {};
-  return { ...DEFAULT_SITE, ...x, show: { ...DEFAULT_SITE.show, ...(x.show ?? {}) } };
+  const merged = { ...DEFAULT_SITE, ...x, show: { ...DEFAULT_SITE.show, ...(x.show ?? {}) }, contact: { ...DEFAULT_SITE.contact, ...(x.contact ?? {}) } };
+  // Köhnə “© EduFlow” alt yazısı artıq footer-in avtomatik hüquq sətrinə daxildir
+  if (merged.footer.trim().startsWith("©")) merged.footer = DEFAULT_SITE.footer;
+  return merged;
 }
 

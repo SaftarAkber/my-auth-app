@@ -4,6 +4,7 @@ import type { LandingData } from "@/lib/landingData";
 import { SUBJECTS, subjectLabel } from "@/lib/subjects";
 import { Avatar, Icon, Img } from "@/components/ui";
 import LandingCarousel from "@/components/LandingCarousel";
+import SiteFooter from "@/components/SiteFooter";
 
 /**
  * Giriş etməmiş ziyarətçilərin gördüyü ana səhifə. Əsas mətnlər adminin “Sayt” bölməsindən gəlir.
@@ -213,21 +214,6 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
         </section>
       )}
 
-      {site.show.features && site.features.length > 0 && (
-        <section className="border-t border-line bg-white py-16 sm:py-20">
-          <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {site.features.map((f, i) => (
-                <article key={i} className="card flex min-h-48 flex-col justify-between border-t-4 border-t-brand p-6">
-                  <h2 className="text-2xl font-bold leading-tight tracking-tight text-ink">{f.title}</h2>
-                  <p className="mt-6 text-[15px] leading-relaxed text-muted">{f.text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {site.show.steps && site.steps.length > 0 && (
         <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
           <h2 className="mb-8 text-3xl font-bold tracking-tight text-ink sm:text-4xl">{site.stepsTitle}</h2>
@@ -257,9 +243,7 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
         </section>
       )}
 
-      <footer className="border-t border-line bg-white px-5 py-8 text-center text-sm text-muted sm:px-8">
-        {site.footer}
-      </footer>
+      <SiteFooter site={site} preview={preview} />
     </div>
   );
 }

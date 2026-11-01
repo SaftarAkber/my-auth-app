@@ -95,8 +95,6 @@ export default function AdminSitePage() {
             </div>
           </section>
 
-          {list("features", "Xüsusiyyət kartları", 8)}
-
           <section className="card p-5">
             <h2 className="mb-3 font-bold">Addımlar və yekun</h2>
             <div className="grid gap-3">
@@ -110,13 +108,23 @@ export default function AdminSitePage() {
             <div className="grid gap-3">
               <Field label="Başlıq"><input className="input" value={s.closeTitle} onChange={(e) => set("closeTitle", e.target.value)} /></Field>
               <Field label="Mətn"><textarea className="input min-h-20" value={s.closeText} onChange={(e) => set("closeText", e.target.value)} /></Field>
-              <Field label="Alt yazı"><input className="input" value={s.footer} onChange={(e) => set("footer", e.target.value)} /></Field>
+              <Field label="Footer qısa mətni (loqonun altında)"><input className="input" value={s.footer} onChange={(e) => set("footer", e.target.value)} /></Field>
+            </div>
+          </section>
+
+          <section className="card p-5">
+            <h2 className="mb-3 font-bold">Əlaqə (footer və Əlaqə səhifəsi)</h2>
+            <p className="mb-3 text-sm text-muted">Boş buraxılan xana göstərilmir.</p>
+            <div className="grid gap-3">
+              <Field label="WhatsApp nömrəsi" hint="Beynəlxalq formatda: +994501234567"><input className="input" value={s.contact.whatsapp} onChange={(e) => set("contact", { ...s.contact, whatsapp: e.target.value })} /></Field>
+              <Field label="Instagram" hint="İstifadəçi adı (@eduflow) və ya tam link"><input className="input" value={s.contact.instagram} onChange={(e) => set("contact", { ...s.contact, instagram: e.target.value })} /></Field>
+              <Field label="YouTube" hint="Kanal adı (@eduflow) və ya tam link"><input className="input" value={s.contact.youtube} onChange={(e) => set("contact", { ...s.contact, youtube: e.target.value })} /></Field>
+              <Field label="Email"><input className="input" value={s.contact.email} onChange={(e) => set("contact", { ...s.contact, email: e.target.value })} /></Field>
             </div>
           </section>
 
           <section className="card grid gap-2 p-5">
             <h2 className="mb-1 font-bold">Bölmələri göstər</h2>
-            <Toggle checked={s.show.features} onChange={(v) => set("show", { ...s.show, features: v })} label="Xüsusiyyət kartları" />
             <Toggle checked={s.show.steps} onChange={(v) => set("show", { ...s.show, steps: v })} label="Addımlar" />
             <Toggle checked={s.show.close} onChange={(v) => set("show", { ...s.show, close: v })} label="Yekun çağırış" />
             <Toggle checked={s.show.subjects} onChange={(v) => set("show", { ...s.show, subjects: v })} label="Fənlər" />

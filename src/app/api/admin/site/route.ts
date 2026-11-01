@@ -7,6 +7,8 @@ import { getSiteContent, mergeSite, type SiteContent } from "@/lib/site";
 const s = (v: unknown, max: number, fallback: string) =>
   typeof v === "string" && v.trim() ? v.trim().slice(0, max) : fallback;
 
+const c = (v: unknown, max: number, fallback: string) => (typeof v === "string" ? v.trim().slice(0, max) : fallback);
+
 function pairs(v: unknown, max: number, fallback: { title: string; text: string }[]) {
   if (!Array.isArray(v)) return fallback;
   return v
@@ -47,6 +49,12 @@ export async function PUT(req: NextRequest) {
       closeTitle: s(b.closeTitle, 120, cur.closeTitle),
       closeText: s(b.closeText, 300, cur.closeText),
       footer: s(b.footer, 160, cur.footer),
+      contact: {
+        whatsapp: c(b.contact?.whatsapp, 30, cur.contact.whatsapp),
+        instagram: c(b.contact?.instagram, 120, cur.contact.instagram),
+        youtube: c(b.contact?.youtube, 160, cur.contact.youtube),
+        email: c(b.contact?.email, 100, cur.contact.email),
+      },
       show: {
         features: b.show?.features !== false,
         steps: b.show?.steps !== false,
