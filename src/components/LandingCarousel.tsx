@@ -10,7 +10,7 @@ import { cx } from "@/lib/format";
  * şərh və müəllim cavabı, qrupa qoşulma, yarış). Hər hekayənin üstündə vaxt xətti dolur və avtomatik növbətiyə keçir.
  */
 
-const STORY_MS = 4500;
+const STORY_MS = 2000;
 const TICK_MS = 50;
 
 function Avatar({ initials, tone = "tint" }: { initials: string; tone?: "tint" | "brand" }) {
@@ -230,7 +230,8 @@ export default function LandingCarousel() {
       aria-roledescription="karusel"
       aria-label="Platformadan nümunələr"
       className="relative mx-auto w-full min-w-0 max-w-[24rem]"
-      onFocus={() => setFocused(true)}
+      // Yalnız klaviatura fokusu hekayəni saxlayır; klikdən sonrakı fokus saxlamır
+      onFocus={(e) => setFocused(e.target.matches(":focus-visible"))}
       onBlur={() => setFocused(false)}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
