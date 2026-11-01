@@ -134,7 +134,7 @@ export default function TeacherAttemptsPage() {
                 {isOpen && (
                   <div className="space-y-3 border-t border-line bg-surface-2/50 p-4">
                     {eligible(a) && (
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-[2.5px] border-ink bg-sun/40 p-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-tint p-3.5">
                         <p className="text-sm font-semibold">
                           Qayda ödənib: {a.package.rewardMinCorrect}+ düz cavab = {a.package.rewardCoins} coin
                         </p>

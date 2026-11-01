@@ -73,10 +73,10 @@ export default function AdminUsersPage() {
 
       <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { l: "Cəmi hesab", v: t?.all, c: "bg-sun" },
+          { l: "Cəmi hesab", v: t?.all, c: "bg-tint" },
           { l: "Müəllim", v: t?.teachers, c: "bg-iris" },
-          { l: "Tələbə", v: t?.students, c: "bg-tiger" },
-          { l: "Admin", v: t?.admins, c: "bg-flame/70" },
+          { l: "Tələbə", v: t?.students, c: "bg-iris" },
+          { l: "Admin", v: t?.admins, c: "bg-brand" },
         ].map((k) => (
           <div key={k.l} className={`card ${k.c} p-4`}>
             <p className="text-sm font-semibold">{k.l}</p>
@@ -108,7 +108,7 @@ export default function AdminUsersPage() {
         <div className="card max-w-[1400px] overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b-[2.5px] border-ink bg-surface-2 text-left">
+              <tr className="border-b border-line bg-surface-2 text-left">
                 <th className="px-4 py-3 font-semibold">Ad</th>
                 <th className="px-4 py-3 font-semibold">Rol</th>
                 <th className="px-4 py-3 font-semibold">Əlaqə</th>
@@ -119,10 +119,10 @@ export default function AdminUsersPage() {
             </thead>
             <tbody>
               {data!.users.map((u) => (
-                <tr key={u.id} className="border-b border-line transition last:border-0 hover:bg-sun/20">
+                <tr key={u.id} className="border-b border-line transition last:border-0 hover:bg-tint">
                   <td className="px-4 py-2.5">
                     <Link href={`/u/${u.id}`} className="flex items-center gap-3 font-semibold hover:underline">
-                      <Avatar src={u.photo} name={u.name} size={34} className="border-2 border-ink" />
+                      <Avatar src={u.photo} name={u.name} size={34} className="border border-line" />
                       {u.name}
                     </Link>
                   </td>
@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button className="btn-icon" onClick={() => setEditing(u)} aria-label="Redaktə et"><Icon name="edit" size={16} /></button>
                     {u.id !== me?.id && (
-                      <button className="btn-icon hover:!bg-flame hover:!text-white" onClick={() => remove(u)} aria-label="Sil"><Icon name="trash" size={16} /></button>
+                      <button className="btn-icon hover:!bg-bad hover:!text-white" onClick={() => remove(u)} aria-label="Sil"><Icon name="trash" size={16} /></button>
                     )}
                   </td>
                 </tr>

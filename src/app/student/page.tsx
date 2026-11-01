@@ -109,7 +109,7 @@ export default function StudentHome() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {groups.map((e) => (
-              <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group p-5 transition hover:-translate-y-0.5 hover:border-brand/40">
+              <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group p-5 transition hover:border-brand/40">
                 <div className="flex items-center gap-3">
                   <Avatar src={e.teacher.photo} name={e.teacher.name} size={40} />
                   <div className="min-w-0">
@@ -145,9 +145,9 @@ export default function StudentHome() {
                 <Link
                   key={t.id}
                   href={`/u/${t.id}`}
-                  className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
+                  className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:bg-tint"
                 >
-                  <Avatar src={t.photo} name={t.name} size={56} className="bg-sun" />
+                  <Avatar src={t.photo} name={t.name} size={56} className="bg-tint" />
                   <span className="flex min-h-[56px] flex-col justify-between py-0.5">
                     <span className="text-sm font-bold leading-tight group-hover:underline">{t.name}</span>
                     <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>

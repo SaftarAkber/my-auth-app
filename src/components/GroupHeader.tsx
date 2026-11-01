@@ -26,12 +26,12 @@ export default function GroupHeader({
 }) {
   return (
     <section className="card overflow-hidden max-sm:-mx-4 max-sm:-mt-6 max-sm:rounded-none max-sm:border-x-0 max-sm:border-t-0 max-sm:shadow-none">
-      <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
+      <div className={`relative overflow-hidden border-b border-line bg-surface-2 ${COVER_BOX}`}>
         <CoverArt value={group.coverPhoto} seed={group.id} />
         {back && (
           <Link
             href={back.href}
-            className="absolute left-4 top-4 hidden sm:inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink bg-white px-3.5 py-1.5 text-sm font-semibold shadow-hard transition hover:bg-sun"
+            className="absolute left-4 top-4 hidden sm:inline-flex items-center gap-1.5 rounded-md border border-line bg-white px-3.5 py-1.5 text-sm font-semibold shadow-soft transition hover:bg-tint"
           >
             <Icon name="left" size={15} /> {back.label}
           </Link>
@@ -41,7 +41,7 @@ export default function GroupHeader({
       <div className="relative flow-root px-5 pb-6 sm:px-8">
         {actions && <div className="absolute right-5 top-4 flex gap-2 sm:right-8">{actions}</div>}
 
-        <span className="-mt-[44px] grid h-[88px] w-[88px] place-items-center sm:-mt-[66px] sm:h-[132px] sm:w-[132px] overflow-hidden rounded-full border-4 border-ink bg-sun text-ink shadow-hard">
+        <span className="-mt-[44px] grid h-[88px] w-[88px] place-items-center sm:-mt-[66px] sm:h-[132px] sm:w-[132px] overflow-hidden rounded-full border-4 border-white bg-tint text-ink shadow-soft">
           {group.photo ? <Img src={group.photo} className="h-full w-full object-cover" /> : <Icon name="users" size={46} />}
         </span>
 

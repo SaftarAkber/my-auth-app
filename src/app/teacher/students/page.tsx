@@ -69,7 +69,7 @@ export default function TeacherStudentsPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {students.map(({ student: s, groups: gs, since }) => (
-            <div key={s.id} className="card flex items-center gap-3 p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+            <div key={s.id} className="card flex items-center gap-3 p-4 transition">
               <Link href={`/u/${s.id}`} className="flex min-w-0 flex-1 items-center gap-4">
                 <Avatar src={s.photo} name={s.name} size={52} />
                 <div className="min-w-0 flex-1">

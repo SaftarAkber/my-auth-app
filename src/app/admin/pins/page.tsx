@@ -15,7 +15,7 @@ interface Item {
 function Row({ v, children }: { v: Item; children: React.ReactNode }) {
   const thumb = videoThumb(v.url);
   return (
-    <div className="flex items-center gap-3 rounded-xl border-2 border-ink/15 bg-white p-2.5">
+    <div className="flex items-center gap-3 rounded-xl border border-line/15 bg-white p-2.5">
       <span className="relative block aspect-video w-28 shrink-0 overflow-hidden rounded-lg bg-surface-2">
         {thumb && <Img src={thumb} className="h-full w-full object-cover" />}
       </span>
@@ -73,7 +73,7 @@ export default function AdminPinsPage() {
           <section>
             <h2 className="mb-3 text-lg font-bold">Sancılmış ({pinned.length}/3)</h2>
             {pinned.length === 0 ? (
-              <p className="rounded-xl border-2 border-dashed border-ink/30 p-6 text-center text-sm text-muted">Heç nə sancılmayıb.</p>
+              <p className="rounded-xl border-2 border-dashed border-line p-6 text-center text-sm text-muted">Heç nə sancılmayıb.</p>
             ) : (
               <div className="space-y-2">
                 {pinned.map((v, i) => (

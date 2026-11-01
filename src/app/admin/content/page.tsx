@@ -73,8 +73,8 @@ export default function AdminContentPage() {
             key={k}
             onClick={() => setKind(k)}
             className={cx(
-              "shrink-0 rounded-full border-[2.5px] border-ink px-4 py-1.5 text-sm font-semibold transition hover:-translate-y-0.5",
-              kind === k ? "bg-ink text-white" : "bg-white hover:bg-sun/40",
+              "shrink-0 rounded-md border border-line px-4 py-1.5 text-sm font-semibold transition",
+              kind === k ? "bg-brand text-white" : "bg-white text-brand hover:bg-tint",
             )}
           >
             {l}
@@ -97,7 +97,7 @@ export default function AdminContentPage() {
         <div className="card max-w-[1400px] overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b-[2.5px] border-ink bg-surface-2 text-left">
+              <tr className="border-b border-line bg-surface-2 text-left">
                 <th className="px-4 py-3 font-semibold">Başlıq</th>
                 <th className="px-4 py-3 font-semibold">Sahibi</th>
                 <th className="px-4 py-3 font-semibold">Təfərrüat</th>
@@ -106,13 +106,13 @@ export default function AdminContentPage() {
             </thead>
             <tbody>
               {data.items.map((i) => (
-                <tr key={i.id} className="border-b border-line transition last:border-0 hover:bg-sun/20">
+                <tr key={i.id} className="border-b border-line transition last:border-0 hover:bg-tint">
                   <td className="max-w-md px-4 py-2.5 font-medium"><span className="line-clamp-2">{i.title}</span></td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-muted">{i.owner}</td>
                   <td className="max-w-sm px-4 py-2.5 text-muted"><span className="line-clamp-2">{i.sub}</span></td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button className="btn-icon" onClick={() => setEditing(i)} aria-label="Redaktə et"><Icon name="edit" size={16} /></button>
-                    <button className="btn-icon hover:!bg-flame hover:!text-white" onClick={() => remove(i)} aria-label="Sil"><Icon name="trash" size={16} /></button>
+                    <button className="btn-icon hover:!bg-bad hover:!text-white" onClick={() => remove(i)} aria-label="Sil"><Icon name="trash" size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -163,7 +163,7 @@ function EditItem({
       <div className="grid gap-4">
         {fields.map((f) =>
           f.type === "bool" ? (
-            <label key={f.key} className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border-[2.5px] border-ink p-3">
+            <label key={f.key} className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-line p-3">
               <span className="text-sm font-semibold">{f.label}</span>
               <input
                 type="checkbox"

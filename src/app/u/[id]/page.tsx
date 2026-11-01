@@ -129,13 +129,13 @@ function ProfileInner() {
   return (
     <div className="page space-y-6">
       <section className="card overflow-hidden max-sm:-mx-4 max-sm:-mt-6 max-sm:rounded-none max-sm:border-x-0 max-sm:border-t-0 max-sm:shadow-none">
-        <div className={`relative overflow-hidden border-b-[3px] border-ink bg-surface-2 ${COVER_BOX}`}>
+        <div className={`relative overflow-hidden border-b border-line bg-surface-2 ${COVER_BOX}`}>
           <CoverArt value={user.coverPhoto} seed={user.id} />
           {isOwn && me?.role !== "ADMIN" && (
             <button
               onClick={() => setEdit(true)}
               aria-label="Divar kağızını dəyiş"
-              className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border-[2.5px] border-ink bg-white shadow-hard transition hover:bg-sun"
+              className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-line bg-white shadow-soft transition hover:bg-tint"
             >
               <Icon name="image" size={18} />
             </button>
@@ -146,12 +146,12 @@ function ProfileInner() {
             <button
               onClick={() => setEdit(true)}
               aria-label="Profili redaktə et"
-              className="absolute right-5 top-4 grid h-10 w-10 place-items-center rounded-full border-[2.5px] border-ink bg-white shadow-hard transition hover:bg-sun sm:right-8"
+              className="absolute right-5 top-4 grid h-10 w-10 place-items-center rounded-full border border-line bg-white shadow-soft transition hover:bg-tint sm:right-8"
             >
               <Icon name="edit" size={17} />
             </button>
           )}
-          <Avatar src={user.photo} name={user.name} size={132} className="-mt-[44px] !h-[88px] !w-[88px] !text-[32px] border-4 border-ink bg-sun text-ink shadow-hard sm:-mt-[66px] sm:!h-[132px] sm:!w-[132px] sm:!text-[50px]" />
+          <Avatar src={user.photo} name={user.name} size={132} className="-mt-[44px] !h-[88px] !w-[88px] !text-[32px] border-4 border-white bg-tint text-ink shadow-soft sm:-mt-[66px] sm:!h-[132px] sm:!w-[132px] sm:!text-[50px]" />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{user.name}</h1>
             <span className={user.role === "TEACHER" ? "badge-brand" : user.role === "ADMIN" ? "badge-bad" : "badge-warn"}>
@@ -187,8 +187,8 @@ function ProfileInner() {
       {quick.length > 0 && (
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {quick.map((q) => (
-            <Link key={q.href} href={q.href} className="card flex items-center gap-3 p-3.5 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-ink bg-sun"><Icon name={q.icon} size={18} /></span>
+            <Link key={q.href} href={q.href} className="card flex items-center gap-3 p-3.5 transition hover:bg-tint">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-tint"><Icon name={q.icon} size={18} /></span>
               <span className="font-bold">{q.label}</span>
             </Link>
           ))}
@@ -406,7 +406,7 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
           {images.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {images.map((u) => (
-                <span key={u} className="relative h-20 w-20 overflow-hidden rounded-xl border-2 border-ink">
+                <span key={u} className="relative h-20 w-20 overflow-hidden rounded-xl border border-line">
                   <Img src={u} className="h-full w-full object-cover" />
                   <button onClick={() => setImages((p) => p.filter((x) => x !== u))} className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink text-white" aria-label="Şəkli sil">
                     <Icon name="x" size={12} />
@@ -480,7 +480,7 @@ function CoinsTab() {
     <div className="card max-w-3xl divide-y-2 divide-line overflow-hidden">
       {list.map((t) => (
         <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-          <span className={cx("grid h-9 w-9 place-items-center rounded-full border-2 border-ink", t.amount > 0 ? "bg-ok/25" : "bg-flame/30")}>
+          <span className={cx("grid h-9 w-9 place-items-center rounded-full border border-line", t.amount > 0 ? "bg-ok/25" : "bg-bad/10")}>
             <Icon name={t.amount > 0 ? "plus" : "coin"} size={16} />
           </span>
           <div className="min-w-0 flex-1">

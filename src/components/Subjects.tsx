@@ -21,8 +21,8 @@ export function SubjectPicker({ value, onChange }: { value: string[]; onChange: 
               aria-pressed={on}
               onClick={() => onChange(on ? value.filter((v) => v !== s.id) : [...value, s.id])}
               className={cx(
-                "inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-sm font-semibold transition",
-                on ? "bg-sun" : "bg-white hover:bg-sun/30",
+                "inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-semibold transition",
+                on ? "bg-tint" : "bg-white hover:bg-tint",
                 disabled && "cursor-not-allowed opacity-40 hover:bg-white",
               )}
             >

@@ -64,7 +64,7 @@ export function VideoThumb({
   const thumb = videoThumb(url);
   return (
     <span className={cx("group/thumb relative block aspect-video overflow-hidden bg-ink/90", className)}>
-      {thumb ? <Img src={thumb} className="h-full w-full object-cover" /> : <span className="absolute inset-0 bg-gradient-to-br from-iris/60 to-sun/60" />}
+      {thumb ? <Img src={thumb} className="h-full w-full object-cover" /> : <span className="absolute inset-0 bg-gradient-to-br from-iris/60 to-tint" />}
       {!plain && (
         <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover/thumb:bg-black/35">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand">

@@ -140,7 +140,7 @@ export default function PackageQuestionsPage() {
                     <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                       {(q.options ?? []).map((o, k) => (
                         <li key={k} className={cx("flex items-center gap-2 rounded-lg border px-3 py-2 text-sm", o === q.correctAnswer ? "border-ok/50 bg-ok/10 font-semibold" : "border-line")}>
-                          <b className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-ink bg-white text-xs">{String.fromCharCode(65 + k)}</b> {o}
+                          <b className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line bg-white text-xs">{String.fromCharCode(65 + k)}</b> {o}
                           {o === q.correctAnswer && <Icon name="check" size={14} className="ml-auto text-ok" />}
                         </li>
                       ))}
@@ -175,7 +175,7 @@ export default function PackageQuestionsPage() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-1">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-1">
             {(["MULTIPLE_CHOICE", "OPEN_ENDED"] as const).map((t) => (
               <button key={t} type="button" onClick={() => setForm({ ...form, type: t })}
                 className={cx("rounded-xl py-2 text-sm font-semibold transition", form.type === t ? "bg-surface text-brand shadow-soft" : "text-muted")}>

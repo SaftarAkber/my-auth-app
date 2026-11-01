@@ -94,7 +94,7 @@ export default function TeacherTestsPage() {
           {list.map((c) => (
             <article key={c.id} className="card flex flex-col p-5 transition hover:border-brand/40">
               <Link href={`/teacher/tests/${c.id}`} className="flex-1">
-                <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand"><Icon name="folder" size={22} /></span>
+                <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name="folder" size={22} /></span>
                 <h3 className="text-lg font-bold hover:text-brand">{c.name}</h3>
                 <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{c.description || "Təsvir yoxdur."}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">

@@ -106,12 +106,12 @@ export function Avatar({
   const style = { width: size, height: size, fontSize: Math.max(11, size * 0.38) };
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={name ?? ""} style={style} className={cx("shrink-0 rounded-full border-2 border-ink object-cover", className)} />;
+    return <img src={src} alt={name ?? ""} style={style} className={cx("shrink-0 rounded-full border border-line object-cover", className)} />;
   }
   return (
     <span
       style={style}
-      className={cx("inline-flex shrink-0 items-center justify-center rounded-full border-2 border-ink bg-iris/50 font-bold text-ink", className)}
+      className={cx("inline-flex shrink-0 items-center justify-center rounded-full border border-line bg-tint font-bold text-brand", className)}
     >
       {initials(name)}
     </span>
@@ -140,7 +140,7 @@ export function SkeletonList({ rows = 3, className = "h-24" }: { rows?: number; 
 export function ProgressBar({ value, tone = "brand" }: { value: number; tone?: "brand" | "ok" | "bad" | "warn" }) {
   const color = { brand: "bg-brand", ok: "bg-ok", bad: "bg-bad", warn: "bg-warn" }[tone];
   return (
-    <div className="h-3 w-full overflow-hidden rounded-full border-2 border-ink bg-surface-2">
+    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
       <div className={cx("h-full rounded-full transition-all duration-500", color)} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   );
@@ -148,14 +148,13 @@ export function ProgressBar({ value, tone = "brand" }: { value: number; tone?: "
 
 export function CoinPill({ amount, className }: { amount: number; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-sun px-3 py-1 text-sm font-bold text-ink", className)}>
+    <span className={cx("inline-flex items-center gap-1.5 rounded-md border border-[#f1dd9a] bg-[#fff7dc] px-2.5 py-1 text-sm font-semibold text-[#7a5a00]", className)}>
       <Icon name="coin" size={15} />
       {amount.toLocaleString("az-AZ")}
     </span>
   );
 }
 
-/* ───────────────────────── Layout blokları ───────────────────────── */
 export function PageHeader({
   title, subtitle, actions, back,
 }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; back?: string | true }) {
@@ -172,7 +171,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="inline-block text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ boxShadow: "inset 0 -0.34em 0 rgb(var(--sun))", padding: "0 4px", marginLeft: -4 }}>{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted sm:text-base">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -182,24 +181,23 @@ export function PageHeader({
 }
 
 const TONES = {
-  brand: "bg-sun",
-  ok: "bg-iris",
-  warn: "bg-tiger",
-  bad: "bg-[#fd9b62]",
-  info: "bg-[#aeaff4]",
+  brand: "text-brand",
+  ok: "text-ok",
+  warn: "text-warn",
+  bad: "text-bad",
+  info: "text-iris",
 } as const;
 
 export function StatCard({
   label, value, icon, tone = "brand", href,
 }: { label: string; value: React.ReactNode; icon: IconName; tone?: keyof typeof TONES; href?: string }) {
   const body = (
-    <div className={cx("card relative h-full overflow-hidden p-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 sm:p-5", TONES[tone])}>
-      <span className="pointer-events-none absolute -bottom-8 -right-8 h-24 w-24 rounded-full border-[2.5px] border-ink bg-white/40" />
-      <div className="relative flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold">{label}</p>
-        <Icon name={icon} size={18} />
+    <div className="card h-full p-4 transition-colors hover:border-line-strong sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-muted">{label}</p>
+        <span className={TONES[tone]}><Icon name={icon} size={18} /></span>
       </div>
-      <p className="relative mt-2 text-3xl font-extrabold leading-none tracking-tight tabular-nums sm:text-4xl">{value}</p>
+      <p className="mt-2 text-3xl font-bold leading-none tracking-tight tabular-nums text-ink sm:text-4xl">{value}</p>
     </div>
   );
   return href ? <Link href={href} className="block">{body}</Link> : body;
@@ -209,8 +207,8 @@ export function Empty({
   icon = "inbox", title, text, action,
 }: { icon?: IconName; title: string; text?: string; action?: React.ReactNode }) {
   return (
-    <div className="card-flat flex flex-col items-center justify-center border-dashed bg-white/70 px-6 py-14 text-center">
-      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border-[2.5px] border-ink bg-sun text-ink shadow-hard">
+    <div className="card-flat flex flex-col items-center justify-center border-dashed border-line-strong bg-white/70 px-6 py-14 text-center">
+      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-tint text-brand">
         <Icon name={icon} size={26} />
       </span>
       <h3 className="text-base font-bold">{title}</h3>
@@ -222,7 +220,7 @@ export function Empty({
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border-[2.5px] border-ink bg-flame/30 p-4 text-sm font-semibold text-ink">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-bad/30 bg-bad/10 p-4 text-sm font-semibold text-bad">
       <span className="flex items-center gap-2"><Icon name="alert" /> {message}</span>
       {onRetry && <button className="btn-secondary btn-sm" onClick={onRetry}>Yenilə</button>}
     </div>
@@ -233,20 +231,21 @@ export function Tabs<T extends string>({
   tabs, value, onChange,
 }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="-mx-2 mb-5 flex gap-2 overflow-x-auto px-2 pb-3 pt-2">
+    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line" role="tablist">
       {tabs.map((t) => (
         <button
           key={t.id}
+          role="tab"
           onClick={() => onChange(t.id)}
-          aria-pressed={value === t.id}
+          aria-selected={value === t.id}
           className={cx(
-            "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-[2.5px] border-ink px-4 py-1.5 text-sm font-semibold transition hover:-translate-y-0.5",
-            value === t.id ? "bg-ink text-white" : "bg-white text-ink hover:bg-sun/40",
+            "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors",
+            value === t.id ? "border-brand text-brand" : "border-transparent text-muted hover:bg-tint/60 hover:text-brand",
           )}
         >
           {t.label}
           {t.count !== undefined && (
-            <span className="rounded-full border-2 border-ink bg-sun px-1.5 text-xs font-bold text-ink">{t.count}</span>
+            <span className={cx("rounded px-1.5 text-xs font-semibold", value === t.id ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>
           )}
         </button>
       ))}
@@ -276,14 +275,14 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-xl border-[2.5px] border-ink bg-surface p-3.5 text-left transition hover:bg-sun/20"
+      className="flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface p-3.5 text-left transition-colors hover:bg-tint/60"
     >
       <span>
         <span className="block text-sm font-semibold">{label}</span>
         {hint && <span className="mt-0.5 block text-xs text-muted">{hint}</span>}
       </span>
-      <span className={cx("relative h-6 w-11 shrink-0 rounded-full border-2 border-ink transition", checked ? "bg-sun" : "bg-white")}>
-        <span className={cx("absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-ink transition-all", checked ? "left-[22px]" : "left-[2px]")} />
+      <span className={cx("relative h-6 w-11 shrink-0 rounded-full transition-colors", checked ? "bg-brand" : "bg-line-strong")}>
+        <span className={cx("absolute top-[2px] h-5 w-5 rounded-full bg-white shadow-soft transition-all", checked ? "left-[22px]" : "left-[2px]")} />
       </span>
     </button>
   );
@@ -303,8 +302,8 @@ export function ChipSelect({
             key={o.id}
             onClick={() => onChange(on ? value.filter((v) => v !== o.id) : [...value, o.id])}
             className={cx(
-              "inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-sm font-semibold transition",
-              on ? "bg-sun text-ink" : "bg-white text-muted hover:text-ink",
+              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors",
+              on ? "border-brand bg-tint text-brand" : "border-line-strong bg-white text-muted hover:bg-tint/60 hover:text-brand",
             )}
           >
             {on && <Icon name="check" size={14} />} {o.label}
@@ -362,15 +361,15 @@ export function ImageUpload({
   }
 
   const box = {
-    wide: "aspect-[16/6] w-full rounded-2xl",
-    square: "aspect-square w-32 rounded-2xl",
+    wide: "aspect-[16/6] w-full rounded-xl",
+    square: "aspect-square w-32 rounded-xl",
     round: "h-28 w-28 rounded-full",
   }[shape];
 
   return (
     <div className={className}>
       {label && <span className="label">{label}</span>}
-      <div className={cx("group relative overflow-hidden border-[2.5px] border-dashed border-ink bg-surface-2", box)}>
+      <div className={cx("group relative overflow-hidden border border-dashed border-line-strong bg-surface-2", box)}>
         {value && <Img src={value} className="h-full w-full object-cover" />}
         <button
           type="button"
@@ -428,16 +427,16 @@ export function Modal({
   // Portal: yuxarı səviyyəli qatda açılır ki, naviqasiya paneli pəncərənin üstünə çıxmasın
   return createPortal(
     <div className="fixed inset-0 z-[500] flex items-end justify-center sm:items-center sm:p-8" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-ink/60" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div className={cx("card relative flex max-h-[calc(100dvh-4.5rem)] w-full animate-pop flex-col rounded-b-none sm:max-h-[calc(100dvh-4rem)] sm:rounded-b-2xl", width)}>
         {title && (
-          <div className="flex items-center justify-between gap-3 border-b-[2.5px] border-ink px-5 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
             <h2 className="text-lg font-bold">{title}</h2>
             <button className="btn-icon -mr-2" onClick={onClose} aria-label="Bağla"><Icon name="x" /></button>
           </div>
         )}
         <div className="overflow-y-auto px-5 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t-[2.5px] border-ink px-5 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-4">{footer}</div>}
       </div>
     </div>,
     document.body,

@@ -29,7 +29,7 @@ export default function ShopSoon() {
         aria-hidden
       >
         {[...ITEMS, ...ITEMS].map((svg, i) => (
-          <div key={i} className="grid aspect-square place-items-center rounded-3xl bg-white p-5">{svg}</div>
+          <div key={i} className="grid aspect-square place-items-center rounded-xl bg-white p-5">{svg}</div>
         ))}
       </div>
       <div className="absolute inset-0 grid place-items-center bg-white/40 text-center">

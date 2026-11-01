@@ -65,7 +65,7 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
                     title={p.name}
                     aria-pressed={active}
                     onClick={() => setCover(PRESET_PREFIX + p.id)}
-                    className={cx("h-16 overflow-hidden rounded-xl border-[2.5px] transition", active ? "border-ink shadow-hard" : "border-line hover:border-ink")}
+                    className={cx("h-16 overflow-hidden rounded-xl border transition", active ? "border-line shadow-soft" : "border-line hover:border-line")}
                   >
                     {p.svg}
                   </button>
@@ -80,7 +80,7 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
             {cover && !cover.startsWith(PRESET_PREFIX) && (
               <div className="mt-4">
                 <span className="label">Şəklin mövqeyi (yuxarı ↔ aşağı)</span>
-                <div className={`mb-2 w-full overflow-hidden rounded-xl border-[2.5px] border-ink ${COVER_RATIO}`}>
+                <div className={`mb-2 w-full overflow-hidden rounded-xl border border-line ${COVER_RATIO}`}>
                   <CoverArt value={cover} />
                 </div>
                 <input
@@ -163,7 +163,7 @@ function ContactRow({ type }: { type: "phone" | "email" }) {
   }
 
   return (
-    <div className="rounded-xl border-[2.5px] border-ink p-4">
+    <div className="rounded-xl border border-line p-4">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
           <Icon name={type === "phone" ? "phone" : "mail"} />

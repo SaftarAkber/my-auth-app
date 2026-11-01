@@ -173,7 +173,7 @@ export default function TestTaker({
             {result.score} / {result.totalScore} düzgün cavab
           </p>
           {!!result.coinsEarned && (
-            <p className="mt-3 inline-flex items-center gap-2 rounded-full border-2 border-ink bg-sun px-4 py-1.5 font-bold text-ink">
+            <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-line bg-tint px-4 py-1.5 font-bold text-ink">
               <Icon name="coin" size={16} /> Müəllimdən +{result.coinsEarned} coin qazandınız
             </p>
           )}
@@ -207,7 +207,7 @@ export default function TestTaker({
 
   return (
     <Overlay>
-      <header className="shrink-0 border-b-[3px] border-ink bg-surface pt-[env(safe-area-inset-top)]">
+      <header className="shrink-0 border-b border-line bg-surface pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <button className="btn-icon -ml-2" onClick={leave} aria-label="Çıx"><Icon name="x" /></button>
           <div className="min-w-0 flex-1">
@@ -296,7 +296,7 @@ export default function TestTaker({
       </div>
       </div>
 
-      <footer className="shrink-0 border-t-[3px] border-ink bg-surface pb-[env(safe-area-inset-bottom)]">
+      <footer className="shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
             <button className="btn-secondary" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
               <Icon name="left" size={16} /> Əvvəlki

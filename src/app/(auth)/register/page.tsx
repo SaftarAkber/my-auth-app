@@ -78,7 +78,7 @@ export default function RegisterPage() {
                 disabled={disabled}
                 onClick={() => setRole(r.id)}
                 className={cx(
-                  "rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50",
+                  "rounded-xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50",
                   on ? "border-brand bg-brand/5" : "border-line bg-surface hover:border-brand/40",
                 )}
               >

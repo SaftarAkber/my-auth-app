@@ -61,7 +61,7 @@ export default function AdminDeletedPage() {
         <div className="space-y-3">
           {items.map((i) => (
             <article key={`${i.kind}${i.id}`} className="card flex flex-wrap items-center gap-4 p-4">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sun/40">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-tint">
                 <Icon name={i.kind === "collection" ? "folder" : "file"} size={20} />
               </span>
               <div className="min-w-0 flex-1">

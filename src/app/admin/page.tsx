@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
                   <div key={d.date} className="group flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${d.count}`}>
                     <span className="text-xs font-bold tabular-nums">{d.count || ""}</span>
                     <div
-                      className={`w-full rounded-t-lg border-[2.5px] border-ink transition ${i === data.signups.length - 1 ? "bg-sun" : "bg-iris"} group-hover:bg-sun`}
+                      className={`w-full rounded-t-lg border border-line transition ${i === data.signups.length - 1 ? "bg-tint" : "bg-iris"} group-hover:bg-tint`}
                       style={{ height: `${Math.max(d.count ? 8 : 3, (d.count / max) * 100)}%` }}
                     />
                     <span className="text-[10px] text-muted">{d.date.slice(8)}</span>
@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
             </section>
 
             <section className="card overflow-hidden">
-              <div className="flex items-center justify-between border-b-[2.5px] border-ink px-5 py-3.5">
+              <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
                 <h2 className="text-lg font-bold">Son hesablar</h2>
                 <Link href="/admin/users" className="text-sm font-semibold text-brand hover:underline">Hamısı →</Link>
               </div>
@@ -95,8 +95,8 @@ export default function AdminDashboardPage() {
 
           <section className="grid gap-4 sm:grid-cols-3">
             {links.map((l) => (
-              <Link key={l.href} href={l.href} className="card flex items-center gap-4 p-5 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-[2.5px] border-ink bg-sun"><Icon name={l.icon} size={20} /></span>
+              <Link key={l.href} href={l.href} className="card flex items-center gap-4 p-5 transition hover:bg-tint">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-line bg-tint"><Icon name={l.icon} size={20} /></span>
                 <span>
                   <span className="block font-bold">{l.title}</span>
                   <span className="block text-sm text-muted">{l.text}</span>

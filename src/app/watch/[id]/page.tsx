@@ -92,7 +92,7 @@ function WatchView({ id }: { id: string }) {
       {/* Telefonda sıra: video → siyahı → şərhlər; geniş ekranda sol sütun (video + şərhlər), sağda siyahı */}
       <div className="grid gap-x-6 gap-y-6 xl:grid-cols-[minmax(0,1fr)_430px]">
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-          <div className="aspect-video w-full overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-hard">
+          <div className="aspect-video w-full overflow-hidden rounded-xl border border-line bg-black shadow-soft">
             {v.uploaded ? (
               processing ? (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-ink px-6 text-center text-white">
@@ -127,7 +127,7 @@ function WatchView({ id }: { id: string }) {
 
           <h1 className="mt-4 text-xl font-extrabold leading-snug sm:text-2xl">{v.title}</h1>
           {v.isOwner && v.state === "draft" && (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-sun/40 px-3 py-1 text-xs font-bold">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-line bg-tint px-3 py-1 text-xs font-bold">
               <Icon name="lock" size={12} /> Qaralama, yalnız siz görürsünüz
             </p>
           )}
@@ -144,14 +144,14 @@ function WatchView({ id }: { id: string }) {
               <button
                 onClick={like}
                 aria-pressed={liked}
-                className={`inline-flex items-center gap-2 rounded-full border-[2.5px] border-ink px-4 py-2 text-sm font-bold transition ${liked ? "bg-sun" : "bg-white hover:bg-sun/30"}`}
+                className={`inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-bold transition ${liked ? "bg-tint" : "bg-white hover:bg-tint"}`}
               >
                 <Icon name="thumb" size={16} /> {likeCount.toLocaleString("az-AZ")}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border-[2.5px] border-ink bg-white p-4">
+          <div className="mt-4 rounded-xl border border-line bg-white p-4">
             <p className="text-sm font-bold">
               {viewCount.toLocaleString("az-AZ")} baxış · {fmtDate(v.createdAt)}
               {v.package && <span className="ml-2 font-semibold text-muted">· {v.package.name}</span>}

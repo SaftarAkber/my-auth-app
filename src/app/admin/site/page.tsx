@@ -59,7 +59,7 @@ export default function AdminSitePage() {
           <div key={i} className="grid gap-2 rounded-xl border-2 border-line p-3">
             <div className="flex gap-2">
               <input className="input" value={x.title} onChange={(e) => setItem(key, i, "title", e.target.value)} aria-label="Başlıq" />
-              <button className="btn-icon shrink-0 hover:!bg-flame hover:!text-white" onClick={() => set(key, s[key].filter((_, j) => j !== i))} aria-label="Sil"><Icon name="trash" size={16} /></button>
+              <button className="btn-icon shrink-0 hover:!bg-bad hover:!text-white" onClick={() => set(key, s[key].filter((_, j) => j !== i))} aria-label="Sil"><Icon name="trash" size={16} /></button>
             </div>
             <textarea className="input min-h-16" value={x.text} onChange={(e) => setItem(key, i, "text", e.target.value)} aria-label="Mətn" />
           </div>

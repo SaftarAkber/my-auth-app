@@ -48,7 +48,7 @@ export default function TeachersPage() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {mine.map((e) => (
-              <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group flex items-center gap-4 p-5 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/20">
+              <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group flex items-center gap-4 p-5 transition hover:bg-tint">
                 <Avatar src={e.teacher.photo} name={e.teacher.name} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{e.group.name}</p>
@@ -86,9 +86,9 @@ export default function TeachersPage() {
             <Link
               key={t.id}
               href={`/u/${t.id}`}
-              className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-sun/25"
+              className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:bg-tint"
             >
-              <Avatar src={t.photo} name={t.name} size={56} className="bg-sun" />
+              <Avatar src={t.photo} name={t.name} size={56} className="bg-tint" />
               <span className="flex min-h-[56px] flex-col justify-between py-0.5">
                 <span className="font-bold leading-tight group-hover:underline">{t.name}</span>
                 <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>

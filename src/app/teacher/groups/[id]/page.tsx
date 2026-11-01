@@ -303,7 +303,7 @@ export default function TeacherGroupPage() {
             ) : (
               <div className="space-y-3">
                 {g.testPackages.map((p) => (
-                  <div key={p.id} className="card-flat flex flex-wrap items-center gap-3 p-4 transition hover:bg-sun/20">
+                  <div key={p.id} className="card-flat flex flex-wrap items-center gap-3 p-4 transition hover:bg-tint">
                     <Link
                       href={p.collectionId ? `/teacher/tests/${p.collectionId}/${p.id}` : `/teacher/results/${p.id}`}
                       className="group flex min-w-0 flex-1 items-center gap-3"

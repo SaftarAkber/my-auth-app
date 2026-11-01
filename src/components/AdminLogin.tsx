@@ -33,7 +33,7 @@ export default function AdminLogin() {
     <div className="relative z-10 grid min-h-screen place-items-center px-4 py-10">
       <div className="w-full max-w-md animate-fade-up">
         <div className="mb-6 flex items-center gap-2.5">
-          <span className="grid h-11 w-11 place-items-center rounded-full border-[2.5px] border-ink bg-white">
+          <span className="grid h-11 w-11 place-items-center rounded-full border border-line bg-white">
             <span className="h-4 w-4 rounded-full bg-ink" />
           </span>
           <span className="text-2xl font-extrabold tracking-tight">EduFlow</span>
@@ -47,7 +47,7 @@ export default function AdminLogin() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-xl border-[2.5px] border-ink bg-flame/30 p-3 text-sm font-semibold" role="alert">
+            <div className="flex items-start gap-2 rounded-xl border border-line bg-bad/10 p-3 text-sm font-semibold" role="alert">
               <Icon name="alert" size={18} className="mt-0.5 shrink-0" /> {error}
             </div>
           )}

@@ -28,12 +28,12 @@ export function SubNav({ items }: { items: Item[] }) {
             href={i.href}
             aria-current={active ? "page" : undefined}
             className={cx(
-              "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-[2.5px] border-ink px-4 py-1.5 text-sm font-semibold transition hover:-translate-y-0.5",
-              active ? "bg-ink text-white" : "bg-white text-ink hover:bg-sun/40",
+              "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-line px-4 py-1.5 text-sm font-semibold transition",
+              active ? "bg-brand text-white" : "bg-white text-brand hover:bg-tint",
             )}
           >
             {i.label}
-            {i.badge && pending > 0 && <span className="rounded-full border-2 border-ink bg-flame px-1.5 text-xs font-bold text-white">{pending}</span>}
+            {i.badge && pending > 0 && <span className="rounded-md border border-line bg-bad px-1.5 text-xs font-bold text-white">{pending}</span>}
           </Link>
         );
       })}

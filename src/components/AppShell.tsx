@@ -49,10 +49,10 @@ const HOME: Record<User["role"], string> = { STUDENT: "/student", TEACHER: "/tea
 function Logo() {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-full border-[2.5px] border-ink bg-white">
-        <span className="h-3.5 w-3.5 rounded-full bg-ink" />
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-brand">
+        <span className="h-3.5 w-3.5 rounded-full bg-white" />
       </span>
-      <span className="hidden text-lg font-extrabold tracking-tight text-ink sm:inline">EduFlow</span>
+      <span className="hidden text-lg font-bold tracking-tight text-brand sm:inline">EduFlow</span>
     </span>
   );
 }
@@ -138,7 +138,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
 
   return (
     <div ref={box} className="relative mx-auto min-w-0 max-w-xl flex-1" role="search">
-      <Icon name="search" size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink" />
+      <Icon name="search" size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
       <input
         ref={input}
         value={q}
@@ -153,10 +153,9 @@ function Search({ t }: { t: (k: DictKey) => string }) {
         placeholder={t("search")}
         aria-label={t("search")}
         autoComplete="off"
-        className="h-10 w-full rounded-full border-[2.5px] border-ink bg-white pl-10 pr-10 text-sm font-medium text-ink placeholder:text-muted/80 focus:outline-none"
-        style={{ boxShadow: open ? "4px 4px 0 rgb(var(--ink))" : undefined }}
+        className="h-10 w-full rounded-md border border-line-strong bg-surface-2 pl-10 pr-10 text-sm font-medium text-ink placeholder:text-muted/80 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-iris/30"
       />
-      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border-2 border-ink bg-sun px-1.5 text-xs font-semibold sm:block">/</kbd>
+      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line-strong bg-white px-1.5 text-xs font-semibold text-muted sm:block">/</kbd>
 
       {open && q.trim().length >= 2 && (
         <div className="pop-menu pop-search left-0 right-0 max-h-[70vh] overflow-y-auto p-1.5">
@@ -172,12 +171,12 @@ function Search({ t }: { t: (k: DictKey) => string }) {
                     key={`${h.kind}${h.id}`}
                     onMouseEnter={() => setSel(i)}
                     onClick={() => go(h)}
-                    className={cx("flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition", sel === i ? "bg-sun" : "hover:bg-sun/40")}
+                    className={cx("flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition", sel === i ? "bg-tint" : "hover:bg-tint/60")}
                   >
                     {h.kind === "people" ? (
                       <Avatar src={h.photo} name={h.title} size={32} />
                     ) : (
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-ink bg-iris/40">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-tint text-brand">
                         <Icon name={h.kind === "groups" ? "users" : h.kind === "tests" ? "file" : h.kind === "videos" ? "video" : "message"} size={15} />
                       </span>
                     )}
@@ -345,7 +344,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
                       role="menuitemradio"
                       aria-checked={lang === l.code}
                       onClick={() => { setLang(l.code); setMenu(null); }}
-                      className={cx("flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition", lang === l.code ? "bg-sun" : "hover:bg-sun/40")}
+                      className={cx("flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition", lang === l.code ? "bg-tint text-brand" : "hover:bg-tint/60")}
                     >
                       {l.label}<span className="text-muted">{l.code}</span>
                     </button>
@@ -364,11 +363,11 @@ export default function AppShell({ role, children }: { role: ShellRole; children
               }} />
               {menu === "bell" && (
                 <div className="pop-menu -right-16 w-[min(22rem,calc(100vw-1.5rem))] sm:right-0">
-                  <p className="border-b-2 border-ink px-4 py-3 text-sm font-bold">{t("notifications")}</p>
+                  <p className="border-b border-line px-4 py-3 text-sm font-bold">{t("notifications")}</p>
                   <div className="max-h-96 overflow-y-auto">
                     {notes.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted">{t("noNotifications")}</p>}
                     {notes.map((n) => (
-                      <Link key={n.id} href={n.href} className={cx("block border-b border-line px-4 py-3 transition last:border-0 hover:bg-sun/30", fresh.has(n.id) && "bg-sun/40")}>
+                      <Link key={n.id} href={n.href} className={cx("block border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-tint/60", fresh.has(n.id) && "bg-tint")}>
                         <p className="text-sm font-medium">{n.text}</p>
                         <p className="mt-0.5 text-xs text-muted">{timeAgo(n.at)}</p>
                       </Link>
@@ -409,38 +408,38 @@ export default function AppShell({ role, children }: { role: ShellRole; children
               </div>
             )}
 
-            <span className="mx-1 hidden h-6 w-0.5 bg-ink sm:block" />
+            <span className="mx-1 hidden h-6 w-px bg-line-strong sm:block" />
 
             <Link
               href={`/u/${user.id}`}
               aria-label={t("profile")}
               aria-current={onProfile ? "page" : undefined}
               className={cx(
-                "flex items-center gap-2 rounded-full border-[2.5px] border-ink p-0.5 text-sm font-semibold transition sm:pr-3",
-                onProfile ? "bg-ink text-white" : "bg-white hover:bg-ink hover:text-white",
+                "flex items-center gap-2 rounded-full border p-0.5 text-sm font-semibold transition-colors sm:pr-3",
+                onProfile ? "border-brand bg-tint text-brand" : "border-line bg-white text-ink hover:bg-tint hover:text-brand",
               )}
             >
-              <Avatar src={user.photo} name={user.name} size={30} className="border-2 border-ink" />
+              <Avatar src={user.photo} name={user.name} size={30} className="border border-line" />
               <span className="hidden max-w-[130px] truncate sm:inline">{user.name}</span>
             </Link>
 
             <RightBtn icon="logout" label={t("logout")} hover={hw(t("logout"))} onClick={logout} />
           </div>
         </div>
-        <div className="border-t-2 border-ink/20 px-4 pb-2.5 pt-2 md:hidden"><Search t={t} /></div>
+        <div className="border-t border-line px-4 pb-2.5 pt-2 md:hidden"><Search t={t} /></div>
       </header>
 
       <main className="relative z-10 min-w-0 pb-24 lg:pb-0">{children}</main>
 
       {/* Mobil alt naviqasiya */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t-[3px] border-ink bg-sun px-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-white px-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
         {items.map((i) => (
           <Link
             key={i.href}
             href={i.href}
             className={cx(
               "relative my-1 flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-bold transition",
-              isActive(i) ? "bg-ink text-white" : "text-ink",
+              isActive(i) ? "bg-tint text-brand" : "text-muted",
             )}
           >
             <Icon name={i.icon} size={20} />

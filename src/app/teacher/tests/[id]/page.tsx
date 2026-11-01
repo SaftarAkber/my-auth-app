@@ -276,7 +276,7 @@ export default function CollectionPage() {
             return (
               <article key={p.id} className="card p-4 sm:p-5">
                 <div className="flex flex-wrap items-start gap-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand"><Icon name="file" size={22} /></span>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name="file" size={22} /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/teacher/tests/${id}/${p.id}`} className="text-lg font-bold hover:text-brand">{p.name}</Link>
@@ -308,7 +308,7 @@ export default function CollectionPage() {
                             disabled={pubBusy === p.id + "*"}
                             aria-pressed={p.isPublished && p.visibility === "PUBLIC"}
                             onClick={() => togglePublic(p)}
-                            className={`inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1 text-sm font-semibold transition ${p.isPublished && p.visibility === "PUBLIC" ? "bg-ok/30" : "bg-white hover:bg-sun/30"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1 text-sm font-semibold transition ${p.isPublished && p.visibility === "PUBLIC" ? "bg-ok/30" : "bg-white hover:bg-tint"}`}
                           >
                             <Icon name="globe" size={13} /> Hamıya açıq
                           </button>
@@ -321,7 +321,7 @@ export default function CollectionPage() {
                                 disabled={pubBusy === p.id + g.groupId}
                                 aria-pressed={on}
                                 onClick={() => togglePublishFor(p, g.groupId)}
-                                className={`inline-flex items-center gap-1.5 rounded-full border-[2.5px] border-ink px-3 py-1 text-sm font-semibold transition ${on ? "bg-sun" : "bg-white hover:bg-sun/30"}`}
+                                className={`inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1 text-sm font-semibold transition ${on ? "bg-tint" : "bg-white hover:bg-tint"}`}
                               >
                                 {on && <Icon name="check" size={13} />} {g.group.name}
                               </button>
@@ -361,7 +361,7 @@ export default function CollectionPage() {
         }
       >
         <div className="space-y-3">
-          <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+          <p className="rounded-xl border border-line/20 bg-tint px-3 py-2 text-sm">
             Seçim kolleksiyadakı bütün testlərə tətbiq olunacaq (sualı olmayan testlər dərc olunmur). Sonra hər birini ayrıca dəyişə bilərsiniz.
           </p>
           {([["draft", "Qaralama", "Heç kim görmür"], ["public", "Hamıya açıq", "Bütün istifadəçilər həll edə bilər"], ["groups", "Seçilmiş qruplar", "Yalnız seçdiyiniz qrupların üzvləri"]] as const).map(([sid, label, hint]) => (
@@ -370,9 +370,9 @@ export default function CollectionPage() {
               type="button"
               onClick={() => setBulk({ ...bulk, state: sid })}
               aria-pressed={bulk.state === sid}
-              className={`flex w-full items-start gap-3 rounded-xl border-[2.5px] border-ink p-3 text-left transition ${bulk.state === sid ? "bg-sun" : "bg-white hover:bg-sun/30"}`}
+              className={`flex w-full items-start gap-3 rounded-xl border border-line p-3 text-left transition ${bulk.state === sid ? "bg-tint" : "bg-white hover:bg-tint"}`}
             >
-              <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-ink ${bulk.state === sid ? "bg-ink text-white" : ""}`}>
+              <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-line ${bulk.state === sid ? "bg-ink text-white" : ""}`}>
                 {bulk.state === sid && <Icon name="check" size={12} />}
               </span>
               <span><span className="block text-sm font-bold">{label}</span><span className="block text-xs text-muted">{hint}</span></span>
@@ -416,7 +416,7 @@ export default function CollectionPage() {
               : "Qrup seçilməsə, kolleksiya məhdudiyyətsizdir və testlərin hər biri öz ayarı ilə dərc olunur."}
           </p>
           {colGroups.length > 0 && !restricted && (
-            <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+            <p className="rounded-xl border border-line/20 bg-tint px-3 py-2 text-sm">
               Diqqət: hamıya açıq testlər hamıya açıq qalır. Qrupa bağlı olmayan dərc olunmuş testlər isə qaralamaya keçir, onları qrup üzrə yenidən dərc edin.
             </p>
           )}
@@ -455,7 +455,7 @@ export default function CollectionPage() {
           )}
 
           {restricted && (
-            <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+            <p className="rounded-xl border border-line/20 bg-tint px-3 py-2 text-sm">
               Bu kolleksiya qruplarla məhdudlaşdırılıb. Testin kimlərə açıq olacağını (hamıya və ya seçilmiş qruplara) test kartında seçirsiniz.
             </p>
           )}
@@ -473,7 +473,7 @@ export default function CollectionPage() {
           <Toggle checked={form.allowRetry} onChange={(v) => setForm({ ...form, allowRetry: v })} label="Təkrar həll icazəsi" hint="Tələbə testi bir neçə dəfə həll edə bilər (coin yalnız ilk dəfə verilir)" />
           <Toggle checked={form.shareAnswers} onChange={(v) => setForm({ ...form, shareAnswers: v })} label="Cavablar hamıya açıq" hint="Testi bitirən tələbələr nəticə cədvəlində bir-birinin cavab kitabçasına baxa bilər" />
 
-          <div className="rounded-2xl border-[2.5px] border-ink bg-sun/25 p-4">
+          <div className="rounded-xl border border-line bg-tint p-4">
             <Toggle
               checked={form.rewardEnabled}
               onChange={(v) => setForm({ ...form, rewardEnabled: v })}

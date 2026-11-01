@@ -81,7 +81,7 @@ export default function TeacherDashboard() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {actions.map((a) => (
-          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 p-4 text-center transition hover:-translate-y-0.5 hover:border-brand/40">
+          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 p-4 text-center transition hover:border-brand/40">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name={a.icon} /></span>
             <span className="text-sm font-semibold">{a.label}</span>
           </Link>

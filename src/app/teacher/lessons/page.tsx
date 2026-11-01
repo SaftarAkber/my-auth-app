@@ -55,7 +55,7 @@ function StateSwitch({
   return (
     <div>
       <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted">Kimlər görsün?</p>
-      <div className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink p-0.5" role="group" aria-label="Kimlər görsün?">
+      <div className="grid grid-cols-3 gap-1 rounded-xl border border-line p-0.5" role="group" aria-label="Kimlər görsün?">
         {opts.map((o) => (
           <button
             key={o.id}
@@ -65,7 +65,7 @@ function StateSwitch({
             onClick={() => onPick(o.id)}
             className={cx(
               "inline-flex items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-xs font-bold transition",
-              cur === o.id ? (o.id === "public" ? "bg-ok/40" : o.id === "groups" ? "bg-iris/40" : "bg-sun") : "hover:bg-sun/30",
+              cur === o.id ? (o.id === "public" ? "bg-ok/40" : o.id === "groups" ? "bg-iris/40" : "bg-tint") : "hover:bg-tint",
             )}
           >
             <Icon name={o.icon} size={12} /> {o.label}
@@ -237,7 +237,7 @@ export default function TeacherLessonsPage() {
   const loose = (singles.data?.videos ?? []).filter((v) => !v.packageId);
 
   const videoCard = (v: Video) => (
-      <div key={v.id} className="overflow-hidden rounded-xl border-2 border-ink/20 bg-white">
+      <div key={v.id} className="overflow-hidden rounded-xl border border-line/20 bg-white">
         <Link href={`/watch/${v.id}`} className="block"><VideoThumb url={v.url} className="w-full" /></Link>
         <div className="space-y-2 p-3">
           <p className="line-clamp-2 min-h-[2.6rem] text-sm font-bold leading-[1.3]">{v.title}</p>
@@ -373,7 +373,7 @@ export default function TeacherLessonsPage() {
       >
         <div className="space-y-4">
           {!vidEdit?.video && (
-            <div className="grid grid-cols-2 gap-1 rounded-xl border-2 border-ink p-0.5" role="tablist">
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-line p-0.5" role="tablist">
               {([["link", "Link (YouTube)"], ["file", "Fayl yüklə"]] as const).map(([id, label]) => (
                 <button
                   key={id}
@@ -382,7 +382,7 @@ export default function TeacherLessonsPage() {
                   aria-selected={mode === id}
                   disabled={busy}
                   onClick={() => setMode(id)}
-                  className={cx("rounded-lg py-2 text-sm font-bold transition", mode === id ? "bg-sun" : "hover:bg-sun/30")}
+                  className={cx("rounded-lg py-2 text-sm font-bold transition", mode === id ? "bg-tint" : "hover:bg-tint")}
                 >
                   {label}
                 </button>
@@ -395,7 +395,7 @@ export default function TeacherLessonsPage() {
           {!vidEdit?.video && mode === "file" ? (
             <div>
               <span className="label">Video faylı *</span>
-              <label className={cx("flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-[2.5px] border-dashed border-ink bg-surface-2 px-4 py-6 text-center transition hover:bg-sun/25", busy && "pointer-events-none opacity-70")}>
+              <label className={cx("flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-line-strong bg-surface-2 px-4 py-6 text-center transition hover:bg-tint", busy && "pointer-events-none opacity-70")}>
                 <Icon name="upload" size={26} />
                 <span className="text-sm font-bold">{file ? file.name : "Telefondan və ya kompüterdən video seçin"}</span>
                 <span className="text-xs text-muted">
@@ -414,8 +414,8 @@ export default function TeacherLessonsPage() {
               </label>
               {progress !== null && (
                 <div className="mt-3">
-                  <div className="h-4 overflow-hidden rounded-full border-[2.5px] border-ink bg-surface-2">
-                    <div className="h-full bg-sun transition-[width] duration-200" style={{ width: `${Math.round(progress * 100)}%` }} />
+                  <div className="h-4 overflow-hidden rounded-full border border-line bg-surface-2">
+                    <div className="h-full bg-tint transition-[width] duration-200" style={{ width: `${Math.round(progress * 100)}%` }} />
                   </div>
                   <p className="mt-1 text-xs font-semibold">{Math.round(progress * 100)}%: yükləmə bitənə qədər səhifəni bağlamayın və telefonun ekranını söndürməyin</p>
                 </div>
@@ -447,7 +447,7 @@ export default function TeacherLessonsPage() {
       >
         <div className="space-y-3">
           {target?.kind === "package" && (
-            <p className="rounded-xl border-2 border-ink/20 bg-sun/20 px-3 py-2 text-sm">
+            <p className="rounded-xl border border-line/20 bg-tint px-3 py-2 text-sm">
               Seçim paketdəki {target.pkg.videos.length} videonun hamısına tətbiq olunacaq. Sonra hər birini ayrıca dəyişə bilərsiniz.
             </p>
           )}
@@ -458,11 +458,11 @@ export default function TeacherLessonsPage() {
               onClick={() => setSt({ ...st, state: s.id })}
               aria-pressed={st.state === s.id}
               className={cx(
-                "flex w-full items-start gap-3 rounded-xl border-[2.5px] border-ink p-3 text-left transition",
-                st.state === s.id ? "bg-sun" : "bg-white hover:bg-sun/30",
+                "flex w-full items-start gap-3 rounded-xl border border-line p-3 text-left transition",
+                st.state === s.id ? "bg-tint" : "bg-white hover:bg-tint",
               )}
             >
-              <span className={cx("mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-ink", st.state === s.id && "bg-ink text-white")}>
+              <span className={cx("mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-line", st.state === s.id && "bg-ink text-white")}>
                 {st.state === s.id && <Icon name="check" size={12} />}
               </span>
               <span>

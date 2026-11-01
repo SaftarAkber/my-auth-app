@@ -4,26 +4,29 @@
 
 /* ───────────── Dizayn tokenləri (RGB kanalları, Tailwind alpha dəstəyi üçün) ───────────── */
 :root {
-  --bg: 228 228 251;
+  /* Rəsmi, sakit palitra: göy əsas rəng, sarı və narıncı yalnız kiçik vurğu üçün */
+  --bg: 245 245 251;
   --surface: 255 255 255;
-  --surface-2: 241 240 253;
-  --line: 205 201 239;
-  --ink: 12 10 28;
-  --muted: 76 72 112;
-  --brand: 61 52 139;
-  --brand-hover: 80 68 185;
-  --ok: 44 110 73;
-  --bad: 193 73 3;
-  --warn: 143 81 1;
-  --info: 80 68 185;
+  --surface-2: 241 241 249;
+  --tint: 233 232 250;
+  --line: 220 220 240;
+  --line-strong: 192 190 226;
+  --ink: 18 16 40;
+  --muted: 91 88 128;
+  --brand: 42 35 112;
+  --brand-hover: 61 52 139;
+  --ok: 31 107 58;
+  --bad: 180 35 24;
+  --warn: 122 90 0;
+  --info: 61 52 139;
   /* marka paleti */
   --sun: 247 184 1;
   --iris: 118 120 237;
   --tiger: 241 135 1;
   --flame: 243 91 4;
-  --shadow: 4px 4px 0 rgb(var(--ink));
-  --hard: 4px 4px 0 rgb(var(--ink));
-  --hard-lg: 7px 7px 0 rgb(var(--ink));
+  --shadow: 0 1px 2px rgb(18 16 40 / 0.06), 0 2px 8px rgb(18 16 40 / 0.05);
+  --hard: 0 1px 2px rgb(18 16 40 / 0.06), 0 2px 8px rgb(18 16 40 / 0.05);
+  --hard-lg: 0 10px 30px rgb(18 16 40 / 0.14);
   color-scheme: light;
 }
 
@@ -37,131 +40,78 @@ body {
   overflow-x: hidden;
 }
 
-/* Arxa fonda yarım görünən coin dairələri (marka motivi) */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  border-radius: 9999px;
-  border: 3px solid rgb(var(--ink));
-  pointer-events: none;
-}
-body::before {
-  right: -130px;
-  top: 90px;
-  width: 360px;
-  height: 360px;
-  background: rgb(var(--sun));
-}
-body::after {
-  left: -90px;
-  bottom: -110px;
-  width: 250px;
-  height: 250px;
-  background: rgb(var(--flame));
-}
-@media (max-width: 820px) {
-  body::before { width: 220px; height: 220px; right: -90px; }
-  body::after { width: 160px; height: 160px; }
-}
-
 ::selection {
-  background: rgb(var(--sun));
+  background: rgb(var(--tint));
   color: rgb(var(--ink));
 }
 
 /* ───────────── Komponent sinifləri ───────────── */
 @layer components {
   .card {
-    @apply rounded-2xl border-[2.5px] border-ink bg-surface;
-    box-shadow: var(--hard);
+    @apply rounded-xl border border-line bg-surface;
+    box-shadow: var(--shadow);
   }
   .card-flat {
-    @apply rounded-2xl border-[2.5px] border-ink bg-surface;
+    @apply rounded-xl border border-line bg-surface;
   }
 
+  /* Düymələr: korporativ (az yumrulanmış, kölgəsiz); üzərinə gələndə fon və yazı rəngi dəyişir */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-5 py-2 text-sm font-semibold
-      transition duration-150 disabled:pointer-events-none disabled:opacity-50
+    @apply inline-flex items-center justify-center gap-2 rounded border border-transparent px-5 py-2.5 text-sm font-semibold
+      transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris focus-visible:ring-offset-2;
-    box-shadow: var(--hard);
-  }
-  .btn:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0 rgb(var(--ink));
-  }
-  .btn:active {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 rgb(var(--ink));
   }
   .btn-primary {
-    @apply btn bg-brand text-white;
+    @apply btn bg-brand text-white hover:bg-brand-hover;
   }
   .btn-secondary {
-    @apply btn bg-surface text-ink;
-  }
-  .btn-secondary:hover {
-    @apply bg-sun/25;
+    @apply btn bg-surface-2 text-brand hover:bg-brand hover:text-white;
   }
   .btn-ghost {
-    @apply btn border-transparent bg-transparent text-muted shadow-none hover:bg-surface-2 hover:text-ink;
-    box-shadow: none;
-  }
-  .btn-ghost:hover,
-  .btn-ghost:active {
-    transform: none;
-    box-shadow: none;
+    @apply btn bg-transparent text-brand hover:bg-tint;
   }
   .btn-danger {
-    @apply btn bg-bad text-white;
+    @apply btn bg-bad/10 text-bad hover:bg-bad hover:text-white;
   }
   .btn-soft {
-    @apply btn bg-iris/30 text-ink;
+    @apply btn border-line-strong bg-surface text-brand hover:bg-tint;
   }
   .btn-sm {
     @apply px-3.5 py-1.5 text-xs;
-    box-shadow: 3px 3px 0 rgb(var(--ink));
-  }
-  .btn-sm:hover {
-    box-shadow: 5px 5px 0 rgb(var(--ink));
-  }
-  .btn-ghost.btn-sm,
-  .btn-ghost.btn-sm:hover {
-    box-shadow: none;
   }
   .btn-icon {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted transition hover:bg-sun hover:text-ink;
+    @apply inline-flex h-9 w-9 items-center justify-center rounded text-muted transition-colors hover:bg-tint hover:text-brand;
   }
 
   .input {
-    @apply w-full rounded-xl border-[2.5px] border-ink bg-surface px-3.5 py-2.5 text-sm text-ink
+    @apply w-full rounded-md border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink
       placeholder:text-muted/70 transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
   }
   .input:focus {
-    box-shadow: 4px 4px 0 rgb(var(--iris));
+    border-color: rgb(var(--brand));
+    box-shadow: 0 0 0 3px rgb(var(--iris) / 0.25);
   }
   .label {
     @apply mb-1.5 block text-sm font-semibold text-ink;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full border-2 border-ink px-2.5 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold;
   }
   .badge-brand {
-    @apply badge bg-iris/30 text-ink;
+    @apply badge bg-tint text-brand;
   }
   .badge-ok {
-    @apply badge bg-ok/20 text-ink;
+    @apply badge bg-ok/10 text-ok;
   }
   .badge-bad {
-    @apply badge bg-flame/30 text-ink;
+    @apply badge bg-bad/10 text-bad;
   }
   .badge-warn {
-    @apply badge bg-sun text-ink;
+    @apply badge bg-sun/25 text-warn;
   }
   .badge-info {
-    @apply badge bg-iris/40 text-ink;
+    @apply badge bg-iris/15 text-brand;
   }
   .badge-muted {
     @apply badge bg-surface-2 text-muted;
@@ -176,13 +126,13 @@ body::after {
 
   /* Siyahı sətirləri: qutu daxilində xətlə ayrılır */
   .row-link {
-    @apply flex items-center gap-3 px-4 py-3 transition hover:bg-sun/20;
+    @apply flex items-center gap-3 px-4 py-3 transition-colors hover:bg-tint/60;
   }
 }
 
 /* ───────────── Navbar ───────────── */
 .topbar {
-  @apply sticky top-0 z-50 border-b-[3px] border-ink bg-sun;
+  @apply sticky top-0 z-50 border-b border-line bg-white;
 }
 .topbar-in {
   @apply flex h-16 w-full items-center gap-2 px-4 lg:px-8;
@@ -193,13 +143,13 @@ body::after {
   flex: none;
   width: var(--w, 40px);
   height: 40px;
-  border-radius: 12px;
-  color: rgb(var(--ink));
-  transition: background 0.3s;
+  border-radius: 8px;
+  color: rgb(var(--muted));
+  transition: background 0.3s, color 0.3s;
 }
 .nb[aria-current="page"] {
-  background: rgb(var(--ink));
-  color: #fff;
+  background: rgb(var(--tint));
+  color: rgb(var(--brand));
 }
 .nb .bx {
   position: absolute;
@@ -210,10 +160,10 @@ body::after {
   max-width: var(--w, 40px);
   overflow: hidden;
   white-space: nowrap;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
-  transition: max-width 0.7s cubic-bezier(0.22, 0.8, 0.24, 1), background 0.45s, color 0.45s, box-shadow 0.45s;
+  transition: max-width 0.7s cubic-bezier(0.22, 0.8, 0.24, 1), background 0.45s, color 0.45s;
   z-index: 2;
 }
 .nb.l .bx { left: 0; flex-direction: row; }
@@ -229,7 +179,7 @@ body::after {
 .nb .lab {
   opacity: 0;
   transition: opacity 0.5s 0.12s;
-  color: rgb(var(--ink));
+  color: rgb(var(--brand));
 }
 .nb.l .lab { padding: 0 16px 0 2px; }
 .nb.r .lab { padding: 0 4px 0 16px; }
@@ -241,15 +191,14 @@ body::after {
 .nb.open .bx {
   max-width: var(--hw, 160px);
   z-index: 20;
-  background: #fff;
-  color: rgb(var(--ink));
-  box-shadow: inset 0 0 0 2.5px rgb(var(--ink)), 3px 3px 0 rgb(var(--ink));
+  background: rgb(var(--tint));
+  color: rgb(var(--brand));
 }
 .nb:focus-visible .lab,
 .nb.open .lab {
   opacity: 1;
 }
-/* Üzərinə gətirmə yalnız siçanla: toxunuşlu ekranda "yapışıb qalmasın" (söz bağlanandan sonra da görünürdü) */
+/* Üzərinə gətirmə yalnız siçanla: toxunuşlu ekranda "yapışıb qalmasın" */
 @media (hover: hover) {
   .nb:hover {
     z-index: 20;
@@ -257,9 +206,8 @@ body::after {
   .nb:hover .bx {
     max-width: var(--hw, 160px);
     z-index: 20;
-    background: #fff;
-    color: rgb(var(--ink));
-    box-shadow: inset 0 0 0 2.5px rgb(var(--ink)), 3px 3px 0 rgb(var(--ink));
+    background: rgb(var(--tint));
+    color: rgb(var(--brand));
   }
   .nb:hover .lab {
     opacity: 1;
@@ -269,22 +217,22 @@ body::after {
   outline: none;
 }
 .nb-dot {
-  @apply absolute right-[9px] top-[8px] h-[11px] w-[11px] rounded-full border-2 border-ink bg-flame;
+  @apply absolute right-[9px] top-[8px] h-[10px] w-[10px] rounded-full border-2 border-white bg-bad;
 }
 .coin-ic {
-  @apply relative inline-block h-5 w-5 rounded-full border-[2.5px] border-ink bg-white;
+  @apply relative inline-block h-5 w-5 rounded-full border-2 border-tiger bg-sun;
 }
 .coin-ic::after {
   content: "";
   position: absolute;
   inset: 2.5px;
   border-radius: 9999px;
-  background: rgb(var(--ink));
+  border: 1.5px solid rgb(var(--tiger) / 0.7);
 }
 
 .pop-menu {
-  @apply absolute top-12 z-[60] overflow-hidden rounded-2xl border-[2.5px] border-ink bg-white animate-slide-in;
-  box-shadow: var(--hard);
+  @apply absolute top-12 z-[60] overflow-hidden rounded-xl border border-line bg-white animate-slide-in;
+  box-shadow: var(--hard-lg);
 }
 
 /* ───────────── Telefon düzəlişləri ───────────── */

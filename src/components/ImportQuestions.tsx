@@ -187,11 +187,11 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
 
       {slow && (
         <div className="fixed inset-0 z-[300] grid place-items-center bg-ink/60 px-6" role="status" aria-live="polite">
-          <div className="w-full max-w-md rounded-3xl border-[3px] border-ink bg-white p-7 shadow-hard">
+          <div className="w-full max-w-md rounded-xl border border-line bg-white p-7 shadow-soft">
             <p className="text-xl font-extrabold">Test paketiniz yaradılır…</p>
             <p className="mt-1 text-sm text-muted">{imgInfo || "Fayl oxunur və suallar hazırlanır, bir az gözləyin."}</p>
-            <div className="mt-5 h-5 overflow-hidden rounded-full border-[2.5px] border-ink bg-surface-2">
-              <div className="h-full bg-sun transition-[width] duration-200 ease-out" style={{ width: `${pct}%` }} />
+            <div className="mt-5 h-5 overflow-hidden rounded-full border border-line bg-surface-2">
+              <div className="h-full bg-tint transition-[width] duration-200 ease-out" style={{ width: `${pct}%` }} />
             </div>
             <p className="mt-2 text-right text-sm font-extrabold tabular-nums">{pct}%</p>
           </div>
@@ -230,12 +230,12 @@ Cavab: B
         {drafts && (
           <div className="space-y-3">
             {missing > 0 && (
-              <p className="flex items-center gap-2 rounded-xl border-2 border-ink bg-sun/40 px-3 py-2 text-sm font-semibold">
+              <p className="flex items-center gap-2 rounded-xl border border-line bg-tint px-3 py-2 text-sm font-semibold">
                 <Icon name="clock" size={15} /> {missing} sualda düzgün cavab tapılmadı. Aşağıda seçin.
               </p>
             )}
             {drafts.map((d, i) => (
-              <article key={i} className={cx("rounded-2xl border-[2.5px] border-ink bg-white p-4", d.type === "MULTIPLE_CHOICE" && d.correct < 0 && "bg-sun/20")}>
+              <article key={i} className={cx("rounded-xl border border-line bg-white p-4", d.type === "MULTIPLE_CHOICE" && d.correct < 0 && "bg-tint")}>
                 <div className="mb-2 flex items-center gap-2">
                   <span className="grid h-7 w-7 place-items-center rounded-lg bg-surface-2 text-sm font-bold">{i + 1}</span>
                   <span className={d.type === "MULTIPLE_CHOICE" ? "badge-brand" : "badge-warn"}>{d.type === "MULTIPLE_CHOICE" ? "Seçimli" : "Açıq"}</span>
@@ -251,7 +251,7 @@ Cavab: B
                           onClick={() => patch(i, { correct: k })}
                           aria-label={`${String.fromCharCode(65 + k)} düzgündür`}
                           aria-pressed={d.correct === k}
-                          className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-ink text-sm font-bold transition", d.correct === k ? "bg-sun" : "bg-white hover:bg-sun/40")}
+                          className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line text-sm font-bold transition", d.correct === k ? "bg-tint" : "bg-white hover:bg-tint")}
                         >
                           {d.correct === k ? <Icon name="check" size={14} /> : String.fromCharCode(65 + k)}
                         </button>

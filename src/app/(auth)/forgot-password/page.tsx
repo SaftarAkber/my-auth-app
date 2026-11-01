@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
         <form onSubmit={sendCode} className="mt-8 space-y-5">
           {error && <Alert tone="bad">{error}</Alert>}
 
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-1">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-1">
             {([["whatsapp", "WhatsApp", "phone"], ["email", "Email", "mail"]] as const).map(([id, label, icon]) => (
               <button
                 type="button"

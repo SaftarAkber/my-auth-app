@@ -64,7 +64,7 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
         </div>
         <div className="mt-4"><ProgressBar value={pct} tone={pct >= 70 ? "ok" : pct >= 40 ? "warn" : "bad"} /></div>
         {a.rewardGranted && a.rewardCoins > 0 && (
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full border-2 border-ink bg-sun px-3 py-1 text-sm font-bold"><Icon name="coin" size={14} /> Müəllimdən +{a.rewardCoins} coin</p>
+          <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-line bg-tint px-3 py-1 text-sm font-bold"><Icon name="coin" size={14} /> Müəllimdən +{a.rewardCoins} coin</p>
         )}
         {pending > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-warn"><Icon name="clock" size={15} /> {pending} açıq sual müəllimin yoxlamasını gözləyir.</p>
