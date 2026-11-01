@@ -4,29 +4,30 @@
 
 /* ───────────── Dizayn tokenləri (RGB kanalları, Tailwind alpha dəstəyi üçün) ───────────── */
 :root {
-  /* Rəsmi, sakit palitra: göy əsas rəng, sarı və narıncı yalnız kiçik vurğu üçün */
-  --bg: 245 245 251;
+  /* Qrafit + kəhrəba: qrafit əsas rəng, kəhrəba yalnız aktiv göstərici və kiçik vurğu üçün */
+  --bg: 246 246 243;
   --surface: 255 255 255;
-  --surface-2: 241 241 249;
-  --tint: 233 232 250;
-  --line: 220 220 240;
-  --line-strong: 192 190 226;
-  --ink: 18 16 40;
-  --muted: 91 88 128;
-  --brand: 42 35 112;
-  --brand-hover: 61 52 139;
+  --surface-2: 239 239 235;
+  --tint: 232 232 227;
+  --line: 224 224 218;
+  --line-strong: 198 198 190;
+  --ink: 20 22 27;
+  --muted: 90 94 105;
+  --brand: 39 43 54;
+  --brand-hover: 61 67 82;
+  --accent: 194 87 12;
   --ok: 31 107 58;
   --bad: 180 35 24;
   --warn: 122 90 0;
-  --info: 61 52 139;
+  --info: 61 67 82;
   /* marka paleti */
   --sun: 247 184 1;
-  --iris: 118 120 237;
+  --iris: 112 118 132;
   --tiger: 241 135 1;
   --flame: 243 91 4;
-  --shadow: 0 1px 2px rgb(18 16 40 / 0.06), 0 2px 8px rgb(18 16 40 / 0.05);
-  --hard: 0 1px 2px rgb(18 16 40 / 0.06), 0 2px 8px rgb(18 16 40 / 0.05);
-  --hard-lg: 0 10px 30px rgb(18 16 40 / 0.14);
+  --shadow: 0 1px 2px rgb(20 22 27 / 0.06), 0 2px 8px rgb(20 22 27 / 0.05);
+  --hard: 0 1px 2px rgb(20 22 27 / 0.06), 0 2px 8px rgb(20 22 27 / 0.05);
+  --hard-lg: 0 10px 30px rgb(20 22 27 / 0.14);
   color-scheme: light;
 }
 
@@ -137,84 +138,52 @@ body {
 .topbar-in {
   @apply flex h-16 w-full items-center gap-2 px-4 lg:px-8;
 }
-.nb {
+/* Üst menyu: tək sıra, adlar həmişə görünür; aktiv bölmənin altında kəhrəba xətt */
+.tl {
   position: relative;
-  display: block;
-  flex: none;
-  width: var(--w, 40px);
-  height: 40px;
-  border-radius: 8px;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  padding: 0 0.7rem;
+  font-size: 14px;
+  font-weight: 600;
   color: rgb(var(--muted));
-  transition: background 0.3s, color 0.3s;
+  transition: color 0.15s, background-color 0.15s;
 }
-.nb[aria-current="page"] {
-  background: rgb(var(--tint));
+.tl:hover {
+  color: rgb(var(--brand));
+  background: rgb(var(--tint) / 0.5);
+}
+.tl[aria-current="page"] {
   color: rgb(var(--brand));
 }
-.nb .bx {
+.tl[aria-current="page"]::after {
+  content: "";
   position: absolute;
-  top: 0;
-  display: flex;
-  align-items: center;
-  height: 40px;
-  max-width: var(--w, 40px);
-  overflow: hidden;
-  white-space: nowrap;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  transition: max-width 0.7s cubic-bezier(0.22, 0.8, 0.24, 1), background 0.45s, color 0.45s;
-  z-index: 2;
+  left: 0.55rem;
+  right: 0.55rem;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: rgb(var(--accent));
 }
-.nb.l .bx { left: 0; flex-direction: row; }
-.nb.r .bx { right: 0; flex-direction: row-reverse; }
-.nb .ic {
+.ib {
   position: relative;
   display: grid;
   width: 40px;
   height: 40px;
   flex: none;
   place-items: center;
+  border-radius: 4px;
+  color: rgb(var(--muted));
+  transition: color 0.15s, background-color 0.15s;
 }
-.nb .lab {
-  opacity: 0;
-  transition: opacity 0.5s 0.12s;
+.ib:hover,
+.ib.open {
   color: rgb(var(--brand));
-}
-.nb.l .lab { padding: 0 16px 0 2px; }
-.nb.r .lab { padding: 0 4px 0 16px; }
-.nb:focus-visible,
-.nb.open {
-  z-index: 20;
-}
-.nb:focus-visible .bx,
-.nb.open .bx {
-  max-width: var(--hw, 160px);
-  z-index: 20;
   background: rgb(var(--tint));
-  color: rgb(var(--brand));
-}
-.nb:focus-visible .lab,
-.nb.open .lab {
-  opacity: 1;
-}
-/* Üzərinə gətirmə yalnız siçanla: toxunuşlu ekranda "yapışıb qalmasın" */
-@media (hover: hover) {
-  .nb:hover {
-    z-index: 20;
-  }
-  .nb:hover .bx {
-    max-width: var(--hw, 160px);
-    z-index: 20;
-    background: rgb(var(--tint));
-    color: rgb(var(--brand));
-  }
-  .nb:hover .lab {
-    opacity: 1;
-  }
-}
-.nb:focus-visible {
-  outline: none;
 }
 .nb-dot {
   @apply absolute right-[9px] top-[8px] h-[10px] w-[10px] rounded-full border-2 border-white bg-bad;

@@ -12,7 +12,6 @@ import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/co
 import { SubjectBadges } from "@/components/Subjects";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
-  type IconName,
 } from "@/components/ui";
 
 interface GroupCard {
@@ -90,7 +89,7 @@ function ProfileInner() {
   const isTeacher = user.role === "TEACHER";
   const viewerStudent = me?.role === "STUDENT";
 
-  const tabs: { id: string; label: string; count?: number }[] = isTeacher
+  const tabs: { id: string; label: string; count?: number; own?: boolean }[] = isTeacher
     ? [
         { id: "posts", label: "Paylaşımlar", count: data.stats.posts },
         { id: "groups", label: "Qruplar", count: data.groups.length },
@@ -100,31 +99,13 @@ function ProfileInner() {
     : user.role === "STUDENT"
       ? [{ id: "groups", label: "Qruplar", count: data.groups.length }]
       : [];
-  if (isOwn && me?.role === "STUDENT") tabs.push({ id: "results", label: "Nəticələr" });
-  if (isOwn && me?.role !== "ADMIN") tabs.push({ id: "coins", label: "Coin tarixçəsi" });
-  if (isOwn) tabs.push({ id: "settings", label: "Tənzimləmələr" });
+  if (isOwn && me?.role === "STUDENT") tabs.push({ id: "results", label: "Nəticələr", own: true });
+  if (isOwn && me?.role !== "ADMIN") tabs.push({ id: "coins", label: "Coin tarixçəsi", own: true });
+  if (isOwn) tabs.push({ id: "settings", label: "Tənzimləmələr", own: true });
 
   const wanted = search.get("tab");
   const tab = tabs.some((t) => t.id === wanted) ? (wanted as string) : tabs[0]?.id;
   const setTab = (t: string) => router.replace(`/u/${id}?tab=${t}`, { scroll: false });
-
-  const quick: { href: string; icon: IconName; label: string }[] = !isOwn
-    ? []
-    : me?.role === "TEACHER"
-      ? [
-          { href: "/teacher/groups", icon: "users", label: "Qruplarım" },
-          { href: "/teacher/tests", icon: "file", label: "Testlərim" },
-          { href: "/teacher/lessons", icon: "video", label: "Videolarım" },
-          { href: "/teacher/students", icon: "grad", label: "Tələbələrim" },
-        ]
-      : me?.role === "STUDENT"
-        ? [
-            { href: "/student/teacher", icon: "users", label: "Qruplarım" },
-            { href: "/student/my-tests", icon: "file", label: "Testlərim" },
-            { href: "/student/videos", icon: "video", label: "Videolarım" },
-            { href: "/student/market", icon: "bag", label: "Mağaza" },
-          ]
-        : [];
 
   return (
     <div className="page space-y-6">
@@ -164,36 +145,26 @@ function ProfileInner() {
           ) : isOwn && me?.role !== "ADMIN" ? (
             <p className="mt-2 text-muted">Haqqında bir şey yaz: qələmə bas.</p>
           ) : null}
-          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2">
-            {isTeacher && (
-              <>
-                <Stat n={data.stats.students ?? 0} l="tələbə" />
-                <Stat n={data.stats.groups ?? 0} l="qrup" />
-                <Stat n={data.stats.posts ?? 0} l="paylaşım" />
-              </>
-            )}
-            {user.role === "STUDENT" && (
-              <>
-                <Stat n={data.stats.groups ?? 0} l="qrup" />
-                <Stat n={data.stats.attempts ?? 0} l="həll edilən test" />
-              </>
-            )}
-            {isOwn && me?.role !== "ADMIN" && <Stat n={me?.coinBalance ?? 0} l="coin" />}
-          </div>
+        </div>
+        <div className="flex divide-x divide-line overflow-x-auto border-t border-line">
+          {isTeacher && (
+            <>
+              <Stat n={data.stats.students ?? 0} l="tələbə" />
+              <Stat n={data.stats.groups ?? 0} l="qrup" />
+              <Stat n={data.tests.length} l="açıq test" />
+              <Stat n={data.videos.length} l="video" />
+            </>
+          )}
+          {user.role === "STUDENT" && (
+            <>
+              <Stat n={data.stats.groups ?? 0} l="qrup" />
+              <Stat n={data.stats.attempts ?? 0} l="həll edilən test" />
+            </>
+          )}
+          {isOwn && me?.role !== "ADMIN" && <Stat n={me?.coinBalance ?? 0} l="coin" />}
         </div>
       </section>
       {edit && <ProfileEditor open withCover onClose={() => { setEdit(false); reload(); }} />}
-
-      {quick.length > 0 && (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {quick.map((q) => (
-            <Link key={q.href} href={q.href} className="card flex items-center gap-3 p-3.5 transition hover:bg-tint">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-tint"><Icon name={q.icon} size={18} /></span>
-              <span className="font-bold">{q.label}</span>
-            </Link>
-          ))}
-        </section>
-      )}
 
       {tabs.length > 0 && <Tabs tabs={tabs} value={tab} onChange={setTab} />}
 
@@ -296,9 +267,9 @@ function ProfileInner() {
 
 function Stat({ n, l }: { n: number; l: string }) {
   return (
-    <span className="flex items-baseline gap-1.5">
-      <b className="text-xl font-extrabold tabular-nums">{n.toLocaleString("az-AZ")}</b>
-      <span className="text-muted">{l}</span>
+    <span className="min-w-[110px] flex-1 px-4 py-3 sm:px-6">
+      <b className="block text-xl font-extrabold tabular-nums tracking-tight">{n.toLocaleString("az-AZ")}</b>
+      <span className="text-xs font-semibold text-muted">{l}</span>
     </span>
   );
 }

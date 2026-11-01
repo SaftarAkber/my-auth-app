@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AUTH_COOKIE } from "@/lib/config";
 import { getSiteContent } from "@/lib/site";
+import { getLandingData } from "@/lib/landingData";
 import Landing from "@/components/Landing";
 
 export const dynamic = "force-dynamic";
@@ -17,5 +18,6 @@ export default async function HomePage() {
   if ((await cookies()).get(AUTH_COOKIE)?.value) redirect("/api/auth/reset");
 
   // Giriş etməmişlər üçün ana səhifə: məzmun admin panelindən idarə olunur
-  return <Landing site={await getSiteContent()} />;
+  const [site, data] = await Promise.all([getSiteContent(), getLandingData()]);
+  return <Landing site={site} data={data} />;
 }

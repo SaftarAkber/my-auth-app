@@ -9,7 +9,7 @@ export interface SiteContent {
   closeTitle: string;
   closeText: string;
   footer: string;
-  show: { features: boolean; steps: boolean; close: boolean };
+  show: { features: boolean; steps: boolean; close: boolean; subjects: boolean; teachers: boolean; videos: boolean; contests: boolean };
 }
 
 export const DEFAULT_SITE: SiteContent = {
@@ -34,7 +34,7 @@ export const DEFAULT_SITE: SiteContent = {
   closeTitle: "Bu gün başla.",
   closeText: "Hesab yaratmaq bir dəqiqə çəkir. Tələbə kimi qrupa qoşul, müəllim kimi qrupunu qur.",
   footer: "© EduFlow",
-  show: { features: true, steps: true, close: true },
+  show: { features: true, steps: true, close: true, subjects: true, teachers: true, videos: true, contests: true },
 };
 
 export function mergeSite(d: Partial<SiteContent> | null | undefined): SiteContent {

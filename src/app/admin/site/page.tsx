@@ -119,6 +119,10 @@ export default function AdminSitePage() {
             <Toggle checked={s.show.features} onChange={(v) => set("show", { ...s.show, features: v })} label="Xüsusiyyət kartları" />
             <Toggle checked={s.show.steps} onChange={(v) => set("show", { ...s.show, steps: v })} label="Addımlar" />
             <Toggle checked={s.show.close} onChange={(v) => set("show", { ...s.show, close: v })} label="Yekun çağırış" />
+            <Toggle checked={s.show.subjects} onChange={(v) => set("show", { ...s.show, subjects: v })} label="Fənlər" />
+            <Toggle checked={s.show.teachers} onChange={(v) => set("show", { ...s.show, teachers: v })} label="Müəllimlər vitrini" />
+            <Toggle checked={s.show.videos} onChange={(v) => set("show", { ...s.show, videos: v })} label="Videodərslər vitrini" />
+            <Toggle checked={s.show.contests} onChange={(v) => set("show", { ...s.show, contests: v })} label="Yarışlar" />
           </section>
         </div>
 

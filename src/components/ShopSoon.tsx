@@ -1,5 +1,5 @@
 /** Mağaza: arxa planda bulanıq məhsullar, üstündə “Tezliklə”. Məhsul şəkilləri kodla çəkilib. */
-const P = ["#3d348b", "#7678ed", "#f7b801", "#f18701", "#f35b04", "#a7a1dc"];
+const P = ["#3d4352", "#8a8f9d", "#f7b801", "#f18701", "#c2570c", "#a9aab0"];
 
 const ITEMS: React.ReactNode[] = [
   // stəkan

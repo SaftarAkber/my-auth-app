@@ -52,19 +52,15 @@ function Logo() {
       <span className="grid h-9 w-9 place-items-center rounded-full bg-brand">
         <span className="h-3.5 w-3.5 rounded-full bg-white" />
       </span>
-      <span className="hidden text-lg font-bold tracking-tight text-brand sm:inline">EduFlow</span>
+      <span className="hidden text-lg font-bold tracking-tight text-brand min-[420px]:inline">EduFlow</span>
     </span>
   );
-}
-
-function hw(label: string) {
-  return Math.round(label.length * 8.6 + 68);
 }
 
 /* ───── Axtarış ───── */
 interface Hit { kind: string; id: string; title: string; sub: string; href: string; photo: string | null }
 
-function Search({ t }: { t: (k: DictKey) => string }) {
+function Search({ t, className, wide, autoFocus, onDone }: { t: (k: DictKey) => string; className?: string; wide?: boolean; autoFocus?: boolean; onDone?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState("");
@@ -105,7 +101,13 @@ function Search({ t }: { t: (k: DictKey) => string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
     setQ("");
+    onDone?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  useEffect(() => {
+    if (autoFocus) input.current?.focus();
+  }, [autoFocus]);
 
   useEffect(() => {
     const click = (e: MouseEvent) => {
@@ -137,7 +139,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
   };
 
   return (
-    <div ref={box} className="relative mx-auto min-w-0 max-w-xl flex-1" role="search">
+    <div ref={box} className={cx("relative min-w-0 flex-1", className ?? "mx-auto max-w-xl")} role="search">
       <Icon name="search" size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
       <input
         ref={input}
@@ -148,7 +150,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
           if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(hits.length - 1, s + 1)); }
           else if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
           else if (e.key === "Enter" && hits.length) go(hits[sel < 0 ? 0 : sel]);
-          else if (e.key === "Escape") { setOpen(false); input.current?.blur(); }
+          else if (e.key === "Escape") { setOpen(false); input.current?.blur(); onDone?.(); }
         }}
         placeholder={t("search")}
         aria-label={t("search")}
@@ -158,7 +160,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
       <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line-strong bg-white px-1.5 text-xs font-semibold text-muted sm:block">/</kbd>
 
       {open && q.trim().length >= 2 && (
-        <div className="pop-menu pop-search left-0 right-0 max-h-[70vh] overflow-y-auto p-1.5">
+        <div className={cx("pop-menu pop-search max-h-[70vh] overflow-y-auto p-1.5", wide ? "right-0 w-[26rem] max-w-[calc(100vw-2rem)]" : "left-0 right-0")}>
           {busy && hits.length === 0 && <p className="px-3 py-4 text-sm text-muted">…</p>}
           {!busy && hits.length === 0 && <p className="px-3 py-4 text-sm text-muted">{t("searchNone")}</p>}
           {Object.entries(groups).map(([kind, list]) => (
@@ -195,36 +197,29 @@ function Search({ t }: { t: (k: DictKey) => string }) {
   );
 }
 
-/* ───── Naviqasiya düyməsi (sağdan-sola açılan) ───── */
-function RightBtn({
-  icon, label, width = 40, hover, open, onClick, dot, children, href, ariaLabel,
+/* ───── Üst panelin ikon düymələri ───── */
+function IconBtn({
+  icon, label, open, onClick, dot, children, href,
 }: {
   icon?: IconName;
   label: string;
-  width?: number;
-  hover: number;
   open?: boolean;
   onClick?: () => void;
   dot?: boolean;
   children?: React.ReactNode;
   href?: string;
-  ariaLabel?: string;
 }) {
   const inner = (
-    <span className="bx">
-      <span className="ic">
-        {children ?? (icon && <Icon name={icon} size={20} />)}
-        {dot && <span className="nb-dot" />}
-      </span>
-      <span className="lab">{label}</span>
-    </span>
+    <>
+      {children ?? (icon && <Icon name={icon} size={20} />)}
+      {dot && <span className="nb-dot" />}
+    </>
   );
-  const style = { "--w": `${width}px`, "--hw": `${hover}px` } as React.CSSProperties;
-  const cls = cx("nb r", open && "open");
+  const cls = cx("ib", open && "open");
   return href ? (
-    <Link href={href} className={cls} style={style} aria-label={ariaLabel ?? label}>{inner}</Link>
+    <Link href={href} className={cls} aria-label={label} title={label}>{inner}</Link>
   ) : (
-    <button type="button" onClick={(e) => { onClick?.(); if (open) e.currentTarget.blur(); }} className={cls} style={style} aria-label={ariaLabel ?? label} aria-expanded={open}>{inner}</button>
+    <button type="button" onClick={onClick} className={cls} aria-label={label} title={label} aria-expanded={open}>{inner}</button>
   );
 }
 
@@ -236,6 +231,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
   const pathname = usePathname();
   const { lang, setLang, t } = useLang();
   const [menu, setMenu] = useState<"lang" | "bell" | "coin" | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   // Bildirimlər: "son baxış" vaxtı brauzerdə saxlanılır; ondan yeni olanlar oxunmamış sayılır
   const [seenTick, setSeenTick] = useState(0);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -309,33 +305,30 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             <Logo />
           </Link>
 
-          {/* Sol: soldan sağa açılan ikonlar (yalnız geniş ekranda) */}
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Əsas menyu">
+          {/* Tək sıra menyu: ad həmişə görünür (yalnız geniş ekranda; telefonda alt panel) */}
+          <nav className="hidden h-full items-stretch lg:flex" aria-label="Əsas menyu">
             {items.map((i) => (
-              <Link
-                key={i.href}
-                href={i.href}
-                className="nb l"
-                aria-current={isActive(i) ? "page" : undefined}
-                aria-label={t(i.key)}
-                style={{ "--hw": `${hw(t(i.key))}px` } as React.CSSProperties}
-              >
-                <span className="bx">
-                  <span className="ic">
-                    <Icon name={i.icon} size={20} />
-                    {i.dot === "requests" && pending > 0 && <span className="nb-dot" />}
-                  </span>
-                  <span className="lab">{t(i.key)}</span>
-                </span>
+              <Link key={i.href} href={i.href} className="tl" aria-current={isActive(i) ? "page" : undefined}>
+                <Icon name={i.icon} size={19} />
+                {t(i.key)}
+                {i.dot === "requests" && pending > 0 && (
+                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">{pending}</span>
+                )}
               </Link>
             ))}
           </nav>
 
-          <div className="mx-2 hidden min-w-0 flex-1 md:flex lg:mx-4"><Search t={t} /></div>
+          <div className="flex-1" />
 
-          <div className="ml-auto flex items-center gap-1.5 md:ml-0">
+          <div className="hidden w-60 min-w-0 xl:block"><Search t={t} className="w-full" wide /></div>
+
+          <div className="flex items-center gap-1">
+            <button type="button" className="ib hidden md:grid xl:hidden" aria-label={t("search")} title={t("search")} onClick={() => setSearchOpen(true)}>
+              <Icon name="search" size={20} />
+            </button>
+
             <div className="relative">
-              <RightBtn icon="globe" label={`${t("language")} · ${lang}`} hover={hw(`${t("language")} · ${lang}`)} open={menu === "lang"} onClick={() => setMenu(menu === "lang" ? null : "lang")} />
+              <IconBtn icon="globe" label={`${t("language")} · ${lang}`} open={menu === "lang"} onClick={() => setMenu(menu === "lang" ? null : "lang")} />
               {menu === "lang" && (
                 <div className="pop-menu right-0 w-52 p-1.5" role="menu">
                   {LANGS.map((l) => (
@@ -344,7 +337,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
                       role="menuitemradio"
                       aria-checked={lang === l.code}
                       onClick={() => { setLang(l.code); setMenu(null); }}
-                      className={cx("flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition", lang === l.code ? "bg-tint text-brand" : "hover:bg-tint/60")}
+                      className={cx("flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-semibold transition", lang === l.code ? "bg-tint text-brand" : "hover:bg-tint/60")}
                     >
                       {l.label}<span className="text-muted">{l.code}</span>
                     </button>
@@ -354,7 +347,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             </div>
 
             <div className="relative">
-              <RightBtn icon="bell" label={t("notifications")} hover={hw(t("notifications"))} open={menu === "bell"} dot={unread.length > 0} onClick={() => {
+              <IconBtn icon="bell" label={t("notifications")} open={menu === "bell"} dot={unread.length > 0} onClick={() => {
                 if (menu === "bell") { setMenu(null); return; }
                 setFresh(new Set(unread.map((n) => n.id)));
                 setMenu("bell");
@@ -378,24 +371,20 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             </div>
 
             {showCoin && (
-              <div className="hidden items-center gap-1.5 sm:flex">
-                <RightBtn href={`/u/${user.id}`} label={t("coin")} width={Math.max(76, 52 + String(user.coinBalance).length * 10)} hover={hw(t("coin")) + 40} ariaLabel={`${t("coin")}: ${user.coinBalance}`}>
-                  <span className="coin-ic" />
-                </RightBtn>
-                <span className="-ml-1 mr-1 text-sm font-extrabold tabular-nums" aria-hidden>{user.coinBalance.toLocaleString("az-AZ")}</span>
-              </div>
+              <Link
+                href={`/u/${user.id}?tab=coins`}
+                aria-label={`${t("coin")}: ${user.coinBalance}`}
+                title={t("coin")}
+                className="mx-1 hidden h-10 items-center gap-2 rounded border border-line bg-white px-3 text-sm font-bold tabular-nums transition-colors hover:bg-tint sm:flex"
+              >
+                <span className="coin-ic !h-4 !w-4" /> {user.coinBalance.toLocaleString("az-AZ")}
+              </Link>
             )}
             {showCoin && (
               <div className="relative sm:hidden">
-                <RightBtn
-                  label={`${user.coinBalance.toLocaleString("az-AZ")} coin`}
-                  hover={hw(`${user.coinBalance.toLocaleString("az-AZ")} coin`)}
-                  open={menu === "coin"}
-                  onClick={() => setMenu(menu === "coin" ? null : "coin")}
-                  ariaLabel={`${t("coin")}: ${user.coinBalance}`}
-                >
+                <IconBtn label={`${t("coin")}: ${user.coinBalance}`} open={menu === "coin"} onClick={() => setMenu(menu === "coin" ? null : "coin")}>
                   <span className="coin-ic" />
-                </RightBtn>
+                </IconBtn>
                 {menu === "coin" && (
                   <div className="pop-menu p-4" role="status">
                     <p className="text-xs font-bold text-muted">{t("coin")}</p>
@@ -407,8 +396,6 @@ export default function AppShell({ role, children }: { role: ShellRole; children
                 )}
               </div>
             )}
-
-            <span className="mx-1 hidden h-6 w-px bg-line-strong sm:block" />
 
             <Link
               href={`/u/${user.id}`}
@@ -423,8 +410,16 @@ export default function AppShell({ role, children }: { role: ShellRole; children
               <span className="hidden max-w-[130px] truncate sm:inline">{user.name}</span>
             </Link>
 
-            <RightBtn icon="logout" label={t("logout")} hover={hw(t("logout"))} onClick={logout} />
+            <IconBtn icon="logout" label={t("logout")} onClick={logout} />
           </div>
+
+          {/* Orta ekranlarda (md–xl) axtarış ikonla açılır və paneli örtür */}
+          {searchOpen && (
+            <div className="absolute inset-x-0 top-0 z-[70] hidden h-16 items-center gap-2 bg-white px-4 md:flex xl:hidden lg:px-8">
+              <Search t={t} autoFocus onDone={() => setSearchOpen(false)} />
+              <button type="button" className="ib" aria-label="Bağla" onClick={() => setSearchOpen(false)}><Icon name="x" size={20} /></button>
+            </div>
+          )}
         </div>
         <div className="border-t border-line px-4 pb-2.5 pt-2 md:hidden"><Search t={t} /></div>
       </header>
@@ -439,7 +434,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             href={i.href}
             className={cx(
               "relative my-1 flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-bold transition",
-              isActive(i) ? "bg-tint text-brand" : "text-muted",
+              isActive(i) ? "bg-tint text-brand after:absolute after:inset-x-3 after:top-0 after:h-[3px] after:rounded-b after:bg-accent" : "text-muted",
             )}
           >
             <Icon name={i.icon} size={20} />

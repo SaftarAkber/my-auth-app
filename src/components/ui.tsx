@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  createContext, Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { cx, initials } from "@/lib/format";
@@ -229,25 +229,28 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
 
 export function Tabs<T extends string>({
   tabs, value, onChange,
-}: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void }) {
+}: { tabs: { id: T; label: string; count?: number; own?: boolean }[]; value: T; onChange: (v: T) => void }) {
   return (
     <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line" role="tablist">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          role="tab"
-          onClick={() => onChange(t.id)}
-          aria-selected={value === t.id}
-          className={cx(
-            "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors",
-            value === t.id ? "border-brand text-brand" : "border-transparent text-muted hover:bg-tint/60 hover:text-brand",
-          )}
-        >
-          {t.label}
-          {t.count !== undefined && (
-            <span className={cx("rounded px-1.5 text-xs font-semibold", value === t.id ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>
-          )}
-        </button>
+      {tabs.map((t, i) => (
+        <Fragment key={t.id}>
+          {/* Yalnız sahibin gördüyü tablar xətlə ayrılır */}
+          {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-2 my-2.5 w-px shrink-0 bg-line-strong" aria-hidden />}
+          <button
+            role="tab"
+            onClick={() => onChange(t.id)}
+            aria-selected={value === t.id}
+            className={cx(
+              "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-[3px] px-4 py-3 text-sm font-semibold transition-colors",
+              value === t.id ? "border-accent text-brand" : "border-transparent text-muted hover:bg-tint/60 hover:text-brand",
+            )}
+          >
+            {t.label}
+            {t.count !== undefined && (
+              <span className={cx("rounded-full px-2 text-xs font-bold", value === t.id ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>
+            )}
+          </button>
+        </Fragment>
       ))}
     </div>
   );

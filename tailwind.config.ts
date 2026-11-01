@@ -22,6 +22,7 @@ const config: Config = {
         ink: token("ink"),
         muted: token("muted"),
         brand: token("brand"),
+        accent: token("accent"),
         ok: token("ok"),
         bad: token("bad"),
         warn: token("warn"),

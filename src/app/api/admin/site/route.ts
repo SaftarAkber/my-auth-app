@@ -51,6 +51,10 @@ export async function PUT(req: NextRequest) {
         features: b.show?.features !== false,
         steps: b.show?.steps !== false,
         close: b.show?.close !== false,
+        subjects: b.show?.subjects !== false,
+        teachers: b.show?.teachers !== false,
+        videos: b.show?.videos !== false,
+        contests: b.show?.contests !== false,
       },
     });
 
