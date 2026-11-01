@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui";
+import { CarouselArrow } from "@/components/ItemCarousel";
 import { cx } from "@/lib/format";
 
 /**
@@ -199,7 +200,7 @@ export default function LandingCarousel() {
   const [i, setI] = useState(0);
   const [progress, setProgress] = useState(0);
   const [focused, setFocused] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
+  const [holding, setHolding] = useState(false);
   const touch = useRef<number | null>(null);
 
   const go = useCallback((d: number) => {
@@ -207,7 +208,8 @@ export default function LandingCarousel() {
     setProgress(0);
   }, [n]);
 
-  const running = !focused && !userPaused;
+  // Dayandırma düyməsi yoxdur: klaviatura fokusunda və ya basıb saxlayanda (Instagram kimi) hekayə durur
+  const running = !focused && !holding;
 
   useEffect(() => {
     if (!running) return;
@@ -227,7 +229,7 @@ export default function LandingCarousel() {
       role="group"
       aria-roledescription="karusel"
       aria-label="Platformadan nümunələr"
-      className="mx-auto w-full min-w-0 max-w-[24rem]"
+      className="relative mx-auto w-full min-w-0 max-w-[24rem]"
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onKeyDown={(e) => {
@@ -238,20 +240,35 @@ export default function LandingCarousel() {
       <div
         className="relative flex h-[460px] touch-pan-y select-none flex-col overflow-hidden rounded-xl border border-line bg-white"
         style={{ boxShadow: "var(--hard-lg)" }}
-        onPointerDown={(e) => { touch.current = e.clientX; }}
+        onPointerDown={(e) => { touch.current = e.clientX; setHolding(true); }}
+        onPointerCancel={() => { touch.current = null; setHolding(false); }}
+        onPointerLeave={() => setHolding(false)}
         onPointerUp={(e) => {
+          setHolding(false);
           if (touch.current === null) return;
           const dx = e.clientX - touch.current;
           touch.current = null;
           if (Math.abs(dx) > 48) go(dx < 0 ? 1 : -1);
         }}
       >
-        {/* Hekayə vaxt xətləri */}
-        <div className="flex gap-1.5 px-4 pt-3" aria-hidden>
+        {/* Vaxt xətləri: həm irəliləyiş göstəricisi, həm də hekayəyə keçid (klik) */}
+        <div className="flex gap-1.5 px-3 pt-1" role="tablist" aria-label="Hekayə seçimi">
           {STORIES.map((s, idx) => (
-            <span key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
-              <span className="block h-full rounded-full bg-accent" style={{ width: idx < i ? "100%" : idx === i ? `${progress * 100}%` : "0%" }} />
-            </span>
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={idx === i}
+              aria-label={s.label}
+              title={s.label}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => { setI(idx); setProgress(0); }}
+              className="group relative z-10 flex h-8 flex-1 items-center focus-visible:outline-none"
+            >
+              <span className="block h-1 w-full overflow-hidden rounded-full bg-surface-2 transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-iris">
+                <span className="block h-full rounded-full bg-accent" style={{ width: idx < i ? "100%" : idx === i ? `${progress * 100}%` : "0%" }} />
+              </span>
+            </button>
           ))}
         </div>
 
@@ -264,32 +281,8 @@ export default function LandingCarousel() {
         <button type="button" className="absolute inset-y-14 right-0 w-1/4 cursor-e-resize" onClick={() => go(1)} aria-label="Növbəti hekayə" tabIndex={-1} />
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2">
-        <button type="button" onClick={() => go(-1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Əvvəlki hekayə"><Icon name="left" size={18} /></button>
-        <div role="tablist" aria-label="Hekayə seçimi" className="flex items-center">
-          {STORIES.map((s, idx) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={idx === i}
-              onClick={() => { setI(idx); setProgress(0); }}
-              className={cx("h-11 rounded px-1.5 text-xs font-semibold transition-colors sm:px-2.5", idx === i ? "text-brand" : "text-muted hover:text-brand")}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-        <button type="button" onClick={() => go(1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Növbəti hekayə"><Icon name="right" size={18} /></button>
-        <button
-          type="button"
-          onClick={() => setUserPaused((v) => !v)}
-          className="h-11 rounded px-2 text-xs font-semibold text-muted hover:text-brand"
-          aria-pressed={userPaused}
-          aria-label={userPaused ? "Avtomatik keçidi davam etdir" : "Avtomatik keçidi dayandır"}
-        >
-          {userPaused ? "Davam" : "Dayan"}
-        </button>
-      </div>
+      <CarouselArrow dir="prev" onClick={() => go(-1)} className="absolute -left-14 top-1/2 hidden -translate-y-1/2 sm:grid" />
+      <CarouselArrow dir="next" onClick={() => go(1)} className="absolute -right-14 top-1/2 hidden -translate-y-1/2 sm:grid" />
     </div>
   );
 }

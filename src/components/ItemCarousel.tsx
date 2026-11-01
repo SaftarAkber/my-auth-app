@@ -1,7 +1,22 @@
 "use client";
 
 import { Children, useCallback, useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/ui";
+
+/** Çərçivəsiz, yumşaq dairəvi fonlu ox düyməsi (karusellər üçün ortaq). */
+export function CarouselArrow({ dir, onClick, className = "" }: { dir: "prev" | "next"; onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={dir === "prev" ? "Əvvəlki" : "Növbəti"}
+      className={`grid h-11 w-11 place-items-center rounded-full text-ink/70 transition-colors hover:bg-ink/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris ${className}`}
+    >
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={dir === "prev" ? "M14.5 5.5 8 12l6.5 6.5" : "M9.5 5.5 16 12l-6.5 6.5"} />
+      </svg>
+    </button>
+  );
+}
 
 /**
  * Kartlar sırası: eyni anda 4 (geniş), 2 (orta), 1 (dar) kart görünür; hər 3 saniyədən bir bir kart sola sürüşür.
@@ -19,7 +34,6 @@ export default function ItemCarousel({ children, label }: { children: React.Reac
   const [idx, setIdx] = useState(0);
   const [anim, setAnim] = useState(true);
   const [hold, setHold] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
   const wrap = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const step = useCallback((d: number) => {
@@ -33,10 +47,10 @@ export default function ItemCarousel({ children, label }: { children: React.Reac
 
   // Avtomatik keçid
   useEffect(() => {
-    if (!slides || hold || userPaused) return;
+    if (!slides || hold) return;
     const t = setInterval(() => step(1), STEP_MS);
     return () => clearInterval(t);
-  }, [slides, hold, userPaused, step]);
+  }, [slides, hold, step]);
 
   // Klon bölməsinə çatanda animasiyasız başa qayıt
   useEffect(() => {
@@ -65,6 +79,9 @@ export default function ItemCarousel({ children, label }: { children: React.Reac
       onFocus={() => setHold(true)}
       onBlur={() => setHold(false)}
     >
+      <div className="relative">
+        <CarouselArrow dir="prev" onClick={() => step(-1)} className="absolute -left-2 top-1/2 z-10 -translate-y-1/2 bg-white/85 shadow-sm lg:-left-12 lg:bg-transparent lg:shadow-none" />
+        <CarouselArrow dir="next" onClick={() => step(1)} className="absolute -right-2 top-1/2 z-10 -translate-y-1/2 bg-white/85 shadow-sm lg:-right-12 lg:bg-transparent lg:shadow-none" />
       <div className="-mx-2 overflow-hidden">
         <ul
           className="flex [--pv:1] sm:[--pv:2] lg:[--pv:4]"
@@ -77,20 +94,8 @@ export default function ItemCarousel({ children, label }: { children: React.Reac
           {clones.map((c, k) => <li key={`c${k}`} className={cell} aria-hidden inert>{c}</li>)}
         </ul>
       </div>
-
-      <div className="mt-6 flex items-center justify-center gap-2">
-        <button type="button" onClick={() => step(-1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Əvvəlki"><Icon name="left" size={18} /></button>
-        <button
-          type="button"
-          onClick={() => setUserPaused((v) => !v)}
-          className="h-11 rounded px-3 text-xs font-semibold text-muted hover:text-brand"
-          aria-pressed={userPaused}
-          aria-label={userPaused ? "Avtomatik sürüşməni davam etdir" : "Avtomatik sürüşməni dayandır"}
-        >
-          {userPaused ? "Davam" : "Dayan"}
-        </button>
-        <button type="button" onClick={() => step(1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Növbəti"><Icon name="right" size={18} /></button>
       </div>
+
     </div>
   );
 }
