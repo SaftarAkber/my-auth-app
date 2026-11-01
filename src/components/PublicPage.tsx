@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SiteContent } from "@/lib/siteDefaults";
 import SiteFooter from "@/components/SiteFooter";
+import AuthMenu from "@/components/AuthMenu";
 
 /** Haqqımızda / Əlaqə kimi açıq səhifələrin çərçivəsi: yuxarı panel + məzmun + ortaq footer. */
 export default function PublicPage({ site, title, lead, children }: { site: SiteContent; title: string; lead?: string; children: React.ReactNode }) {
@@ -12,10 +13,7 @@ export default function PublicPage({ site, title, lead, children }: { site: Site
             <span className="grid h-9 w-9 place-items-center rounded-full bg-brand"><span className="h-3.5 w-3.5 rounded-full bg-white" /></span>
             <span className="text-lg font-bold tracking-tight text-brand">{site.brand}</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/login" className="btn-secondary btn-sm sm:!px-5 sm:!py-2.5 sm:!text-sm">Daxil ol</Link>
-            <Link href="/register" className="btn-primary btn-sm sm:!px-5 sm:!py-2.5 sm:!text-sm">{site.heroBtn}</Link>
-          </div>
+          <AuthMenu signupLabel={site.heroBtn} />
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">

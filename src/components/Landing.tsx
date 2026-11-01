@@ -5,6 +5,8 @@ import { SUBJECTS, subjectLabel } from "@/lib/subjects";
 import { Avatar, Icon, Img } from "@/components/ui";
 import LandingCarousel from "@/components/LandingCarousel";
 import SiteFooter from "@/components/SiteFooter";
+import ItemCarousel from "@/components/ItemCarousel";
+import AuthMenu from "@/components/AuthMenu";
 
 /**
  * Giriş etməmiş ziyarətçilərin gördüyü ana səhifə. Əsas mətnlər adminin “Sayt” bölməsindən gəlir.
@@ -66,20 +68,14 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
             {showVideos && <a href="#videolar" className="tl">Videolar</a>}
             {site.show.contests && <a href="#yarislar" className="tl">Yarışlar</a>}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <A preview={preview} href="/login" className="btn-secondary btn-sm sm:!px-5 sm:!py-2.5 sm:!text-sm">Daxil ol</A>
-            <A preview={preview} href="/register" className="btn-primary btn-sm sm:!px-5 sm:!py-2.5 sm:!text-sm">{site.heroBtn}</A>
-          </div>
+          <AuthMenu signupLabel={site.heroBtn} preview={preview} />
         </div>
       </header>
 
       {/* Giriş + karusel */}
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-12 sm:px-8 sm:pt-20 lg:grid-cols-[1.05fr_1fr]">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-2 rounded border border-line-strong bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted">
-            <span className="h-2 w-2 rounded-full bg-accent" /> Müəllim və tələbələr üçün
-          </span>
-          <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl">{site.heroTitle}</h1>
+          <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl">{site.heroTitle}</h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">{site.heroText}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <A preview={preview} href="/register" className="btn-primary !px-8 !py-3.5 !text-base">{site.heroBtn}</A>
@@ -132,9 +128,9 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
             text="Profilə baxmaq və qrupa müraciət etmək üçün hesaba daxil olmaq lazımdır."
             action={<A preview={preview} href="/register" className="btn-secondary">Qoşul</A>}
           />
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {(preview && teachers.length === 0 ? [] : teachers).map((t) => (
-              <li key={t.id}>
+          <ItemCarousel label="Müəllimlər">
+            {teachers.map((t) => (
+              <div key={t.id} className="h-full">
                 <A preview={preview} href={`/u/${t.id}`} label={`${t.name}: profilə baxmaq üçün daxil ol`} className="card flex h-full flex-col items-center p-5 text-center transition-colors hover:border-brand">
                   <Avatar src={t.photo} name={t.name} size={72} className="border border-line" />
                   <p className="mt-3 font-bold leading-tight text-ink">{t.name}</p>
@@ -149,9 +145,9 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
                     <Icon name="lock" size={13} /> Profilə bax
                   </span>
                 </A>
-              </li>
+              </div>
             ))}
-          </ul>
+          </ItemCarousel>
         </section>
       )}
 
@@ -165,11 +161,11 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
               text="Hamıya açıq dərslərdən seçmələr. İzləmək üçün giriş etmək lazımdır."
               action={<A preview={preview} href="/login" className="btn-secondary">Daxil ol və izlə</A>}
             />
-            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {(preview && videos.length === 0 ? [] : videos).map((v) => {
+            <ItemCarousel label="Videodərslər">
+              {videos.map((v) => {
                 const dur = mmss(v.duration);
                 return (
-                  <li key={v.id}>
+                  <div key={v.id}>
                     <A preview={preview} href={`/watch/${v.id}`} label={`${v.title}: izləmək üçün daxil ol`} className="group block">
                       <span className="relative block aspect-video overflow-hidden rounded-lg border border-line bg-brand">
                         {v.thumb ? (
@@ -185,10 +181,10 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
                       <span className="mt-3 block line-clamp-2 font-semibold leading-snug text-ink group-hover:text-brand">{v.title}</span>
                       <span className="mt-0.5 block truncate text-sm text-muted">{v.teacher}</span>
                     </A>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </ItemCarousel>
           </div>
         </section>
       )}

@@ -4,181 +4,240 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui";
 import { cx } from "@/lib/format";
 
-/** Ana səhifənin “kart topası” karuseli: kartlar üst-üstə düzülür, öndəki sürüşüb arxaya keçir. Məhsulun real ekranlarının nümunəsidir. */
+/**
+ * Ana səhifənin “hekayə” karuseli: platformada baş verən hadisələrin nümunələri (test bitirmə, hədiyyə,
+ * şərh və müəllim cavabı, qrupa qoşulma, yarış). Hər hekayənin üstündə vaxt xətti dolur və avtomatik növbətiyə keçir.
+ */
 
-const RESULTS = [
-  { name: "Riyaziyyat: triqonometriya", score: "28 / 30", pct: 93 },
-  { name: "İnformatika: say sistemləri", score: "22 / 25", pct: 88 },
-  { name: "Ədəbiyyat: orta əsr poeziyası", score: "17 / 20", pct: 85 },
-];
+const STORY_MS = 4500;
+const TICK_MS = 50;
 
-function Frame({ label, children }: { label: string; children: React.ReactNode }) {
+function Avatar({ initials, tone = "tint" }: { initials: string; tone?: "tint" | "brand" }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-line bg-white" style={{ boxShadow: "var(--hard-lg)" }}>
-      <div className="flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-        <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-        <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-        <span className="ml-2 text-xs font-semibold text-muted">{label}</span>
+    <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold", tone === "brand" ? "bg-brand text-white" : "bg-tint text-brand")}>
+      {initials}
+    </span>
+  );
+}
+
+function Head({ initials, name, action, time, tone }: { initials: string; name: string; action: string; time: string; tone?: "tint" | "brand" }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+      <Avatar initials={initials} tone={tone} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-ink">{name}</p>
+        <p className="truncate text-xs text-muted">{action}</p>
       </div>
-      {children}
+      <span className="text-xs font-semibold text-muted">{time}</span>
     </div>
   );
 }
 
-function TestSlide() {
+/* ───── 1. Test bitirdi ───── */
+function TestStory() {
+  const C = 2 * Math.PI * 52;
   return (
-    <Frame label="Test nəticələri">
-      <ul className="divide-y divide-line">
-        {RESULTS.map((r) => (
-          <li key={r.name} className="px-5 py-3.5">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-sm font-medium text-ink">{r.name}</p>
-              <p className="text-sm font-bold tabular-nums text-brand">{r.score}</p>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full rounded-full bg-brand" style={{ width: `${r.pct}%` }} />
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-auto flex items-center justify-between bg-surface-2 px-5 py-3 text-sm">
-        <span className="text-muted">Müəllimdən mükafat</span>
-        <span className="inline-flex items-center gap-1.5 font-semibold"><span className="coin-ic !h-4 !w-4" /> +20 coin</span>
-      </div>
-    </Frame>
-  );
-}
-
-function VideoSlide() {
-  return (
-    <Frame label="Video dərs">
-      <div className="relative grid aspect-video place-items-center bg-brand">
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-white/95 text-brand"><Icon name="video" size={24} /></span>
-        <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">18:24</span>
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20"><div className="h-full w-2/5 bg-accent" /></div>
-      </div>
-      <div className="px-5 py-3.5">
-        <p className="text-sm font-semibold text-ink">Hərəkət qanunları: sürət və təcil</p>
-        <p className="mt-0.5 text-xs text-muted">Fizika · 12 şərh · yeni dərs</p>
-      </div>
-      <div className="mt-auto flex gap-2 border-t border-line bg-surface-2 px-5 py-3">
-        {["Dərs 2", "Dərs 3", "Dərs 4"].map((x) => (
-          <span key={x} className="flex-1 rounded border border-line bg-white px-2 py-1.5 text-center text-xs font-semibold text-muted">{x}</span>
-        ))}
-      </div>
-    </Frame>
-  );
-}
-
-function GroupSlide() {
-  return (
-    <Frame label="Qrup">
-      <div className="h-14 bg-tint" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgb(var(--brand) / .07) 0 14px, transparent 14px 28px)" }} />
-      <div className="px-5 pb-4">
-        <span className="-mt-6 grid h-12 w-12 place-items-center rounded-lg border border-line-strong bg-white text-base font-bold text-brand">11A</span>
-        <p className="mt-2 font-bold text-ink">11-A hazırlıq qrupu</p>
-        <p className="text-xs text-muted">Riyaziyyat · həftədə 3 dərs</p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="badge-warn">2 müraciət</span>
-          <span className="badge-muted">3 test</span>
-          <span className="badge-muted">4 video</span>
+    <>
+      <Head initials="NQ" name="Nigar Q." action="testi bitirdi" time="indicə" />
+      <div className="grid flex-1 place-items-center px-5 py-4">
+        <div className="relative grid h-36 w-36 place-items-center">
+          <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgb(var(--surface-2))" strokeWidth="10" />
+            <circle
+              cx="60" cy="60" r="52" fill="none" stroke="rgb(var(--brand))" strokeWidth="10" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C * 0.07}
+              className="ring-anim" style={{ ["--c" as string]: `${C}` }}
+            />
+          </svg>
+          <div className="text-center">
+            <p className="text-3xl font-bold tabular-nums tracking-tight text-ink">28<span className="text-lg text-muted"> / 30</span></p>
+            <p className="text-xs font-semibold text-ok">93% · Keçdi</p>
+          </div>
         </div>
       </div>
-      <div className="mt-auto flex items-center justify-between border-t border-line bg-surface-2 px-5 py-3 text-sm">
-        <span className="flex -space-x-2">
-          {["AM", "RH", "NQ", "LH"].map((x) => (
-            <span key={x} className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface-2 bg-tint text-[10px] font-bold text-brand">{x}</span>
-          ))}
-        </span>
-        <span className="font-semibold text-muted">12 üzv</span>
+      <div className="space-y-2 px-5 pb-5">
+        <p className="text-sm font-semibold text-ink">Riyaziyyat: triqonometriya</p>
+        <div className="flex flex-wrap gap-1.5"><span className="badge-ok">28 düz</span><span className="badge-bad">1 səhv</span><span className="badge-muted">1 boş</span></div>
       </div>
-    </Frame>
+    </>
   );
 }
 
-function ContestSlide() {
+/* ───── 2. Hədiyyə qazandı ───── */
+function GiftStory() {
+  return (
+    <>
+      <Head initials="RH" name="Rauf H." action="müəllimdən hədiyyə aldı" time="2 dəq" />
+      <div className="grid flex-1 place-items-center px-5 py-4">
+        <div className="text-center">
+          <div className="pop-in relative mx-auto h-28 w-28">
+            <span className="absolute inset-0 rounded-full border-[6px] border-tiger bg-sun" />
+            <span className="absolute inset-3 rounded-full border-2 border-tiger/70" />
+            <span className="absolute inset-0 grid place-items-center text-4xl font-bold text-tiger">$</span>
+          </div>
+          <p className="mt-4 text-3xl font-bold tabular-nums tracking-tight text-ink">+50 coin</p>
+          <p className="mt-1 text-sm text-muted">Həftənin ən yaxşı nəticəsi üçün</p>
+        </div>
+      </div>
+      <div className="mx-5 mb-5 flex items-center justify-between rounded-lg border border-line bg-surface-2 px-4 py-3">
+        <div>
+          <p className="text-xs font-semibold text-muted">Mağazada</p>
+          <p className="text-sm font-bold text-ink">Qələm dəsti · 40 coin</p>
+        </div>
+        <span className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white">Al</span>
+      </div>
+    </>
+  );
+}
+
+/* ───── 3. Şərh və müəllim cavabı ───── */
+function CommentStory() {
+  return (
+    <>
+      <Head initials="LH" name="Leyla H." action="videoya şərh yazdı" time="5 dəq" />
+      <div className="flex-1 space-y-3 px-5 py-4">
+        <div className="flex items-center gap-3 rounded-lg border border-line p-2">
+          <span className="grid h-12 w-20 shrink-0 place-items-center rounded bg-brand text-white"><Icon name="video" size={18} /></span>
+          <p className="line-clamp-2 text-xs font-semibold text-ink">Törəmənin həndəsi mənası</p>
+        </div>
+        <div className="slide-in-l flex gap-2.5">
+          <Avatar initials="LH" />
+          <div className="rounded-lg rounded-tl-none bg-surface-2 px-3.5 py-2.5">
+            <p className="text-xs font-bold text-ink">Leyla H.</p>
+            <p className="mt-0.5 text-sm text-ink">Toxunan düz xəttin bucaq əmsalını bir də izah edərsiniz?</p>
+          </div>
+        </div>
+        <div className="slide-in-r ml-8 flex gap-2.5" style={{ animationDelay: "0.9s" }}>
+          <Avatar initials="RƏ" tone="brand" />
+          <div className="rounded-lg rounded-tl-none border border-brand/20 bg-tint px-3.5 py-2.5">
+            <p className="flex items-center gap-2 text-xs font-bold text-ink">Rəşad Əliyev <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">Müəllim</span></p>
+            <p className="mt-0.5 text-sm text-ink">Əlbəttə! Sabahkı dərsdə qrafik üzərində göstərəcəyəm.</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ───── 4. Qrupa qoşuldu ───── */
+function GroupStory() {
+  return (
+    <>
+      <Head initials="TM" name="Tural M." action="qrupa müraciət etdi" time="12 dəq" />
+      <div className="flex-1 px-5 py-4">
+        <div className="overflow-hidden rounded-lg border border-line">
+          <div className="h-12 bg-tint" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgb(var(--brand) / .07) 0 14px, transparent 14px 28px)" }} />
+          <div className="px-4 pb-4">
+            <span className="-mt-5 grid h-10 w-10 place-items-center rounded-lg border border-line-strong bg-white text-sm font-bold text-brand">11A</span>
+            <p className="mt-2 font-bold text-ink">11-A hazırlıq qrupu</p>
+            <p className="text-xs text-muted">Riyaziyyat · həftədə 3 dərs</p>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="flex -space-x-2">
+                {["AM", "RH", "NQ", "LH"].map((x) => (
+                  <span key={x} className="grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-tint text-[10px] font-bold text-brand">{x}</span>
+                ))}
+              </span>
+              <span className="text-xs font-semibold text-muted">12 üzv</span>
+            </div>
+          </div>
+        </div>
+        <div className="pop-in mt-4 flex items-center gap-3 rounded-lg border border-ok/30 bg-ok/10 px-4 py-3" style={{ animationDelay: "0.8s" }}>
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-ok text-white"><Icon name="check" size={16} /></span>
+          <div>
+            <p className="text-sm font-bold text-ink">Müəllim qəbul etdi</p>
+            <p className="text-xs text-muted">Artıq qrupun testləri və videoları açıqdır</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ───── 5. Yarış ───── */
+function ContestStory() {
   const rows = [
-    { n: 1, name: "Nigar Q.", pts: "980" },
-    { n: 2, name: "Rauf H.", pts: "940" },
-    { n: 3, name: "Leyla H.", pts: "905" },
+    { n: 1, name: "Nigar Q.", pts: 980 },
+    { n: 2, name: "Rauf H.", pts: 940 },
+    { n: 3, name: "Aysel M.", pts: 905 },
   ];
   return (
-    <Frame label="Həftənin yarışı">
-      <div className="flex items-center justify-between px-5 pt-4">
-        <p className="text-sm font-bold text-ink">Riyaziyyat yarışı</p>
-        <span className="badge bg-accent text-white">Tezliklə</span>
+    <>
+      <Head initials="AM" name="Aysel M." action="yarışa hazırlaşır" time="bu gün" />
+      <div className="flex-1 px-5 py-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-bold text-ink">Həftənin riyaziyyat yarışı</p>
+          <span className="badge bg-accent text-white">Tezliklə</span>
+        </div>
+        <ol className="space-y-2">
+          {rows.map((r, i) => (
+            <li key={r.n} className="slide-in-l flex items-center gap-3 rounded-lg border border-line px-3 py-2.5" style={{ animationDelay: `${i * 0.18}s` }}>
+              <span className={cx("grid h-7 w-7 place-items-center rounded text-xs font-bold", r.n === 1 ? "bg-accent text-white" : "bg-surface-2 text-muted")}>{r.n}</span>
+              <span className="flex-1 text-sm font-semibold text-ink">{r.name}</span>
+              <span className="text-sm font-bold tabular-nums text-brand">{r.pts}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-surface-2 px-4 py-3 text-sm">
+          <span className="text-muted">Qalibə mükafat</span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><span className="coin-ic !h-4 !w-4" /> coin</span>
+        </div>
       </div>
-      <ol className="mt-2 px-5 pb-4">
-        {rows.map((r) => (
-          <li key={r.n} className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">
-            <span className={cx("grid h-7 w-7 place-items-center rounded text-xs font-bold", r.n === 1 ? "bg-accent text-white" : "bg-surface-2 text-muted")}>{r.n}</span>
-            <span className="flex-1 text-sm font-medium text-ink">{r.name}</span>
-            <span className="text-sm font-bold tabular-nums text-brand">{r.pts}</span>
-          </li>
-        ))}
-      </ol>
-      <div className="mt-auto flex items-center justify-between bg-surface-2 px-5 py-3 text-sm">
-        <span className="text-muted">Qalibə</span>
-        <span className="inline-flex items-center gap-1.5 font-semibold"><span className="coin-ic !h-4 !w-4" /> coin mükafatı</span>
-      </div>
-    </Frame>
+    </>
   );
 }
 
-const SLIDES = [
-  { id: "test", label: "Testlər", title: "Test həll et, nəticəni dərhal gör", text: "Vaxtlı və ya sərbəst testlər, avtomatik yoxlama, hər sualın təhlili.", node: <TestSlide /> },
-  { id: "video", label: "Videolar", title: "Dərslər istədiyin vaxt", text: "Müəllimin video paketləri, sual-cavab, şərhlər və növbəti dərsə keçid.", node: <VideoSlide /> },
-  { id: "group", label: "Qruplar", title: "Müəllimin qrupu bir yerdə", text: "Paylaşımlar, testlər və videolar yalnız sənin qrupuna açıq olur.", node: <GroupSlide /> },
-  { id: "contest", label: "Yarışlar", title: "Yarış və coin", text: "Həftəlik yarışlar və mağazada xərcləmək üçün coin mükafatları.", node: <ContestSlide /> },
+const STORIES = [
+  { id: "test", label: "Test", node: <TestStory /> },
+  { id: "gift", label: "Hədiyyə", node: <GiftStory /> },
+  { id: "comment", label: "Şərh", node: <CommentStory /> },
+  { id: "group", label: "Qrup", node: <GroupStory /> },
+  { id: "contest", label: "Yarış", node: <ContestStory /> },
 ] as const;
 
-const AUTO_MS = 6000;
-
 export default function LandingCarousel() {
-  const n = SLIDES.length;
+  const n = STORIES.length;
   const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [focused, setFocused] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
-  const [reduced, setReduced] = useState(true);
   const touch = useRef<number | null>(null);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const upd = () => setReduced(mq.matches);
-    upd();
-    mq.addEventListener("change", upd);
-    return () => mq.removeEventListener("change", upd);
-  }, []);
+  const go = useCallback((d: number) => {
+    setI((x) => (x + d + n) % n);
+    setProgress(0);
+  }, [n]);
 
-  const go = useCallback((d: number) => setI((x) => (x + d + n) % n), [n]);
-  const auto = !reduced && !paused && !userPaused;
+  const running = !focused && !userPaused;
 
   useEffect(() => {
-    if (!auto) return;
-    const t = setInterval(() => setI((x) => (x + 1) % n), AUTO_MS);
+    if (!running) return;
+    const t = setInterval(() => setProgress((p) => Math.min(1, p + TICK_MS / STORY_MS)), TICK_MS);
     return () => clearInterval(t);
-  }, [auto, n]);
+  }, [running]);
 
-  const cur = SLIDES[i];
+  useEffect(() => {
+    if (progress < 1) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setI((x) => (x + 1) % n);
+    setProgress(0);
+  }, [progress, n]);
 
   return (
     <div
       role="group"
       aria-roledescription="karusel"
-      aria-label="Məhsul nümunələri"
-      className="w-full min-w-0"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      aria-label="Platformadan nümunələr"
+      className="mx-auto w-full min-w-0 max-w-[24rem]"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
         else if (e.key === "ArrowLeft") go(-1);
       }}
     >
       <div
-        className="relative mx-auto h-[340px] w-full max-w-[26rem] touch-pan-y select-none"
+        className="relative flex h-[460px] touch-pan-y select-none flex-col overflow-hidden rounded-xl border border-line bg-white"
+        style={{ boxShadow: "var(--hard-lg)" }}
         onPointerDown={(e) => { touch.current = e.clientX; }}
         onPointerUp={(e) => {
           if (touch.current === null) return;
@@ -187,67 +246,49 @@ export default function LandingCarousel() {
           if (Math.abs(dx) > 48) go(dx < 0 ? 1 : -1);
         }}
       >
-        {SLIDES.map((s, idx) => {
-          const k = (idx - i + n) % n;
-          return (
-            <div
-              key={s.id}
-              role="group"
-              aria-roledescription="slayd"
-              aria-label={`${idx + 1} / ${n}: ${s.label}`}
-              aria-hidden={k !== 0}
-              className="absolute inset-x-0 top-0 h-[300px] transition-[transform,opacity] duration-500 ease-out motion-reduce:transition-none"
-              style={{
-                transform: `translateY(${k * 26}px) scale(${1 - k * 0.05})`,
-                opacity: k === 0 ? 1 : k === 1 ? 0.8 : k === 2 ? 0.45 : 0,
-                zIndex: n - k,
-                transformOrigin: "top center",
-                pointerEvents: k === 0 ? "auto" : "none",
-              }}
-            >
-              <div className="absolute inset-0 rounded-lg border border-line bg-white" style={{ boxShadow: "var(--hard-lg)" }} />
-              <div className={cx("relative h-full transition-opacity duration-500", k === 0 ? "opacity-100" : "opacity-0")}>{s.node}</div>
-            </div>
-          );
-        })}
+        {/* Hekayə vaxt xətləri */}
+        <div className="flex gap-1.5 px-4 pt-3" aria-hidden>
+          {STORIES.map((s, idx) => (
+            <span key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
+              <span className="block h-full rounded-full bg-accent" style={{ width: idx < i ? "100%" : idx === i ? `${progress * 100}%` : "0%" }} />
+            </span>
+          ))}
+        </div>
+
+        <div key={STORIES[i].id} className="story-in flex min-h-0 flex-1 flex-col" aria-live={running ? "off" : "polite"}>
+          {STORIES[i].node}
+        </div>
+
+        {/* Toxunma sahələri: sol/sağ */}
+        <button type="button" className="absolute inset-y-14 left-0 w-1/4 cursor-w-resize" onClick={() => go(-1)} aria-label="Əvvəlki hekayə" tabIndex={-1} />
+        <button type="button" className="absolute inset-y-14 right-0 w-1/4 cursor-e-resize" onClick={() => go(1)} aria-label="Növbəti hekayə" tabIndex={-1} />
       </div>
 
-      <div className="mt-6 text-center" aria-live={auto ? "off" : "polite"}>
-        <p className="text-base font-bold text-ink">{cur.title}</p>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-muted">{cur.text}</p>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-        <button type="button" onClick={() => go(-1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Əvvəlki slayd"><Icon name="left" size={18} /></button>
-        <div role="tablist" aria-label="Slayd seçimi" className="flex items-center gap-1">
-          {SLIDES.map((s, idx) => (
+      <div className="mt-4 flex items-center justify-center gap-1 sm:gap-2">
+        <button type="button" onClick={() => go(-1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Əvvəlki hekayə"><Icon name="left" size={18} /></button>
+        <div role="tablist" aria-label="Hekayə seçimi" className="flex items-center">
+          {STORIES.map((s, idx) => (
             <button
               key={s.id}
               role="tab"
               aria-selected={idx === i}
-              onClick={() => setI(idx)}
-              className={cx(
-                "h-11 rounded px-1.5 text-xs font-semibold transition-colors sm:px-2.5",
-                idx === i ? "text-brand" : "text-muted hover:text-brand",
-              )}
+              onClick={() => { setI(idx); setProgress(0); }}
+              className={cx("h-11 rounded px-1.5 text-xs font-semibold transition-colors sm:px-2.5", idx === i ? "text-brand" : "text-muted hover:text-brand")}
             >
-              <span className="block">{s.label}</span>
-              <span className={cx("mx-auto mt-1 block h-[3px] rounded-full transition-all", idx === i ? "w-6 bg-accent" : "w-2 bg-line-strong")} />
+              {s.label}
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => go(1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Növbəti slayd"><Icon name="right" size={18} /></button>
-        {!reduced && (
-          <button
-            type="button"
-            onClick={() => setUserPaused((v) => !v)}
-            className="h-11 rounded px-2 text-xs font-semibold text-muted hover:text-brand sm:ml-1"
-            aria-label={userPaused ? "Avtomatik keçidi davam etdir" : "Avtomatik keçidi dayandır"}
-            aria-pressed={userPaused}
-          >
-            {userPaused ? "Davam" : "Dayan"}
-          </button>
-        )}
+        <button type="button" onClick={() => go(1)} className="btn-icon h-11 w-11 border border-line-strong bg-white" aria-label="Növbəti hekayə"><Icon name="right" size={18} /></button>
+        <button
+          type="button"
+          onClick={() => setUserPaused((v) => !v)}
+          className="h-11 rounded px-2 text-xs font-semibold text-muted hover:text-brand"
+          aria-pressed={userPaused}
+          aria-label={userPaused ? "Avtomatik keçidi davam etdir" : "Avtomatik keçidi dayandır"}
+        >
+          {userPaused ? "Davam" : "Dayan"}
+        </button>
       </div>
     </div>
   );
