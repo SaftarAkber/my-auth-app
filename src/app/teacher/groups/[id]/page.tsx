@@ -11,6 +11,7 @@ import {
 } from "@/components/content";
 import GroupHeader from "@/components/GroupHeader";
 import GroupEditModal from "@/components/GroupEditModal";
+import TopicList from "@/components/topics/TopicList";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
 } from "@/components/ui";
@@ -48,7 +49,7 @@ export default function TeacherGroupPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
-  const [tab, setTab] = useState<"feed" | "members" | "tests" | "videos" | "requests">("feed");
+  const [tab, setTab] = useState<"feed" | "topics" | "members" | "tests" | "videos" | "requests">("feed");
   const [editOpen, setEditOpen] = useState(false);
 
   // Post yazma
@@ -197,6 +198,7 @@ export default function TeacherGroupPage() {
             onChange={setTab}
             tabs={[
               { id: "feed", label: "Lent", count: g.posts.length },
+              { id: "topics", label: "Mövzular" },
               { id: "members", label: "Üzvlər", count: g.members.length },
               { id: "requests", label: "Müraciətlər", count: pending.length },
               { id: "tests", label: "Testlər", count: g.testPackages.length },
@@ -248,6 +250,8 @@ export default function TeacherGroupPage() {
               )}
             </div>
           )}
+
+          {tab === "topics" && <TopicList groupId={g.id} />}
 
           {tab === "members" &&
             (g.members.length === 0 ? (

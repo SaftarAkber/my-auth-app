@@ -303,3 +303,49 @@ main > * {
 
 /* Scrollbar */
 * { scrollbar-width: thin; scrollbar-color: rgb(var(--ink) / 0.35) transparent; }
+
+/* ───────────── Mövzu kitabxanası (redaktor və oxu görünüşü eyni ölçülərlə) ───────────── */
+.topic-content {
+  position: relative;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgb(var(--ink));
+  overflow-wrap: anywhere;
+}
+.topic-content::after { content: ""; display: block; clear: both; }
+.topic-content p { margin: 0 0 12px; min-height: 24px; }
+.topic-content h2 { font-size: 24px; line-height: 32px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
+.topic-content h3 { font-size: 20px; line-height: 28px; font-weight: 700; margin: 0 0 12px; }
+.topic-content ul, .topic-content ol { margin: 0 0 12px; padding-left: 26px; }
+.topic-content ul { list-style: disc; }
+.topic-content ol { list-style: decimal; }
+.topic-content blockquote { margin: 0 0 12px; padding: 6px 14px; border-left: 3px solid rgb(var(--accent)); background: rgb(var(--surface-2)); }
+.topic-content strong, .topic-content b { font-weight: 700; }
+.topic-content figure { margin: 4px 0 12px; max-width: 100%; border: 1px solid rgb(var(--line)); border-radius: 4px; background: #fff; position: relative; }
+.topic-content figure img { display: block; width: 100%; height: auto; border-radius: 3px; }
+.topic-content figure.img-l { float: left; margin-right: 18px; }
+.topic-content figure.img-r { float: right; margin-left: 18px; }
+.topic-content figure.img-c { margin-left: auto; margin-right: auto; clear: both; }
+.topic-content figcaption { font-size: 12px; line-height: 18px; color: rgb(var(--muted)); padding: 4px 8px; border-top: 1px solid rgb(var(--line)); }
+.topic-content figcaption:empty { display: none; }
+.topic-content hr.page-break { display: none; }
+/* Redaktorda əlavə görünüşlər */
+.topic-editor { outline: none; min-height: 480px; }
+.topic-editor hr.page-break {
+  display: block; clear: both; border: 0; border-top: 2px dashed rgb(var(--accent)); margin: 18px 0; height: 0; position: relative; overflow: visible;
+}
+.topic-editor hr.page-break::after {
+  content: "Yeni səhifə"; position: absolute; right: 0; top: -11px; background: #fff; padding: 0 6px;
+  font-size: 11px; font-weight: 700; color: rgb(var(--accent));
+}
+.topic-editor figure { cursor: pointer; user-select: none; }
+.topic-editor figure.sel { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+.topic-editor figcaption { cursor: text; user-select: text; outline: none; }
+.topic-editor figure.cap figcaption:empty { display: block; }
+.topic-editor figure.cap figcaption:empty::before { content: "Şəkil izahı yazın…"; color: rgb(var(--muted) / 0.7); }
+.topic-editor .handle {
+  position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border-radius: 3px; display: none;
+  background: rgb(var(--accent)); border: 2px solid #fff; cursor: nwse-resize; touch-action: none;
+}
+.topic-editor figure.sel .handle { display: block; }
+.topic-editor:empty::before { content: "Mövzunu burada izah edin…"; color: rgb(var(--muted) / 0.7); }

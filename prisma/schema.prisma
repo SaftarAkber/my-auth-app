@@ -36,6 +36,7 @@ model User {
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
   orders           Order[] 
+  topics           Topic[]
 
   @@map("users")
 }
@@ -76,6 +77,7 @@ model Group {
   testPackageGroups    TestPackageGroup[]
 
   collectionGroups CollectionGroup[]
+  topicGroups      TopicGroup[]
 
   @@map("groups")
 }
@@ -233,6 +235,7 @@ model Video {
   pinOrder     Int?
   views        VideoView[]
   likes        VideoLike[]
+  topicVideos  TopicVideo[]
 
   @@map("videos")
 }
@@ -316,6 +319,7 @@ model TestPackage {
   deletedAt    DateTime?
   deletedById  String?
   testPackageGroups TestPackageGroup[]
+  topicTests   TopicTest[]
   // Müəllimin istəyə bağlı coin mükafatı qaydası
   rewardEnabled    Boolean @default(false)
   rewardMinCorrect Int?
@@ -486,4 +490,61 @@ model SiteContent {
   updatedAt DateTime @updatedAt
 
   @@map("site_content")
+}
+
+// Mövzu paketi: müəllimin bir mövzu üzrə qeydləri (kitabxana) + bağlı test paketləri və videolar.
+// Bir mövzu bir neçə qrupla paylaşıla bilər; qaralama (isPublished=false) yalnız müəllimə görünür.
+model Topic {
+  id          String   @id @default(cuid())
+  title       String
+  // Kitabxana: təmizlənmiş HTML (server tərəfdə icazəli teq və stillərlə süzülür)
+  content     String   @default("")
+  isPublished Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  groups      TopicGroup[]
+  tests       TopicTest[]
+  videos      TopicVideo[]
+
+  @@index([teacherId, order])
+  @@map("topics")
+}
+
+model TopicGroup {
+  id      String @id @default(cuid())
+  topicId String
+  groupId String
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, groupId])
+  @@index([groupId])
+  @@map("topic_groups")
+}
+
+model TopicTest {
+  id        String      @id @default(cuid())
+  topicId   String
+  packageId String
+  order     Int         @default(0)
+  topic     Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, packageId])
+  @@map("topic_tests")
+}
+
+model TopicVideo {
+  id      String @id @default(cuid())
+  topicId String
+  videoId String
+  order   Int    @default(0)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, videoId])
+  @@map("topic_videos")
 }

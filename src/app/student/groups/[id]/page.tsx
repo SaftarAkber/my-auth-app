@@ -13,6 +13,7 @@ import {
   Avatar, Empty, ErrorBox, Icon, SkeletonList, Tabs, useConfirm, useToast,
 } from "@/components/ui";
 import GroupHeader from "@/components/GroupHeader";
+import TopicList from "@/components/topics/TopicList";
 
 interface GroupData {
   id: string;
@@ -39,7 +40,7 @@ export default function StudentGroupPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
-  const [tab, setTab] = useState<"feed" | "tests" | "videos" | "members">("feed");
+  const [tab, setTab] = useState<"feed" | "topics" | "tests" | "videos" | "members">("feed");
   const { start, starting } = useStartTest();
   const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
 
@@ -100,7 +101,9 @@ export default function StudentGroupPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { id: "feed", label: "Lent", count: g.posts.length },
+              { id: "feed" as const, label: "Lent", count: g.posts.length },
+              // Mövzular yalnız qrup üzvlərinə görünür
+              ...(g.isMember ? [{ id: "topics" as const, label: "Mövzular" }] : []),
               { id: "tests", label: "Testlər", count: g.testPackages.length },
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
               { id: "members", label: "Üzvlər", count: g.members.length },
@@ -115,6 +118,8 @@ export default function StudentGroupPage() {
                 {g.posts.map((p) => <PostCard key={p.id} post={p} />)}
               </div>
             ))}
+
+          {tab === "topics" && g.isMember && <TopicList groupId={g.id} />}
 
           {tab === "tests" &&
             (g.testPackages.length === 0 ? (
