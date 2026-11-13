@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui";
+import LangSwitch from "@/components/LangSwitch";
 
 const FEATURES = [
   { icon: "file", title: "Onlayn testlər", text: "Vaxtlı və ya sərbəst testlər, avtomatik yoxlama və detallı nəticələr." },
@@ -45,7 +46,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <p className="relative text-sm text-white/70">© {new Date().getFullYear()} EduFlow</p>
       </aside>
 
-      <main className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <main className="relative flex items-center justify-center px-4 py-10 sm:px-8">
+        <div className="absolute right-4 top-4 sm:right-8"><LangSwitch /></div>
         <div className="w-full max-w-md animate-fade-up">
           <Link href="/" className="mb-6 inline-block lg:hidden"><Logo /></Link>
           <div className="card p-6 sm:p-8">{children}</div>

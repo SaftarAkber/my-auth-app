@@ -3,8 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { UiProvider } from "@/components/ui";
+import AutoTranslate from "@/components/AutoTranslate";
 
-const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
+const inter = Inter({ subsets: ["latin", "latin-ext", "cyrillic"], display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "EduFlow", template: "%s · EduFlow" },
@@ -22,11 +23,20 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="az">
+    <html lang="az" suppressHydrationWarning>
+      <head>
+        {/* Seçilmiş dil AZ deyilsə, səhifə tərcümə olunana qədər gizlədilir (köhnə dil “yanıb-sönməsin”); 1.5 san sonra hər halda göstərilir */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var l=localStorage.getItem("eduflow-lang");if(l&&l!=="AZ"){var d=document.documentElement;d.lang=l.toLowerCase();d.classList.add("i18n-pending");setTimeout(function(){d.classList.remove("i18n-pending")},1500)}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <UiProvider>{children}</UiProvider>
         </AuthProvider>
+        <AutoTranslate />
       </body>
     </html>
   );

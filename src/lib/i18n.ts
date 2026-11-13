@@ -34,7 +34,19 @@ const DICT = {
 } as const;
 
 export type DictKey = keyof typeof DICT;
-const KEY = "eduflow-lang";
+export const LANG_KEY = "eduflow-lang";
+const KEY = LANG_KEY;
+
+/** Brauzerdə yadda saxlanmış dil (yoxdursa AZ) */
+export function getLang(): Lang {
+  try {
+    const saved = localStorage.getItem(KEY) as Lang | null;
+    if (saved && LANGS.some((l) => l.code === saved)) return saved;
+  } catch {
+    /* localStorage əlçatmazdır */
+  }
+  return "AZ";
+}
 
 export function useLang() {
   const [lang, setLangState] = useState<Lang>("AZ");
@@ -49,14 +61,15 @@ export function useLang() {
     }
   }, []);
 
+  // Dil dəyişəndə səhifə yenilənir: bütün mətnlər (tarixlər daxil) yeni dildə yenidən çəkilir
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
       localStorage.setItem(KEY, l);
-      document.documentElement.lang = l.toLowerCase();
     } catch {
       /* ignore */
     }
+    window.location.reload();
   }, []);
 
   const t = useCallback((k: DictKey) => DICT[k][lang], [lang]);

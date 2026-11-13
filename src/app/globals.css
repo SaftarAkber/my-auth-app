@@ -34,6 +34,10 @@
 html {
   -webkit-text-size-adjust: 100%;
 }
+/* Tərcümə hazır olana qədər (AutoTranslate) */
+html.i18n-pending body {
+  visibility: hidden;
+}
 
 body {
   @apply bg-bg text-ink antialiased;

@@ -7,6 +7,7 @@ import LandingCarousel from "@/components/LandingCarousel";
 import SiteFooter from "@/components/SiteFooter";
 import ItemCarousel from "@/components/ItemCarousel";
 import AuthMenu from "@/components/AuthMenu";
+import LangSwitch from "@/components/LangSwitch";
 
 /**
  * Giriş etməmiş ziyarətçilərin gördüyü ana səhifə. Əsas mətnlər adminin “Sayt” bölməsindən gəlir.
@@ -68,7 +69,10 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
             {showVideos && <a href="#videolar" className="tl">Videolar</a>}
             {site.show.contests && <a href="#yarislar" className="tl">Yarışlar</a>}
           </nav>
-          <AuthMenu signupLabel={site.heroBtn} preview={preview} />
+          <div className="flex items-center gap-1 sm:gap-2">
+            {!preview && <LangSwitch />}
+            <AuthMenu signupLabel={site.heroBtn} preview={preview} />
+          </div>
         </div>
       </header>
 
@@ -108,7 +112,7 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
                     className="group flex min-h-16 items-center gap-3 rounded-lg border border-line bg-bg px-4 py-3 font-semibold text-ink transition-colors hover:border-brand hover:bg-brand hover:text-white"
                   >
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white text-sm font-bold text-brand group-hover:bg-white/15 group-hover:text-white">
-                      {s.label.slice(0, 2)}
+                      <Icon name="book" size={18} />
                     </span>
                     {s.label}
                   </A>
