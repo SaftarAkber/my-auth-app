@@ -9,6 +9,20 @@ import { PAGE_WIDTH, imagesReady, paginate } from "@/lib/paginate";
  * Kitabxananın oxu görünüşü: məzmun gizli, 680px enli qutuda ölçülür və 40 sətirlik səhifələrə bölünür.
  * Tələbənin qaldığı səhifə brauzerdə yadda saxlanılır (`rememberKey` verilibsə).
  */
+/** Şəkil eni (px, 680-lik səhifəyə görə) faizə çevrilir ki, hər ekranda eyni nisbəti saxlasın */
+function responsive(el: Element) {
+  const c = el.cloneNode(true) as HTMLElement;
+  const figs = c.matches("figure") ? [c] : Array.from(c.querySelectorAll("figure"));
+  figs.forEach((f) => {
+    const px = parseFloat(f.style.width);
+    if (!px) return;
+    const pct = `${Math.min(100, (px / PAGE_WIDTH) * 100).toFixed(2)}%`;
+    f.style.width = pct;
+    f.style.setProperty("--w", pct);
+  });
+  return c.outerHTML;
+}
+
 export default function TopicReader({ html, rememberKey }: { html: string; rememberKey?: string }) {
   const measure = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -23,7 +37,7 @@ export default function TopicReader({ html, rememberKey }: { html: string; remem
     imagesReady(root).then(() => {
       if (!alive) return;
       const kids = Array.from(root.children);
-      const out = paginate(root).map((idx) => idx.map((i) => kids[i].outerHTML).join(""));
+      const out = paginate(root).map((idx) => idx.map((i) => responsive(kids[i])).join(""));
       setPages(out.length ? out : [""]);
       let saved = 0;
       if (rememberKey) {
@@ -65,7 +79,7 @@ export default function TopicReader({ html, rememberKey }: { html: string; remem
       ) : (
         <>
           <article className="card w-full max-w-[760px] px-5 py-7 sm:px-10 sm:py-9">
-            <div className="topic-content" dangerouslySetInnerHTML={{ __html: pages[page] }} />
+            <div className="topic-content topic-reader" dangerouslySetInnerHTML={{ __html: pages[page] }} />
           </article>
           {pages.length > 1 && (
             <nav className="mt-4 flex max-w-[760px] flex-wrap items-center justify-between gap-3" aria-label="Səhifələr">

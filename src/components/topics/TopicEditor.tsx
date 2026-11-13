@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errMsg, uploadImage } from "@/lib/api";
 import { cx } from "@/lib/format";
 import { LINE_PX, LINES_PER_PAGE, PAGE_WIDTH, imagesReady, paginate } from "@/lib/paginate";
-import { Icon, Spinner, useToast } from "@/components/ui";
+import { Icon, Spinner, useConfirm, useToast } from "@/components/ui";
 
 /**
  * Kitabxana redaktoru (contenteditable). Mətn: ölçü, başlıq, qalın/kursiv/altından xətt, rəng, marker, siyahı, düzləmə.
@@ -57,9 +57,12 @@ function topBlock(root: HTMLElement, node: Node | null): HTMLElement | null {
 }
 
 export default function TopicEditor({
-  initialHtml, onSave, onDirtyChange,
-}: { initialHtml: string; onSave: (html: string) => Promise<void>; onDirtyChange?: (dirty: boolean) => void }) {
+  initialHtml, onSave, onDirtyChange, importUrl,
+}: { initialHtml: string; onSave: (html: string) => Promise<void>; onDirtyChange?: (dirty: boolean) => void; importUrl?: string }) {
   const toast = useToast();
+  const confirm = useConfirm();
+  const docRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
   const ed = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const measure = useRef<HTMLDivElement>(null);
@@ -307,6 +310,45 @@ export default function TopicEditor({
     }
   }
 
+  // Hazır fayldan (DOCX / PDF / TXT) kitabxana: server mətni, formatı və şəkilləri hazırlayır
+  async function importFile(files: FileList | null) {
+    const file = files?.[0];
+    if (docRef.current) docRef.current.value = "";
+    if (!file || !importUrl || !ed.current) return;
+    const root = ed.current;
+    const hasContent = !!root.textContent?.trim() || !!root.querySelector("img");
+    if (hasContent) {
+      const ok = await confirm({
+        title: "Kitabxanada artıq mətn var",
+        message: `“${file.name}” faylının məzmunu mövcud mətnin sonuna əlavə olunacaq.`,
+        confirmText: "Sona əlavə et",
+      });
+      if (!ok) return;
+    }
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(importUrl, { method: "POST", body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d?.error ?? "Fayl oxunmadı");
+      const tmp = document.createElement("div");
+      tmp.innerHTML = d.html as string;
+      prepare(tmp);
+      if (!hasContent) root.innerHTML = "";
+      root.append(...Array.from(tmp.childNodes));
+      select(null);
+      changed();
+      imagesReady(root).then(recount);
+      const extra = d.skippedImages ? ` (${d.skippedImages} şəkil oxunmadı)` : "";
+      toast.success(`Fayl əlavə olundu${d.images ? `: ${d.images} şəkil` : ""}${extra}. Yoxlayıb yadda saxlayın.`);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function addPageBreak() {
     const hr = document.createElement("hr");
     hr.className = "page-break";
@@ -333,7 +375,7 @@ export default function TopicEditor({
   return (
     <div data-topic-editor>
       {/* Alətlər */}
-      <div className="sticky top-16 z-20 flex flex-wrap items-center gap-1 rounded-t-lg border border-line bg-white p-1.5" onMouseDown={keep}>
+      <div className="sticky top-[124px] z-20 flex flex-nowrap items-center gap-1 overflow-x-auto md:top-16 md:flex-wrap md:overflow-visible [&>*]:shrink-0 rounded-t-lg border border-line bg-white p-1.5" onMouseDown={keep}>
         <select
           className="h-9 rounded border border-line bg-white px-2 text-sm"
           aria-label="Blok növü"
@@ -382,6 +424,14 @@ export default function TopicEditor({
           {uploading ? <Spinner /> : <Icon name="image" size={16} />} Şəkil
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => addImage(e.target.files)} />
+        {importUrl && (
+          <>
+            <button type="button" className={tb} title="DOCX, PDF və ya TXT faylından kitabxana hazırla" onClick={() => docRef.current?.click()} disabled={importing}>
+              {importing ? <Spinner /> : <Icon name="upload" size={15} />} Fayldan
+            </button>
+            <input ref={docRef} type="file" accept=".docx,.pdf,.txt,.md" hidden onChange={(e) => importFile(e.target.files)} />
+          </>
+        )}
         <button type="button" className={tb} title="Burada yeni səhifə başlasın" onClick={addPageBreak}><Icon name="file" size={15} /> Yeni səhifə</button>
         <span className="mx-1 h-6 w-px bg-line" />
         <button type="button" className={tb} title="Geri al (Ctrl+Z)" onClick={() => exec("undo")}>↶</button>
@@ -391,6 +441,16 @@ export default function TopicEditor({
       {/* Səhifə */}
       <div className="overflow-x-auto rounded-b-lg border border-t-0 border-line bg-surface-2 px-2 py-6 sm:px-6">
         <div ref={wrap} className="relative mx-auto rounded bg-white px-4 py-8 shadow-soft sm:px-10" style={{ width: "fit-content", maxWidth: "100%" }}>
+          {importing && (
+            <div className="absolute inset-0 z-40 grid place-items-center rounded bg-white/85" role="status">
+              <div className="w-64 text-center">
+                <Spinner />
+                <p className="mt-3 text-sm font-semibold">Fayl hazırlanır…</p>
+                <p className="mt-1 text-xs text-muted">Mətn, başlıqlar və şəkillər kitabxanaya çevrilir</p>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full w-1/3 animate-[shimmer_1.2s_infinite] rounded-full bg-accent" /></div>
+              </div>
+            </div>
+          )}
           <div
             ref={ed}
             className="topic-content topic-editor"

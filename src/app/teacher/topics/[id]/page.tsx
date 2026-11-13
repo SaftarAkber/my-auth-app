@@ -266,6 +266,7 @@ export default function TeacherTopicPage() {
               <TopicEditor
                 initialHtml={initial}
                 onDirtyChange={setDirty}
+                importUrl={`/api/topics/${id}/import`}
                 onSave={async (html) => {
                   const r = await api<{ topic: { content: string } }>(`/api/topics/${id}`, { method: "PATCH", body: { content: html } });
                   setContent(r.topic.content);

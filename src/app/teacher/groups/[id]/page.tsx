@@ -197,7 +197,7 @@ export default function TeacherGroupPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { id: "feed", label: "Lent", count: g.posts.length },
+              { id: "feed", label: "Paylaşımlar", count: g.posts.length },
               { id: "topics", label: "Mövzular" },
               { id: "members", label: "Üzvlər", count: g.members.length },
               { id: "requests", label: "Müraciətlər", count: pending.length },

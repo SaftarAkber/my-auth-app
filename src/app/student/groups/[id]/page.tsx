@@ -101,7 +101,7 @@ export default function StudentGroupPage() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { id: "feed" as const, label: "Lent", count: g.posts.length },
+              { id: "feed" as const, label: "Paylaşımlar", count: g.posts.length },
               // Mövzular yalnız qrup üzvlərinə görünür
               ...(g.isMember ? [{ id: "topics" as const, label: "Mövzular" }] : []),
               { id: "tests", label: "Testlər", count: g.testPackages.length },

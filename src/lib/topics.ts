@@ -14,12 +14,14 @@ const FONT_SIZES: Record<string, string> = { "1": "x-small", "2": "small", "3": 
 
 export function sanitizeTopicHtml(html: string): string {
   return sanitizeHtml(html.slice(0, MAX_TOPIC_HTML), {
-    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "span", "mark", "ul", "ol", "li", "blockquote", "figure", "img", "figcaption", "hr"],
+    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "span", "mark", "ul", "ol", "li", "blockquote", "figure", "img", "figcaption", "hr", "table", "thead", "tbody", "tr", "th", "td"],
     allowedAttributes: {
       "*": ["style"],
       figure: ["class", "style"],
       img: ["src", "alt"],
       hr: ["class"],
+      td: ["colspan", "rowspan"],
+      th: ["colspan", "rowspan"],
     },
     allowedClasses: { figure: ["img-l", "img-c", "img-r"], hr: ["page-break"] },
     allowedStyles: {
