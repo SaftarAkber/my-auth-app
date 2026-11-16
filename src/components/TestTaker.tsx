@@ -7,12 +7,14 @@ import { api, errMsg } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtClock, percent } from "@/lib/format";
 import { Icon, ProgressBar, Spinner, useConfirm, useToast } from "@/components/ui";
+import QuestionImage from "@/components/QuestionImage";
 
 export interface TakeQuestion {
   id: string;
   text: string;
   type: "MULTIPLE_CHOICE" | "OPEN_ENDED";
   options: string[] | null;
+  imageUrl?: string | null;
   order: number;
 }
 
@@ -235,7 +237,8 @@ export default function TestTaker({
             <span className="badge-brand">Sual {index + 1} / {questions.length}</span>
             <span className="badge-muted">{q.type === "MULTIPLE_CHOICE" ? "Test" : "Açıq sual"}</span>
           </div>
-          <h2 className="whitespace-pre-wrap text-lg font-bold leading-relaxed sm:text-xl">{q.text}</h2>
+          <h2 className="whitespace-pre-wrap break-words text-lg font-bold leading-relaxed sm:text-xl">{q.text}</h2>
+          <QuestionImage src={q.imageUrl} />
 
           <div className="mt-6 space-y-3">
             {q.type === "MULTIPLE_CHOICE" ? (
@@ -258,7 +261,7 @@ export default function TestTaker({
                     >
                       {String.fromCharCode(65 + i)}
                     </span>
-                    <span className="font-medium">{opt}</span>
+                    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words font-medium [overflow-wrap:anywhere]">{opt}</span>
                   </button>
                 );
               })

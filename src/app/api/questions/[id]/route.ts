@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cleanQuestionImage } from "@/lib/questionImage";
 import { forbidden, notFound, requireTeacher, serverError, teacherOwnsTestPackage } from "@/lib/guards";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -25,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const result = await authorize(id);
     if ("response" in result) return result.response;
 
-    const { text, type, options, correctAnswer, isActive, order } = await req.json();
+    const { text, type, options, correctAnswer, isActive, order, imageUrl } = await req.json();
 
     if (Array.isArray(options) && options.length > 5) {
       return NextResponse.json({ error: "Ən çoxu 5 variant (A–E) ola bilər" }, { status: 400 });
@@ -40,6 +41,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         ...(correctAnswer !== undefined && { correctAnswer }),
         ...(isActive !== undefined && { isActive }),
         ...(order !== undefined && { order }),
+        // null/"" → şəkli silir
+        ...(imageUrl !== undefined && { imageUrl: cleanQuestionImage(imageUrl) }),
       },
     });
 

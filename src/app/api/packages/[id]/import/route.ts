@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbidden, requireTeacher, serverError, teacherOwnsTestPackage } from "@/lib/guards";
+import cloudinary from "@/lib/cloudinary";
 import { extractText, parseQuiz } from "@/lib/quizImport";
+
+// DOCX-dəki şəkillərin yüklənməsi vaxt aparır
+export const maxDuration = 60;
 
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel sorğu limiti ~4.5MB
 
@@ -19,7 +23,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     let text: string;
     try {
-      text = await extractText(file);
+      text = await extractText(file, async (dataUri) => {
+        const r = await cloudinary.uploader.upload(dataUri, { folder: "eduflow/questions", resource_type: "image" });
+        return r.secure_url;
+      });
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Fayl oxunmadı" }, { status: 400 });
     }

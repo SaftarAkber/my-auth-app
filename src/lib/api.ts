@@ -52,22 +52,33 @@ export function useFetch<T = unknown>(url: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(!!url);
+  // Eyni ünvanın təkrar yüklənməsi (redaktədən sonra reload) arxa planda gedir: səhifə skeletə qayıtmır,
+  // siyahı yerində qalır və brauzer yuxarı sürüşmür. `loading` yalnız ilk dəfə / ünvan dəyişəndə true olur.
+  const [refreshing, setRefreshing] = useState(false);
   const seq = useRef(0);
+  const loadedUrl = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (!url) return;
     const id = ++seq.current;
-    setLoading(true);
+    const background = loadedUrl.current === url;
+    if (background) setRefreshing(true);
+    else setLoading(true);
     try {
       const d = await api<T>(url);
       if (id === seq.current) {
         setData(d);
         setError(null);
+        loadedUrl.current = url;
       }
     } catch (e) {
-      if (id === seq.current) setError(errMsg(e));
+      // Arxa plan yeniləməsi alınmasa köhnə məlumat qalır (əməliyyatın öz xətası artıq göstərilib)
+      if (id === seq.current && !background) setError(errMsg(e));
     } finally {
-      if (id === seq.current) setLoading(false);
+      if (id === seq.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [url]);
 
@@ -76,5 +87,5 @@ export function useFetch<T = unknown>(url: string | null) {
     load();
   }, [load]);
 
-  return { data, setData, error, loading, reload: load };
+  return { data, setData, error, loading, refreshing, reload: load };
 }

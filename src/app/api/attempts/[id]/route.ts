@@ -115,7 +115,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         answers: {
           include: {
             question: {
-              select: { id: true, text: true, type: true, options: true, correctAnswer: true, order: true },
+              select: { id: true, text: true, type: true, options: true, correctAnswer: true, imageUrl: true, order: true },
             },
           },
           orderBy: { question: { order: "asc" } },
@@ -154,7 +154,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const activeQuestions = await prisma.question.findMany({
       where: { packageId: attempt.package.id, isActive: true },
       orderBy: { order: "asc" },
-      select: { id: true, text: true, type: true, options: true, correctAnswer: true, order: true },
+      select: { id: true, text: true, type: true, options: true, correctAnswer: true, imageUrl: true, order: true },
     });
     const numbers: Record<string, number> = Object.fromEntries(activeQuestions.map((q, i) => [q.id, i + 1]));
     const answered = new Set(attempt.answers.map((a) => a.question.id));

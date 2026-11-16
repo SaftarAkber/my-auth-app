@@ -231,23 +231,28 @@ export function Tabs<T extends string>({
   tabs, value, onChange,
 }: { tabs: { id: T; label: string; count?: number; own?: boolean }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-line" role="tablist">
+    // Scroll yoxdur: mobildə düymələr sığmayanda alt sətrə keçir (sürüşən zolaq deyil, sabit menyu);
+    // genişlikdə alt xətli tablar
+    <div className="mb-5 flex flex-wrap gap-1.5 sm:gap-x-1 sm:gap-y-0 sm:border-b sm:border-line" role="tablist">
       {tabs.map((t, i) => (
         <Fragment key={t.id}>
           {/* Yalnız sahibin gördüyü tablar xətlə ayrılır */}
-          {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-2 my-2.5 w-px shrink-0 bg-line-strong" aria-hidden />}
+          {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-2 my-2.5 hidden w-px shrink-0 bg-line-strong sm:block" aria-hidden />}
           <button
             role="tab"
             onClick={() => onChange(t.id)}
             aria-selected={value === t.id}
             className={cx(
-              "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-[3px] px-4 py-3 text-sm font-semibold transition-colors",
-              value === t.id ? "border-accent text-brand" : "border-transparent text-muted hover:bg-tint/60 hover:text-brand",
+              "flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors",
+              "sm:-mb-px sm:min-h-0 sm:gap-2 sm:rounded-none sm:border-0 sm:border-b-[3px] sm:bg-transparent sm:px-4 sm:py-3 sm:text-sm",
+              value === t.id
+                ? "border-brand bg-brand text-white sm:border-accent sm:text-brand"
+                : "border-line bg-surface text-muted hover:bg-tint/60 hover:text-brand sm:border-transparent",
             )}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className={cx("rounded-full px-2 text-xs font-bold", value === t.id ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>
+              <span className={cx("rounded-full px-1.5 text-xs font-bold sm:px-2", value === t.id ? "bg-white/20 text-white sm:bg-brand" : "bg-surface-2 text-muted")}>{t.count}</span>
             )}
           </button>
         </Fragment>

@@ -178,7 +178,7 @@ function ProfileInner() {
             {data.groups.map((g) => (
               <article key={g.id} className="card flex flex-col gap-3 p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-lg font-bold">{g.name}</h3>
+                  <h3 className="min-w-0 break-words text-lg font-bold [overflow-wrap:anywhere]">{g.name}</h3>
                   {g.state === "member" && <span className="badge-ok">Qrupdasan</span>}
                   {g.state === "pending" && <span className="badge-warn">Gözlənilir</span>}
                   {g.isActive === false && <span className="badge-muted">Deaktiv</span>}
@@ -387,7 +387,7 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
             </div>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <select className="input !w-auto !py-1.5 text-xs" value={target} onChange={(e) => setGroupId(e.target.value)} aria-label="Qrup">
+            <select className="input !w-auto min-w-0 max-w-full !py-1.5 text-xs" value={target} onChange={(e) => setGroupId(e.target.value)} aria-label="Qrup">
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
             <button className="btn-ghost btn-sm" onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4} aria-label="Şəkil əlavə et">

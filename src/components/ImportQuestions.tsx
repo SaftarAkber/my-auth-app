@@ -4,33 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { api, errMsg, ApiError } from "@/lib/api";
 import { cx } from "@/lib/format";
 import { Icon, Modal, Spinner, useToast } from "@/components/ui";
+import { shrinkImage } from "@/lib/imageShrink";
 
 interface Draft {
   text: string;
   type: "MULTIPLE_CHOICE" | "OPEN_ENDED";
   options: string[];
   correct: number;
+  image?: string;
 }
 
 const MAX_IMAGES = 10;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-/** Şəkli brauzerdə kiçildir (uzun tərəf 1800px, JPEG): həm sürətli yüklənir, həm server limitinə sığır. */
-async function shrink(file: File): Promise<File> {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * scale);
-  c.height = Math.round(bmp.height * scale);
-  const ctx = c.getContext("2d");
-  if (!ctx) throw new Error("Şəkil işlənmədi");
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.85));
-  if (!blob) throw new Error("Şəkil işlənmədi");
-  return new File([blob], "page.jpg", { type: "image/jpeg" });
-}
 
 /** Fayldan (PDF / DOCX / TXT) və ya şəkillərdən sualları yaradır. Fayl: avtomatik; şəkil: əvvəlcə önbaxış. */
 export default function ImportQuestions({ packageId, onDone }: { packageId: string; onDone: () => void }) {
@@ -112,7 +97,7 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
         imgProg.current = i / files.length;
         try {
           const fd = new FormData();
-          fd.append("file", await shrink(file));
+          fd.append("file", await shrinkImage(file));
           const res = await fetch(`/api/packages/${packageId}/import-image`, { method: "POST", body: fd });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new ApiError(data?.error ?? "Şəkil oxunmadı", res.status);
@@ -159,6 +144,7 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
             text: d.text, type: d.type,
             options: d.type === "MULTIPLE_CHOICE" ? d.options : undefined,
             correctAnswer: d.type === "MULTIPLE_CHOICE" ? d.options[d.correct] : null,
+            imageUrl: d.image ?? null,
           })),
         },
       });
@@ -201,6 +187,7 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
       <Modal open={help} onClose={() => setHelp(false)} title="Fayl formatı">
         <div className="text-sm">
           <pre className="whitespace-pre-wrap font-sans text-muted">{`1. Sual mətni
+[şəkil — istəyə görə, DOCX-də sualın altında]
 A) birinci variant
 B) ikinci variant
 C) üçüncü variant
@@ -208,7 +195,7 @@ Cavab: B
 
 2. Növbəti sual ...`}</pre>
           <p className="mt-3 text-xs text-muted">
-            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur.
+            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur. DOCX-də sualın mətni ilə variantları arasına qoyulan şəkil (qraf, ağac, cədvəl) həmin sualın şəklinə çevrilir.
           </p>
         </div>
       </Modal>
@@ -242,6 +229,15 @@ Cavab: B
                   <button className="btn-icon ml-auto" aria-label="Sil" onClick={() => setDrafts((x) => x && x.filter((_, j) => j !== i))}><Icon name="trash" size={16} /></button>
                 </div>
                 <textarea className="input min-h-[60px]" value={d.text} onChange={(e) => patch(i, { text: e.target.value })} />
+                {d.image && (
+                  <div className="relative mt-2 inline-block max-w-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={d.image} alt="" className="max-h-56 max-w-full rounded-lg border border-line bg-white object-contain" />
+                    <button type="button" className="btn-icon absolute right-1 top-1 bg-white" aria-label="Şəkli sil" title="Şəkli sil" onClick={() => patch(i, { image: undefined })}>
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </div>
+                )}
                 {d.type === "MULTIPLE_CHOICE" && (
                   <ul className="mt-2 space-y-1.5">
                     {d.options.map((o, k) => (

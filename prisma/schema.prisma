@@ -335,6 +335,7 @@ model Question {
   type          QuestionType @default(MULTIPLE_CHOICE)
   options       Json?
   correctAnswer String?
+  imageUrl      String?
   isActive      Boolean      @default(true)
   order         Int          @default(0)
   createdAt     DateTime     @default(now())

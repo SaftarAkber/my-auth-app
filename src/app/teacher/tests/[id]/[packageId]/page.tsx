@@ -1,10 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx } from "@/lib/format";
 import ImportQuestions from "@/components/ImportQuestions";
+import QuestionImage from "@/components/QuestionImage";
+import { shrinkImage } from "@/lib/imageShrink";
 import {
   Empty, ErrorBox, Field, Icon, Modal, PageHeader, SkeletonList, Spinner, useConfirm, useToast,
 } from "@/components/ui";
@@ -15,6 +17,7 @@ interface Question {
   type: "MULTIPLE_CHOICE" | "OPEN_ENDED";
   options: string[] | null;
   correctAnswer: string | null;
+  imageUrl: string | null;
   isActive: boolean;
   order: number;
 }
@@ -25,7 +28,7 @@ interface Pkg {
   questions: Question[];
 }
 
-const BLANK = { text: "", type: "MULTIPLE_CHOICE" as Question["type"], options: ["", "", "", ""], correct: -1 };
+const BLANK = { text: "", type: "MULTIPLE_CHOICE" as Question["type"], options: ["", "", "", ""], correct: -1, image: null as string | null };
 
 export default function PackageQuestionsPage() {
   const { id, packageId } = useParams<{ id: string; packageId: string }>();
@@ -35,12 +38,44 @@ export default function PackageQuestionsPage() {
   const [editing, setEditing] = useState<Question | "new" | null>(null);
   const [form, setForm] = useState(BLANK);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const imgInput = useRef<HTMLInputElement>(null);
+  // Yadda saxlanan sual: siyahı yeniləndikdən sonra (yeni sual isə) ona sürüşdürülür və qısa müddət vurğulanır
+  const [flash, setFlash] = useState<{ id: string; scroll: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!flash || !data) return;
+    const el = document.getElementById(`q-${flash.id}`);
+    if (el && flash.scroll) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlash(null), 1800);
+    return () => clearTimeout(t);
+  }, [flash, data]);
 
   function open(q: Question | "new") {
     setEditing(q);
     if (q === "new") return setForm(BLANK);
     const opts = q.options?.length ? [...q.options] : ["", "", "", ""];
-    setForm({ text: q.text, type: q.type, options: opts, correct: q.correctAnswer ? opts.indexOf(q.correctAnswer) : -1 });
+    setForm({ text: q.text, type: q.type, options: opts, correct: q.correctAnswer ? opts.indexOf(q.correctAnswer) : -1, image: q.imageUrl });
+  }
+
+  async function pickImage(file: File | undefined) {
+    if (imgInput.current) imgInput.current.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Şəkil seçin (JPG, PNG, WEBP)");
+    setUploading(true);
+    try {
+      // Sxemlər (qraf, cədvəl) kiçikdir və olduğu kimi qalır; böyük foto kiçildilir
+      const fd = new FormData();
+      fd.append("file", await shrinkImage(file, { minBytes: 1.5 * 1024 * 1024 }));
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.url) throw new Error(d?.error ?? "Şəkil yüklənmədi");
+      setForm((f) => ({ ...f, image: d.url }));
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function save() {
@@ -57,12 +92,17 @@ export default function PackageQuestionsPage() {
     }
     setBusy(true);
     try {
-      const body = { text: form.text.trim(), type: form.type, options: options ?? null, correctAnswer };
-      if (editing === "new") await api(`/api/packages/${packageId}/questions`, { body });
-      else if (editing) await api(`/api/questions/${editing.id}`, { method: "PATCH", body });
+      const body = { text: form.text.trim(), type: form.type, options: options ?? null, correctAnswer, imageUrl: form.image };
+      if (editing === "new") {
+        const r = await api<{ question: { id: string } }>(`/api/packages/${packageId}/questions`, { body });
+        setFlash({ id: r.question.id, scroll: true });
+      } else if (editing) {
+        await api(`/api/questions/${editing.id}`, { method: "PATCH", body });
+        setFlash({ id: editing.id, scroll: false });
+      }
       toast.success("Yadda saxlanıldı");
       setEditing(null);
-      reload();
+      await reload();
     } catch (e) {
       toast.error(errMsg(e));
     } finally {
@@ -107,7 +147,7 @@ export default function PackageQuestionsPage() {
     }
   }
 
-  if (loading) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
+  if (loading && !data) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
   if (error || !data) return <div className="page-narrow"><ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} /></div>;
 
   const pkg = data.package;
@@ -127,7 +167,7 @@ export default function PackageQuestionsPage() {
       ) : (
         <div className="space-y-3">
           {qs.map((q, i) => (
-            <article key={q.id} className={cx("card p-4 sm:p-5", !q.isActive && "opacity-60")}>
+            <article key={q.id} id={`q-${q.id}`} className={cx("card scroll-mt-24 p-4 transition-shadow duration-500 sm:p-5", !q.isActive && "opacity-60", flash?.id === q.id && "ring-2 ring-accent")}>
               <div className="flex items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-sm font-bold text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
@@ -135,12 +175,14 @@ export default function PackageQuestionsPage() {
                     <span className={q.type === "MULTIPLE_CHOICE" ? "badge-brand" : "badge-warn"}>{q.type === "MULTIPLE_CHOICE" ? "Seçimli" : "Açıq"}</span>
                     {!q.isActive && <span className="badge-muted">Deaktiv</span>}
                   </div>
-                  <p className="whitespace-pre-wrap font-semibold">{q.text}</p>
+                  <p className="whitespace-pre-wrap break-words font-semibold">{q.text}</p>
+                  <QuestionImage src={q.imageUrl} />
                   {q.type === "MULTIPLE_CHOICE" && (
-                    <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <ul className="mt-3 grid gap-2">
                       {(q.options ?? []).map((o, k) => (
                         <li key={k} className={cx("flex items-center gap-2 rounded-lg border px-3 py-2 text-sm", o === q.correctAnswer ? "border-ok/50 bg-ok/10 font-semibold" : "border-line")}>
-                          <b className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line bg-white text-xs">{String.fromCharCode(65 + k)}</b> {o}
+                          <b className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line bg-white text-xs">{String.fromCharCode(65 + k)}</b>
+                          <span className="min-w-0 flex-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{o}</span>
                           {o === q.correctAnswer && <Icon name="check" size={14} className="ml-auto text-ok" />}
                         </li>
                       ))}
@@ -170,7 +212,7 @@ export default function PackageQuestionsPage() {
         footer={
           <>
             <button className="btn-secondary" onClick={() => setEditing(null)}>Ləğv et</button>
-            <button className="btn-primary" onClick={save} disabled={busy}>{busy ? <Spinner /> : "Yadda saxla"}</button>
+            <button className="btn-primary" onClick={save} disabled={busy || uploading}>{busy ? <Spinner /> : "Yadda saxla"}</button>
           </>
         }
       >
@@ -185,6 +227,29 @@ export default function PackageQuestionsPage() {
           </div>
 
           <Field label="Sual mətni *"><textarea className="input min-h-24" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} autoFocus /></Field>
+
+          <div>
+            <span className="label">Şəkil (qraf, ağac, cədvəl və s.) · istəyə görə</span>
+            {form.image ? (
+              <div className="flex flex-wrap items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={form.image} alt="" className="max-h-48 max-w-full rounded-lg border border-line bg-white object-contain" />
+                <div className="flex gap-2">
+                  <button type="button" className="btn-secondary btn-sm" disabled={uploading} onClick={() => imgInput.current?.click()}>
+                    {uploading ? <Spinner /> : <><Icon name="upload" size={14} /> Dəyiş</>}
+                  </button>
+                  <button type="button" className="btn-ghost btn-sm hover:!text-bad" onClick={() => setForm({ ...form, image: null })}>
+                    <Icon name="trash" size={14} /> Sil
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn-secondary btn-sm" disabled={uploading} onClick={() => imgInput.current?.click()}>
+                {uploading ? <Spinner /> : <><Icon name="upload" size={14} /> Şəkil əlavə et</>}
+              </button>
+            )}
+            <input ref={imgInput} type="file" hidden accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => pickImage(e.target.files?.[0])} />
+          </div>
 
           {form.type === "MULTIPLE_CHOICE" ? (
             <div>

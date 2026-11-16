@@ -90,7 +90,7 @@ export default function AdminUsersPage() {
           <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
           <input className="input pl-10" placeholder="Ad, email və ya telefon" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="input !w-auto" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Rol">
+        <select className="input !w-auto min-w-0 max-w-full" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Rol">
           <option value="">Bütün rollar</option>
           <option value="TEACHER">Müəllim</option>
           <option value="STUDENT">Tələbə</option>

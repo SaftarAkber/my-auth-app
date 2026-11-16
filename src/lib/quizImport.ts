@@ -11,7 +11,14 @@ export interface ParsedQuestion {
   options: string[];
   /** Düzgün variantın indeksi (tapılmayıbsa -1) */
   correct: number;
+  /** Sualın şəkli (DOCX-dən Cloudinary-ə yüklənmiş) */
+  image?: string;
 }
+
+/** Mətndə şəklin yeri: ayrıca sətirdə [[IMG:url]] */
+const IMG_LINE_RE = /^\[\[IMG:(\S+)\]\]$/;
+/** Sual içindəki siyahı bəndi ("1 – ...", "a – ...") öz sətrində qalır */
+const LIST_ITEM_RE = /^(?:\d{1,2}|[A-Za-z])\s*[–—-]\s+\S/;
 
 const MAX_OPTIONS = 5;
 const LETTERS = "ABCDE";
@@ -48,11 +55,13 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     .map(clean)
     .filter(Boolean);
 
-  type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean };
+  type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean; image?: string };
   const drafts: Draft[] = [];
   let cur: Draft | null = null;
   let keyMode = false;
   const key = new Map<number, number>();
+  // Sualın nömrəsindən əvvəl gələn şəkil növbəti suala aiddir
+  let pendingImage: string | undefined;
 
   const readKey = (s: string) => {
     for (const m of s.matchAll(/(\d{1,3})\s*[-.):=]?\s*([A-Ea-e])\b/g)) key.set(+m[1], LETTERS.indexOf(m[2].toUpperCase()));
@@ -67,6 +76,13 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     }
     if (keyMode) {
       readKey(rawLine);
+      continue;
+    }
+    const img = rawLine.match(IMG_LINE_RE);
+    if (img) {
+      // Sualın mətni ilə variantları arasındakı şəkil həmin sualındır; variantlardan/cavabdan sonrakı isə növbəti sualın
+      if (cur && !cur.image && cur.options.length === 0 && !cur.answered) cur.image = img[1];
+      else if (!pendingImage) pendingImage = img[1];
       continue;
     }
 
@@ -94,16 +110,19 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       const q = line.match(QUESTION_RE);
       // Yeni sual: nömrə əvvəlkindən böyük olmalıdır (mətn içindəki "2) ..." ilə qarışmasın)
       if (q && (!cur || +q[1] === drafts.length + 1 || (cur.options.length > 0 && cur.options.length >= 2))) {
-        cur = { text: clean(q[2]), options: [], correct: -1, opt: -1, marks: 0, answered: false };
+        cur = { text: clean(q[2]), options: [], correct: -1, opt: -1, marks: 0, answered: false, image: pendingImage };
+        pendingImage = undefined;
         drafts.push(cur);
         continue;
       }
       if (!cur) continue;
       // Davam sətri: variantın və ya sualın mətninə əlavə olunur
       if (cur.options.length > 0 && cur.opt >= 0) cur.options[cur.opt] = clean(`${cur.options[cur.opt]} ${line}`);
-      else cur.text = clean(`${cur.text} ${line}`);
+      else cur.text = LIST_ITEM_RE.test(line) ? `${cur.text}\n${line}` : `${cur.text} ${line}`.trim();
     }
   }
+  // Sonuncu sualdan sonra qalan şəkil həmin suala aiddir
+  if (pendingImage && cur && !cur.image) cur.image = pendingImage;
 
   return drafts.map((d, i) => {
     const mc = d.options.length >= 2;
@@ -111,14 +130,18 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     let correct = d.marks > 1 && !d.answered ? -1 : d.correct;
     if (key.has(i + 1)) correct = key.get(i + 1)!;
     if (!mc || correct >= d.options.length) correct = -1;
+    const image = d.image ? { image: d.image } : {};
     return mc
-      ? { text: d.text, type: "MULTIPLE_CHOICE" as const, options: d.options, correct }
-      : { text: [d.text, ...d.options.map((o, k) => `${LETTERS[k]}) ${o}`)].join(" "), type: "OPEN_ENDED" as const, options: [], correct: -1 };
+      ? { text: d.text, type: "MULTIPLE_CHOICE" as const, options: d.options, correct, ...image }
+      : { text: [d.text, ...d.options.map((o, k) => `${LETTERS[k]}) ${o}`)].join(" "), type: "OPEN_ENDED" as const, options: [], correct: -1, ...image };
   });
 }
 
-/** Fayldan mətn çıxarır */
-export async function extractText(file: File): Promise<string> {
+const MAX_IMAGES = 60;
+const IMG_TYPES = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
+
+/** Fayldan mətn çıxarır. DOCX şəkilləri `uploadImage` ilə yüklənir və mətndə ayrıca [[IMG:url]] sətri kimi qalır. */
+export async function extractText(file: File, uploadImage?: (dataUri: string) => Promise<string>): Promise<string> {
   const name = file.name.toLowerCase();
   const buf = new Uint8Array(await file.arrayBuffer());
   if (name.endsWith(".pdf") || file.type === "application/pdf") {
@@ -130,7 +153,17 @@ export async function extractText(file: File): Promise<string> {
   if (name.endsWith(".docx")) {
     // HTML-ə çevirib qalın/altından xətli variantları düzgün cavab kimi işarələyirik (sətir sonuna *)
     const mammoth = await import("mammoth");
-    const { value: html } = await mammoth.convertToHtml({ buffer: Buffer.from(buf) });
+    let images = 0;
+    const { value: html } = await mammoth.convertToHtml(
+      { buffer: Buffer.from(buf) },
+      {
+        convertImage: mammoth.images.imgElement(async (image) => {
+          if (!uploadImage || images >= MAX_IMAGES || !IMG_TYPES.test(image.contentType)) return { src: "" };
+          images++;
+          return { src: await uploadImage(`data:${image.contentType};base64,${await image.read("base64")}`) };
+        }),
+      },
+    );
     // Word-un avtomatik nömrələməsi (1. 2. 3.) mətndə itir: nömrələnmiş siyahı elementlərinə əlavə edirik
     const stack: { ordered: boolean; n: number }[] = [];
     const numbered = html.replace(/<(\/?)(ol|ul|li)>/gi, (m, close: string, tag: string) => {
@@ -144,6 +177,8 @@ export async function extractText(file: File): Promise<string> {
       return !close && top?.ordered && stack.length === 1 ? `${m}${++top.n}. ` : m;
     });
     return numbered
+      // Şəkil öz sətrində qalır
+      .replace(/<img [^>]*src="(https:[^"]+)"[^>]*>/gi, (_m, src: string) => `\n[[IMG:${src}]]\n`)
       .replace(/<\/(p|li|h\d|tr)>/gi, (m) => m + "\n")
       .replace(/<br\s*\/?>/gi, "\n")
       .split("\n")

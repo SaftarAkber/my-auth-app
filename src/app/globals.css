@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Sütunu göstərilməyən grid (mobildə "grid gap-3 sm:grid-cols-2") bir sütundur və ekrandan geniş ola bilməz.
+   Əks halda uzun, sınmayan mətn (qrup adı və s.) sütunu genişləndirir və səhifə sağa sürüşür.
+   :where() spesifikliyi 0-dır: istənilən grid-cols-* sinfi bunu əvəz edir. */
+:where(.grid) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* ───────────── Dizayn tokenləri (RGB kanalları, Tailwind alpha dəstəyi üçün) ───────────── */
 :root {
   /* Qrafit + kəhrəba: qrafit əsas rəng, kəhrəba yalnız aktiv göstərici və kiçik vurğu üçün */

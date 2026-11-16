@@ -4,6 +4,7 @@ import { useFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { Avatar, ErrorBox, Icon, PageHeader, ProgressBar, SkeletonList } from "@/components/ui";
+import QuestionImage from "@/components/QuestionImage";
 
 interface ReviewAttempt {
   id: string;
@@ -16,14 +17,14 @@ interface ReviewAttempt {
   student: { id: string; name: string; photo: string | null };
   package: { id: string; name: string; group: { id: string; name: string } | null };
   numbers?: Record<string, number>;
-  blanks?: { id: string; text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; order: number }[];
+  blanks?: { id: string; text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; imageUrl?: string | null; order: number }[];
   answers: {
     id: string;
     answer: string;
     isCorrect: boolean | null;
     status: "PENDING" | "APPROVED" | "REJECTED";
     teacherComment: string | null;
-    question: { id: string; text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; order: number };
+    question: { id: string; text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; imageUrl?: string | null; order: number };
   }[];
 }
 
@@ -31,7 +32,7 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
   const { user } = useAuth();
   const { data: a, loading, error, reload } = useFetch<ReviewAttempt>(`/api/attempts/${id}`);
 
-  if (loading) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
+  if (loading && !a) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
   if (error || !a) return <div className="page-narrow"><ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} /></div>;
 
   const pct = percent(a.score, a.totalScore);
@@ -93,7 +94,8 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
                 {state === "pending" && <span className="badge-warn"><Icon name="clock" size={12} /> Yoxlanılır</span>}
                 {state === "blank" && <span className="badge-muted">Cavab verilməyib</span>}
               </div>
-              <p className="whitespace-pre-wrap font-semibold">{q.text}</p>
+              <p className="whitespace-pre-wrap break-words font-semibold">{q.text}</p>
+              <QuestionImage src={q.imageUrl} />
 
               {q.type === "MULTIPLE_CHOICE" ? (
                 <ul className="mt-3 space-y-2">
@@ -104,15 +106,19 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
                       <li
                         key={k}
                         className={cx(
-                          "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm",
+                          "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-3.5 py-2.5 text-sm",
                           right ? "border-ok/50 bg-ok/10" : mine ? "border-bad/50 bg-bad/10" : "border-line",
                         )}
                       >
-                        <span className="font-bold text-muted">{String.fromCharCode(65 + k)}</span>
-                        <span className="flex-1">{opt}</span>
-                        {right && <Icon name="check" size={16} className="text-ok" />}
-                        {mine && !right && <Icon name="x" size={16} className="text-bad" />}
-                        {mine && <span className="text-xs font-semibold text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</span>}
+                        <span className="shrink-0 font-bold text-muted">{String.fromCharCode(65 + k)}</span>
+                        <span className="min-w-0 flex-1 basis-40 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{opt}</span>
+                        {(right || mine) && (
+                          <span className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                            {right && <Icon name="check" size={16} className="text-ok" />}
+                            {mine && !right && <Icon name="x" size={16} className="text-bad" />}
+                            {mine && <span className="text-xs font-semibold text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</span>}
+                          </span>
+                        )}
                       </li>
                     );
                   })}
@@ -120,7 +126,7 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
               ) : (
                 <div className="mt-3 rounded-xl bg-surface-2 p-3.5 text-sm">
                   <p className="mb-1 text-xs font-semibold uppercase text-muted">{viewer === "student" && a.student.id === user?.id ? "Sizin cavab" : "Cavab"}</p>
-                  <p className="whitespace-pre-wrap">{r.blank ? "Cavab verilməyib" : r.answer}</p>
+                  <p className="whitespace-pre-wrap break-words">{r.blank ? "Cavab verilməyib" : r.answer}</p>
                 </div>
               )}
 

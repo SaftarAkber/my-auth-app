@@ -43,6 +43,7 @@ export async function GET() {
                 text: true,
                 type: true,
                 options: true,
+                imageUrl: true,
                 correctAnswer: true,
               },
             },

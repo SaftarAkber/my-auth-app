@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Fayl seçilməyib" }, { status: 400 });
     }
 
+    if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.type)) {
+      return NextResponse.json({ error: "Yalnız şəkil (JPG, PNG, WEBP, GIF) yükləmək olar" }, { status: 400 });
+    }
+
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json({ error: "Şəkil maksimum 5MB ola bilər" }, { status: 400 });

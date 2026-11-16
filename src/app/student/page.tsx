@@ -112,8 +112,8 @@ export default function StudentHome() {
               <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group p-5 transition hover:border-brand/40">
                 <div className="flex items-center gap-3">
                   <Avatar src={e.teacher.photo} name={e.teacher.name} size={40} />
-                  <div className="min-w-0">
-                    <p className="truncate font-bold group-hover:text-brand">{e.group.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 break-words font-bold leading-snug [overflow-wrap:anywhere] group-hover:text-brand" title={e.group.name}>{e.group.name}</p>
                     <p className="truncate text-xs text-muted">{e.teacher.name}</p>
                   </div>
                 </div>

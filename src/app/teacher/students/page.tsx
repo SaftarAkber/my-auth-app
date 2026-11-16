@@ -54,7 +54,7 @@ export default function TeacherStudentsPage() {
           <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
           <input className="input pl-10" placeholder="Ad, telefon və ya email…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="input !w-auto" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+        <select className="input min-w-0 max-w-full sm:!w-auto" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
           <option value="">Bütün qruplar</option>
           {groups.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
         </select>
@@ -76,7 +76,7 @@ export default function TeacherStudentsPage() {
                 <p className="truncate font-bold">{s.name}</p>
                 <p className="truncate text-xs text-muted">{s.phone ?? s.email ?? "—"} · {fmtDate(since)}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {gs.map((g) => <span key={g.id} className="badge-brand">{g.name}</span>)}
+                  {gs.map((g) => <span key={g.id} className="badge-brand max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">{g.name}</span>)}
                 </div>
                 </div>
               </Link>

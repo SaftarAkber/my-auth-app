@@ -6,6 +6,7 @@ import { cx, fmtDateTime, percent } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
 import { SubNav, TESTS_NAV } from "@/components/SubNav";
 import GiftModal from "@/components/GiftModal";
+import QuestionImage from "@/components/QuestionImage";
 
 interface Answer {
   id: string;
@@ -13,7 +14,7 @@ interface Answer {
   isCorrect: boolean | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   teacherComment: string | null;
-  question: { text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null };
+  question: { text: string; type: "MULTIPLE_CHOICE" | "OPEN_ENDED"; options: string[] | null; correctAnswer: string | null; imageUrl?: string | null };
 }
 interface Attempt {
   id: string;
@@ -97,7 +98,7 @@ export default function TeacherAttemptsPage() {
           <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
           <input className="input pl-10" placeholder="Tələbə axtar…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="input !w-auto" value={pkgId} onChange={(e) => setPkgId(e.target.value)}>
+        <select className="input !w-auto min-w-0 max-w-full" value={pkgId} onChange={(e) => setPkgId(e.target.value)}>
           <option value="">Bütün testlər</option>
           {packages.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
         </select>
@@ -148,8 +149,9 @@ export default function TeacherAttemptsPage() {
                           <span className="text-xs font-bold uppercase text-muted">Sual {i + 1} · {r.question.type === "MULTIPLE_CHOICE" ? "Seçimli" : "Açıq"}</span>
                           {r.status === "PENDING" ? <span className="badge-warn">Yoxlanmalı</span> : r.isCorrect ? <span className="badge-ok">Düzgün</span> : <span className="badge-bad">Yanlış</span>}
                         </div>
-                        <p className="whitespace-pre-wrap text-sm font-semibold">{r.question.text}</p>
-                        <p className="mt-2 text-sm"><span className="text-muted">Cavab:</span> <span className="whitespace-pre-wrap">{r.answer}</span></p>
+                        <p className="whitespace-pre-wrap break-words text-sm font-semibold">{r.question.text}</p>
+                        <QuestionImage src={r.question.imageUrl} />
+                        <p className="mt-2 break-words text-sm"><span className="text-muted">Cavab:</span> <span className="whitespace-pre-wrap">{r.answer}</span></p>
                         {r.question.type === "MULTIPLE_CHOICE" && !r.isCorrect && (
                           <p className="mt-1 text-sm"><span className="text-muted">Düzgün cavab:</span> <span className="font-semibold text-ok">{r.question.correctAnswer}</span></p>
                         )}
@@ -195,11 +197,12 @@ export default function TeacherAttemptsPage() {
           <div className="space-y-4">
             <div>
               <p className="label">Sual</p>
-              <p className="whitespace-pre-wrap font-semibold">{grading.question.text}</p>
+              <p className="whitespace-pre-wrap break-words font-semibold">{grading.question.text}</p>
+              <QuestionImage src={grading.question.imageUrl} />
             </div>
             <div className="rounded-xl bg-surface-2 p-3.5">
               <p className="label">Tələbənin cavabı</p>
-              <p className="whitespace-pre-wrap text-sm">{grading.answer}</p>
+              <p className="whitespace-pre-wrap break-words text-sm">{grading.answer}</p>
             </div>
             <label className="block">
               <span className="label">Şərh (istəyə bağlı)</span>

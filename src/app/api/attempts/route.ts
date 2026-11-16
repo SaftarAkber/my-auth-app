@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         questions: {
           where: { isActive: true },
           orderBy: { order: "asc" },
-          select: { id: true, text: true, type: true, options: true, order: true },
+          select: { id: true, text: true, type: true, options: true, imageUrl: true, order: true },
         },
       },
     });
