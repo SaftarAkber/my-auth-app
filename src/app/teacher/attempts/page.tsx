@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
@@ -32,10 +34,12 @@ interface Attempt {
   answers: Answer[];
 }
 
-export default function TeacherAttemptsPage() {
+/** Yoxlanmalı açıq cavabı olan cəhdlər: qiymətləndirmə və coin */
+function ReviewList({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const { data, loading, error, reload } = useFetch<{ attempts: Attempt[] }>("/api/teacher/attempts");
-  const [tab, setTab] = useState<"all" | "review">("all");
+  const { data, loading, error, reload: reloadList } = useFetch<{ attempts: Attempt[] }>("/api/teacher/attempts?pending=1");
+  const reload = () => { reloadList(); onChanged(); };
+  const tab = "review" as "all" | "review";
   const [pkgId, setPkgId] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -80,19 +84,7 @@ export default function TeacherAttemptsPage() {
   }
 
   return (
-    <div className="page">
-      <PageHeader title="Nəticələr" subtitle="Tələbələrin tamamladığı testlər və açıq sualların yoxlanması" />
-      <SubNav items={TESTS_NAV} />
-
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: "all", label: "Hamısı", count: all.length },
-          { id: "review", label: "Yoxlanmalı", count: all.filter(needsReview).length },
-        ]}
-      />
-
+    <div>
       <div className="mb-5 flex flex-wrap gap-3">
         <div className="relative min-w-60 flex-1 sm:max-w-sm">
           <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
@@ -215,6 +207,229 @@ export default function TeacherAttemptsPage() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+/* ───────── Testlər → tələbələr → cəhdlər ───────── */
+
+interface PkgSummary {
+  id: string; name: string; isBank: boolean; isMonthly: boolean; collection: { name: string } | null;
+  students: number; attempts: number; lastAt: string | null; pending: number;
+}
+interface StudentAttemptLite {
+  id: string; score: number | null; totalScore: number | null; startedAt: string; finishedAt: string | null;
+  rewardGranted: boolean; rewardCoins: number; pending: number; first: boolean;
+}
+interface PkgResults {
+  package: { id: string; name: string; isBank: boolean; isMonthly: boolean; rewardEnabled: boolean; rewardMinCorrect: number | null; rewardCoins: number | null; rewardAuto: boolean };
+  students: { student: { id: string; name: string; photo: string | null }; attempts: StudentAttemptLite[] }[];
+}
+
+const pctTone = (p: number) => (p >= 70 ? "bg-ok/10 text-ok" : p >= 40 ? "bg-warn/10 text-warn" : "bg-bad/10 text-bad");
+
+export default function TeacherAttemptsPage() {
+  return (
+    <Suspense fallback={<div className="page"><SkeletonList /></div>}>
+      <AttemptsInner />
+    </Suspense>
+  );
+}
+
+function AttemptsInner() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const pkgId = search.get("p");
+  const [tab, setTab] = useState<"packages" | "review">(search.get("tab") === "review" ? "review" : "packages");
+  const list = useFetch<{ packages: PkgSummary[] }>("/api/teacher/results");
+  const pendingTotal = (list.data?.packages ?? []).reduce((n, p) => n + p.pending, 0);
+
+  return (
+    <div className="page">
+      <PageHeader title="Nəticələr" subtitle="Testlər üzrə tələbələrin cəhdləri və açıq sualların yoxlanması" />
+      <SubNav items={TESTS_NAV} />
+
+      {pkgId ? (
+        <PackageView id={pkgId} onBack={() => router.push("/teacher/attempts")} />
+      ) : (
+        <>
+          <Tabs
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { id: "packages", label: "Testlər", count: list.data?.packages.length },
+              { id: "review", label: "Yoxlanmalı", count: pendingTotal },
+            ]}
+          />
+          {tab === "review" ? (
+            <ReviewList onChanged={list.reload} />
+          ) : (
+            <PackageList packages={list.data?.packages} loading={list.loading} error={list.error} reload={list.reload} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function PackageList({
+  packages, loading, error, reload,
+}: { packages?: PkgSummary[]; loading: boolean; error: string | null; reload: () => void }) {
+  const [q, setQ] = useState("");
+  if (loading && !packages) return <SkeletonList />;
+  if (error || !packages) return <ErrorBox message={error ?? "Xəta"} onRetry={reload} />;
+  if (packages.length === 0) return <Empty icon="chart" title="Hələ heç kim test işləməyib" />;
+  const rows = packages.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div>
+      <div className="relative mb-4 sm:max-w-sm">
+        <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
+        <input className="input pl-10" placeholder="Test axtar…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="space-y-2.5">
+        {rows.map((p) => (
+          <Link key={p.id} href={`/teacher/attempts?p=${p.id}`} className="card flex items-center gap-3 p-4 transition-colors hover:bg-tint/50">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Icon name={p.isBank ? "book" : p.isMonthly ? "award" : "file"} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-words font-bold [overflow-wrap:anywhere]">{p.name}</span>
+              <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
+                {p.collection && <span>{p.collection.name}</span>}
+                <span>{p.students} tələbə · {p.attempts} cəhd</span>
+                {p.lastAt && <span>son: {fmtDateTime(p.lastAt)}</span>}
+              </span>
+              {(p.isBank || p.isMonthly || p.pending > 0) && (
+                <span className="mt-1.5 flex flex-wrap gap-1.5">
+                  {p.isBank && <span className="badge-brand">Sual bankı</span>}
+                  {p.isMonthly && <span className="badge-brand">Aylıq sınaq</span>}
+                  {p.pending > 0 && <span className="badge-warn">{p.pending} yoxlanmalı</span>}
+                </span>
+              )}
+            </span>
+            <Icon name="right" className="shrink-0 text-muted" />
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PackageView({ id, onBack }: { id: string; onBack: () => void }) {
+  const { data, loading, error, reload } = useFetch<PkgResults>(`/api/teacher/results/${id}`);
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+  const [giftFor, setGiftFor] = useState<{ attempt: StudentAttemptLite; student: { id: string; name: string } } | null>(null);
+
+  if (loading && !data) return <SkeletonList />;
+  if (error || !data) return <ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} />;
+  const pkg = data.package;
+  const eligible = (a: StudentAttemptLite) =>
+    pkg.rewardEnabled && pkg.rewardMinCorrect != null && (a.score ?? 0) >= pkg.rewardMinCorrect && !a.rewardGranted && a.pending === 0;
+
+  const rows = data.students
+    .map((s) => {
+      const pcts = s.attempts.map((a) => percent(a.score, a.totalScore));
+      return {
+        ...s,
+        last: s.attempts[s.attempts.length - 1],
+        best: Math.max(...pcts),
+        avg: Math.round((pcts.reduce((x, y) => x + y, 0) / pcts.length) * 10) / 10,
+        total: s.attempts.reduce((n, a) => n + (a.score ?? 0), 0),
+        pending: s.attempts.reduce((n, a) => n + a.pending, 0),
+      };
+    })
+    .filter((r) => !q.trim() || r.student.name.toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => +new Date(b.last.finishedAt ?? 0) - +new Date(a.last.finishedAt ?? 0));
+  const cur = data.students.find((s) => s.student.id === open);
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button className="btn-secondary btn-sm" onClick={onBack}><Icon name="left" size={14} /> Testlər</button>
+        <h2 className="min-w-0 flex-1 break-words text-lg font-bold [overflow-wrap:anywhere]">{pkg.name}</h2>
+        <Link href={`/teacher/results/${pkg.id}`} className="btn-soft btn-sm"><Icon name="chart" size={14} /> {pkg.isBank ? "Reytinq" : "Cədvəl"}</Link>
+      </div>
+      <div className="relative mb-4 sm:max-w-sm">
+        <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={17} />
+        <input className="input pl-10" placeholder="Tələbə axtar…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+
+      {rows.length === 0 ? (
+        <Empty icon="users" title="Tələbə tapılmadı" />
+      ) : (
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <button key={r.student.id} onClick={() => setOpen(r.student.id)} className="card flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-tint/50">
+              <Avatar src={r.student.photo} name={r.student.name} size={38} />
+              <span className="min-w-0 flex-1">
+                <span className="block break-words font-bold [overflow-wrap:anywhere]">{r.student.name}</span>
+                <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
+                  <span>{r.attempts.length} cəhd</span>
+                  <span>son: {r.last.score}/{r.last.totalScore}</span>
+                  {r.attempts.length > 1 && <span>ən yaxşı: {r.best}%</span>}
+                  {pkg.isBank && <span>toplam düz: {r.total}</span>}
+                </span>
+                {r.pending > 0 && <span className="badge-warn mt-1">{r.pending} yoxlanmalı</span>}
+              </span>
+              <span className={cx("badge shrink-0 font-extrabold", pctTone(r.avg))} title="Orta faiz">{r.avg}%</span>
+              <Icon name="right" className="shrink-0 text-muted" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <Modal open={!!cur} onClose={() => setOpen(null)} title={cur?.student.name}>
+        {cur && (
+          <div>
+            <Link href={`/u/${cur.student.id}`} className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+              Profilə bax <Icon name="right" size={14} />
+            </Link>
+            <ul className="divide-y divide-line">
+              {[...cur.attempts].reverse().map((a, i) => {
+                const p = percent(a.score, a.totalScore);
+                return (
+                  <li key={a.id} className="py-2.5">
+                    <div className="flex items-center gap-3">
+                      <Link href={`/teacher/attempts/${a.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:underline">
+                        <span className="w-7 shrink-0 text-center text-sm font-bold text-muted">{cur.attempts.length - i}</span>
+                        <span className="min-w-0 flex-1 text-sm">
+                          <span className="font-semibold">{a.score}/{a.totalScore}</span>
+                          <span className="block text-xs text-muted">{fmtDateTime(a.finishedAt)}</span>
+                        </span>
+                      </Link>
+                      <span className={cx("badge shrink-0", pctTone(p))}>{p}%</span>
+                    </div>
+                    {(pkg.isMonthly || a.pending > 0 || a.rewardGranted || eligible(a)) && (
+                      <div className="ml-10 mt-1 flex flex-wrap gap-1.5">
+                        {pkg.isMonthly && (a.first ? <span className="badge-brand">Cədvələ düşən</span> : <span className="badge-muted">Məşq</span>)}
+                        {a.pending > 0 && <span className="badge-warn">{a.pending} yoxlanmalı</span>}
+                        {a.rewardGranted && <span className="badge-ok"><Icon name="coin" size={12} /> +{a.rewardCoins}</span>}
+                        {eligible(a) && (
+                          <button className="badge-warn" onClick={() => setGiftFor({ attempt: a, student: cur.student })}>
+                            <Icon name="coin" size={12} /> Coin ver
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </Modal>
+
+      <GiftModal
+        open={!!giftFor}
+        onClose={() => setGiftFor(null)}
+        onDone={reload}
+        studentId={giftFor?.student.id}
+        studentName={giftFor?.student.name}
+        attemptId={giftFor?.attempt.id}
+        defaultAmount={pkg.rewardCoins ?? 10}
+        defaultReason={giftFor ? `${pkg.name}, ${giftFor.attempt.score}/${giftFor.attempt.totalScore}` : ""}
+      />
     </div>
   );
 }

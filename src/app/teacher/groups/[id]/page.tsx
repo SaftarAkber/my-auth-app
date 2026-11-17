@@ -12,6 +12,7 @@ import {
 import GroupHeader from "@/components/GroupHeader";
 import GroupEditModal from "@/components/GroupEditModal";
 import TopicList from "@/components/topics/TopicList";
+import MonthlyTable from "@/components/MonthlyTable";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
 } from "@/components/ui";
@@ -49,7 +50,7 @@ export default function TeacherGroupPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
-  const [tab, setTab] = useState<"feed" | "topics" | "members" | "tests" | "videos" | "requests">("feed");
+  const [tab, setTab] = useState<"feed" | "topics" | "members" | "tests" | "monthly" | "videos" | "requests">("feed");
   const [editOpen, setEditOpen] = useState(false);
 
   // Post yazma
@@ -202,6 +203,7 @@ export default function TeacherGroupPage() {
               { id: "members", label: "Üzvlər", count: g.members.length },
               { id: "requests", label: "Müraciətlər", count: pending.length },
               { id: "tests", label: "Testlər", count: g.testPackages.length },
+              ...(g.testPackages.some((p) => p.isMonthly) ? [{ id: "monthly" as const, label: "Aylıq sınaq" }] : []),
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
             ]}
           />
@@ -315,7 +317,11 @@ export default function TeacherGroupPage() {
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name="file" /></span>
                       <div className="min-w-0 flex-1">
                         <p className="font-bold group-hover:underline">{p.name}</p>
-                        <p className="text-xs text-muted">{p._count.questions} sual</p>
+                        <p className="text-xs text-muted">
+                          {p._count.questions} sual
+                          {p.isBank && " · Sual bankı"}
+                          {p.isMonthly && " · Aylıq sınaq"}
+                        </p>
                       </div>
                     </Link>
                     <TestWindowBadge pkg={p} />
@@ -324,6 +330,8 @@ export default function TeacherGroupPage() {
                 ))}
               </div>
             ))}
+
+          {tab === "monthly" && <MonthlyTable groupId={g.id} attemptBase="/teacher/attempts" />}
 
           {tab === "videos" && (
             <div className="space-y-4">

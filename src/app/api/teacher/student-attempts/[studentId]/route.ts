@@ -1,38 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { requireTeacher, serverError } from "@/lib/guards";
+import { ownedTestWhere } from "@/lib/topics";
 
-export async function GET(
-  _: NextRequest,
-  { params }: { params: Promise<{ studentId: string }> }
-) {
+/** Tələbənin bu müəllimin testlərindəki bitmiş cəhdləri (profildə "Test keçmişi") */
+export async function GET(_: NextRequest, { params }: { params: Promise<{ studentId: string }> }) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-    }
-
+    const auth = await requireTeacher();
+    if ("response" in auth) return auth.response;
     const { studentId } = await params;
 
     const attempts = await prisma.studentAttempt.findMany({
-      where: {
-        studentId,
-        package: { deletedAt: null, collection: { teacherId: currentUser.id } },
+      where: { studentId, finishedAt: { not: null }, package: ownedTestWhere(auth.user.id) },
+      select: {
+        id: true, score: true, totalScore: true, finishedAt: true,
+        package: { select: { id: true, name: true, isBank: true, isMonthly: true } },
       },
-      include: {
-        package: { select: { name: true } },
-        answers: {
-          include: {
-            question: { select: { text: true, type: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
+      orderBy: { finishedAt: "desc" },
+      take: 500,
     });
-
     return NextResponse.json({ attempts });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return serverError(error);
   }
 }

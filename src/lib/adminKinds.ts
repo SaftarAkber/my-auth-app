@@ -28,6 +28,12 @@ const str = (v: unknown, max = 2000) => (typeof v === "string" ? v.trim().slice(
 const bool = (v: unknown) => (typeof v === "boolean" ? v : undefined);
 const clean = <T extends Record<string, unknown>>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+/** Mətn sahəsindən tam ədəd (boş → null, səhv → undefined) */
+const num = (v: unknown, min: number, max: number): number | null | undefined => {
+  if (v === null || (typeof v === "string" && !v.trim())) return null;
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : undefined;
+};
 const has = (q: string) => (q ? { contains: q, mode: "insensitive" as const } : undefined);
 
 const VIS = [
@@ -72,6 +78,17 @@ export const ADMIN_KINDS: Record<string, Spec> = {
       { key: "description", label: "Təsvir", type: "textarea" },
       { key: "isPublished", label: "Dərc olunub", type: "bool" },
       { key: "isPublic", label: "Profildə hamıya açıq", type: "bool" },
+      { key: "isTimed", label: "Vaxt məhdudiyyəti", type: "bool" },
+      { key: "durationMin", label: "Müddət (dəqiqə)", type: "text" },
+      { key: "allowRetry", label: "Təkrar həll icazəsi", type: "bool" },
+      { key: "isBank", label: "Sual bankı (hər dəfə təsadüfi suallar)", type: "bool" },
+      { key: "drawEasy", label: "Bank: asan sual sayı", type: "text" },
+      { key: "drawMedium", label: "Bank: orta sual sayı", type: "text" },
+      { key: "drawHard", label: "Bank: çətin sual sayı", type: "text" },
+      { key: "isMonthly", label: "Aylıq sınaq (qrup yarış cədvəli)", type: "bool" },
+      { key: "rewardEnabled", label: "Coin mükafatı", type: "bool" },
+      { key: "rewardMinCorrect", label: "Mükafat: minimum düz cavab", type: "text" },
+      { key: "rewardCoins", label: "Mükafat: coin", type: "text" },
     ],
     async list(q) {
       const rows = await prisma.testPackage.findMany({
@@ -85,16 +102,43 @@ export const ADMIN_KINDS: Record<string, Spec> = {
         take: 200,
       });
       return rows.map((t) => ({
-        id: t.id, title: t.name, sub: `${t._count.questions} sual · ${t.isPublished ? "dərc olunub" : "qaralama"}`,
+        id: t.id,
+        title: t.name,
+        sub: `${t._count.questions} sual · ${t.isPublished ? "dərc olunub" : "qaralama"}${t.isBank ? ` · bank (${t.drawEasy}/${t.drawMedium}/${t.drawHard})` : ""}${t.isMonthly ? " · aylıq sınaq" : ""}${t.isTimed && t.duration ? ` · ${Math.round(t.duration / 60)} dəq` : ""}`,
         owner: t.collection?.teacher.name ?? t.group?.teacher.name ?? "—",
-        values: { name: t.name, description: t.description, isPublished: t.isPublished, isPublic: t.isPublic },
+        values: {
+          name: t.name, description: t.description, isPublished: t.isPublished, isPublic: t.isPublic,
+          isTimed: t.isTimed, durationMin: t.duration ? String(Math.round(t.duration / 60)) : "", allowRetry: t.allowRetry,
+          isBank: t.isBank, drawEasy: String(t.drawEasy), drawMedium: String(t.drawMedium), drawHard: String(t.drawHard),
+          isMonthly: t.isMonthly, rewardEnabled: t.rewardEnabled,
+          rewardMinCorrect: t.rewardMinCorrect ? String(t.rewardMinCorrect) : "", rewardCoins: t.rewardCoins ? String(t.rewardCoins) : "",
+        },
       }));
     },
-    update: (id, d) =>
-      prisma.testPackage.update({
+    update: async (id, d) => {
+      const dur = num(d.durationMin, 1, 600);
+      const isBank = bool(d.isBank);
+      const isMonthly = isBank ? false : bool(d.isMonthly);
+      const isTimed = bool(d.isTimed);
+      return prisma.testPackage.update({
         where: { id },
-        data: clean({ name: str(d.name, 160) || undefined, description: str(d.description), isPublished: bool(d.isPublished), isPublic: bool(d.isPublic) }),
-      }),
+        data: clean({
+          name: str(d.name, 160) || undefined, description: str(d.description), isPublished: bool(d.isPublished), isPublic: bool(d.isPublic),
+          isTimed: isTimed === true && !dur ? undefined : isTimed,
+          duration: isTimed === false ? null : dur ? dur * 60 : undefined,
+          allowRetry: isBank ? true : bool(d.allowRetry),
+          isBank,
+          isMonthly,
+          ...(isBank ? { shareAnswers: false } : {}),
+          drawEasy: num(d.drawEasy, 0, 200) ?? undefined,
+          drawMedium: num(d.drawMedium, 0, 200) ?? undefined,
+          drawHard: num(d.drawHard, 0, 200) ?? undefined,
+          rewardEnabled: bool(d.rewardEnabled),
+          rewardMinCorrect: num(d.rewardMinCorrect, 1, 1000),
+          rewardCoins: num(d.rewardCoins, 1, 100000),
+        }),
+      });
+    },
     remove: (id) => prisma.testPackage.delete({ where: { id } }),
   },
 

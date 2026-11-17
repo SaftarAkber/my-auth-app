@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { forbidden, requireStudent, serverError, unauthorized } from "@/lib/guards";
+import { closeExpiredAttempts, drawBankQuestions, draftOf, finishAttempt, isExpired } from "@/lib/attempts";
 
 // Test cəhdini başlat (və ya davam edəni qaytar)
 export async function POST(req: NextRequest) {
@@ -19,18 +20,14 @@ export async function POST(req: NextRequest) {
       where: { id: packageId },
       include: {
         testPackageGroups: { select: { groupId: true } },
-        questions: {
-          where: { isActive: true },
-          orderBy: { order: "asc" },
-          select: { id: true, text: true, type: true, options: true, imageUrl: true, order: true },
-        },
+        _count: { select: { questions: { where: { isActive: true } } } },
       },
     });
 
-    if (!testPackage || !testPackage.isPublished) {
+    if (!testPackage || !testPackage.isPublished || testPackage.deletedAt) {
       return NextResponse.json({ error: "Test tapılmadı" }, { status: 404 });
     }
-    if (testPackage.questions.length === 0) {
+    if (testPackage._count.questions === 0) {
       return NextResponse.json({ error: "Bu testdə hələ sual yoxdur" }, { status: 400 });
     }
 
@@ -56,34 +53,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Testin vaxtı bitib" }, { status: 403 });
     }
 
-    const payload = (attempt: { id: string; startedAt: Date }, extra = {}) => ({
-      attemptId: attempt.id,
-      questions: testPackage.questions,
-      isTimed: testPackage.isTimed,
-      duration: testPackage.duration,
-      startedAt: attempt.startedAt,
-      ...extra,
-    });
+    const qSelect = { id: true, text: true, type: true, options: true, imageUrl: true, order: true } as const;
+    const payload = async (
+      attempt: { id: string; startedAt: Date; questionIds: string[]; draft: unknown },
+      extra = {},
+    ) => {
+      let questions;
+      if (attempt.questionIds.length) {
+        // Bank: seçilmiş suallar seçim sırası ilə
+        const rows = await prisma.question.findMany({ where: { id: { in: attempt.questionIds } }, select: qSelect });
+        const byId = new Map(rows.map((q) => [q.id, q]));
+        questions = attempt.questionIds.flatMap((id, i) => {
+          const q = byId.get(id);
+          return q ? [{ ...q, order: i }] : [];
+        });
+      } else {
+        questions = await prisma.question.findMany({ where: { packageId, isActive: true }, orderBy: { order: "asc" }, select: qSelect });
+      }
+      return {
+        attemptId: attempt.id,
+        questions,
+        isTimed: testPackage.isTimed,
+        duration: testPackage.duration,
+        startedAt: attempt.startedAt,
+        answers: draftOf(attempt.draft as never),
+        isBank: testPackage.isBank,
+        ...extra,
+      };
+    };
 
-    const latest = await prisma.studentAttempt.findFirst({
+    let latest = await prisma.studentAttempt.findFirst({
       where: { studentId: user.id, packageId },
       orderBy: { startedAt: "desc" },
     });
 
-    // Davam edən cəhd
+    // Davam edən cəhd: vaxt varsa qaldığı yerdən; vaxt bitibsə bitmiş sayılır (cavabsızlar səhv)
     if (latest && !latest.finishedAt) {
-      return NextResponse.json(payload(latest));
+      if (!isExpired(latest.startedAt, testPackage)) return NextResponse.json(await payload(latest));
+      await finishAttempt(latest.id, null);
+      latest = await prisma.studentAttempt.findUnique({ where: { id: latest.id } });
     }
 
-    // Tamamlanıb — təkrar icazəsi yoxdursa rədd et
-    if (latest?.finishedAt && !testPackage.allowRetry) {
+    // Tamamlanıb: bankda həmişə yeni cəhd; adi testdə təkrar icazəsi lazımdır
+    if (latest?.finishedAt && !testPackage.allowRetry && !testPackage.isBank) {
       return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
     }
 
+    const questionIds = testPackage.isBank ? await drawBankQuestions(testPackage, user.id) : [];
+    if (testPackage.isBank && questionIds.length === 0) {
+      return NextResponse.json({ error: "Bu testdə hələ sual yoxdur" }, { status: 400 });
+    }
     const attempt = await prisma.studentAttempt.create({
-      data: { studentId: user.id, packageId },
+      data: { studentId: user.id, packageId, questionIds },
     });
-    return NextResponse.json(payload(attempt, latest ? { isRetry: true } : {}));
+    return NextResponse.json(await payload(attempt, latest ? { isRetry: true } : {}));
   } catch (error) {
     return serverError(error);
   }
@@ -95,12 +118,13 @@ export async function GET() {
     if (!currentUser) return unauthorized();
 
     if (currentUser.role === "STUDENT") {
+      await closeExpiredAttempts({ studentId: currentUser.id });
       const attempts = await prisma.studentAttempt.findMany({
         where: { studentId: currentUser.id, package: { deletedAt: null } },
         include: {
           package: {
             select: {
-              id: true, name: true, isTimed: true, duration: true, allowRetry: true,
+              id: true, name: true, isTimed: true, duration: true, allowRetry: true, isBank: true, isMonthly: true,
               group: { select: { id: true, name: true, teacher: { select: { name: true } } } },
               testPackageGroups: { select: { group: { select: { id: true, name: true } } } },
             },

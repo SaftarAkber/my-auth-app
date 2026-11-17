@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
-import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
+import { useTestRunner } from "@/components/TestTaker";
 import {
-  PostCard, TestRow, VideoPackageBlock,
+  BankRow, PostCard, TestRow, VideoPackageBlock, bankEntries,
   type PostLite, type TestPackageLite, type VideoPackageLite,
 } from "@/components/content";
+import MonthlyTable from "@/components/MonthlyTable";
 import {
   Avatar, Empty, ErrorBox, Icon, SkeletonList, Tabs, useConfirm, useToast,
 } from "@/components/ui";
@@ -40,14 +41,9 @@ export default function StudentGroupPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
-  const [tab, setTab] = useState<"feed" | "topics" | "tests" | "videos" | "members">("feed");
-  const { start, starting } = useStartTest();
-  const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
-
-  async function begin(p: TestPackageLite) {
-    const d = await start(p.id);
-    if (d) setTaking({ name: p.name, data: d });
-  }
+  const [tab, setTab] = useState<"feed" | "topics" | "tests" | "monthly" | "videos" | "members">("feed");
+  const { begin: run, starting, node } = useTestRunner(() => reload());
+  const begin = (p: TestPackageLite) => run(p);
 
   async function leave() {
     const ok = await confirm({
@@ -105,6 +101,7 @@ export default function StudentGroupPage() {
               // Üzv olmayan tələbə yalnız müəllimin hərkəsə açıq mövzularını görür
               { id: "topics" as const, label: "Mövzular" },
               { id: "tests", label: "Testlər", count: g.testPackages.length },
+              ...(g.isMember && g.testPackages.some((p) => p.isMonthly) ? [{ id: "monthly" as const, label: "Aylıq sınaq" }] : []),
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
               { id: "members", label: "Üzvlər", count: g.members.length },
             ]}
@@ -125,12 +122,28 @@ export default function StudentGroupPage() {
             (g.testPackages.length === 0 ? (
               <Empty icon="file" title="Hələ test yoxdur" />
             ) : (
-              <div className="space-y-3">
-                {g.testPackages.map((p) => (
-                  <TestRow key={p.id} pkg={p} onStart={begin} busy={starting === p.id} canStart={!g.isTeacher} />
-                ))}
+              <div className="space-y-6">
+                {/* Mövzu testləri: hər mövzunun qarşısında "Testə başla" (hər dəfə yeni suallar) */}
+                {bankEntries(g.testPackages).length > 0 && (
+                  <section className="space-y-3">
+                    <h2 className="text-base font-bold">Mövzu testləri</h2>
+                    {bankEntries(g.testPackages).map((e) => (
+                      <BankRow key={e.key} pkg={e.pkg} title={e.title} onStart={begin} busy={starting === e.pkg.id} canStart={!g.isTeacher} />
+                    ))}
+                  </section>
+                )}
+                {g.testPackages.some((p) => !p.isBank) && (
+                  <section className="space-y-3">
+                    {g.testPackages.some((p) => p.isBank) && <h2 className="text-base font-bold">Testlər</h2>}
+                    {g.testPackages.filter((p) => !p.isBank).map((p) => (
+                      <TestRow key={p.id} pkg={p} onStart={begin} busy={starting === p.id} canStart={!g.isTeacher} />
+                    ))}
+                  </section>
+                )}
               </div>
             ))}
+
+          {tab === "monthly" && <MonthlyTable groupId={g.id} attemptBase="/student/attempts" />}
 
           {tab === "videos" &&
             (g.videoPackages.length === 0 ? (
@@ -157,7 +170,7 @@ export default function StudentGroupPage() {
         </div>
       </div>
 
-      {taking && <TestTaker name={taking.name} data={taking.data} onClose={() => { setTaking(null); reload(); }} />}
+      {node}
     </div>
   );
 }

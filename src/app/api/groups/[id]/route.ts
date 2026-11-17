@@ -91,6 +91,7 @@ export async function GET(
     const testPackages = await prisma.testPackage.findMany({
       where: {
         isPublished: true,
+        deletedAt: null,
         OR: [
           { groupId: id },
           { testPackageGroups: { some: { groupId: id } } },
@@ -103,6 +104,8 @@ export async function GET(
         testPackageGroups: {
           include: { group: { select: { id: true, name: true } } },
         },
+        // Sual bankı mövzu adı ilə göstərilir
+        topicTests: { where: { topic: { isPublished: true } }, select: { topic: { select: { id: true, title: true } } } },
         ...(currentUser
           ? {
               attempts: {
@@ -117,7 +120,7 @@ export async function GET(
               },
             }
           : {}),
-        _count: { select: { questions: true, attempts: true } },
+        _count: { select: { questions: { where: { isActive: true } }, attempts: true } },
       },
       orderBy: { createdAt: "desc" },
     });

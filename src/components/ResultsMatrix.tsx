@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useFetch } from "@/lib/api";
 import { cx } from "@/lib/format";
 import { Avatar, Empty, ErrorBox, Icon, PageHeader, SkeletonList } from "@/components/ui";
+import Leaderboard from "@/components/Leaderboard";
 
 type Cell = boolean | "pending" | null;
 interface Results {
+  bank?: boolean;
   package: { id: string; name: string };
   total: number;
   canOpenAll: boolean;
@@ -33,6 +35,15 @@ export default function ResultsMatrix({ packageId, back, attemptBase }: { packag
 
   if (loading) return <div className="page"><SkeletonList rows={4} /></div>;
   if (error || !data) return <div className="page"><ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} /></div>;
+
+  if (data.bank) {
+    return (
+      <div className="page-narrow">
+        <PageHeader title={data.package.name} subtitle="Reytinq" back={back} />
+        <Leaderboard packageId={packageId} />
+      </div>
+    );
+  }
 
   const nums = Array.from({ length: data.total }, (_, i) => i + 1);
 

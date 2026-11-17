@@ -100,6 +100,8 @@ function ProfileInner() {
       ? [{ id: "groups", label: "Qruplar", count: data.groups.length }]
       : [];
   if (isOwn && me?.role === "STUDENT") tabs.push({ id: "results", label: "Nəticələr", own: true });
+  // Müəllim tələbənin öz testlərindəki keçmişini görür (hər cəhddə hansı sual səhvdir)
+  if (!isOwn && me?.role === "TEACHER" && user.role === "STUDENT") tabs.push({ id: "history", label: "Test keçmişi" });
   if (isOwn && me?.role !== "ADMIN") tabs.push({ id: "coins", label: "Coin tarixçəsi", own: true });
   if (isOwn) tabs.push({ id: "settings", label: "Tənzimləmələr", own: true });
 
@@ -245,6 +247,7 @@ function ProfileInner() {
       )}
 
       {tab === "results" && <ResultsTab />}
+      {tab === "history" && <HistoryTab studentId={user.id} />}
       {tab === "coins" && <CoinsTab />}
       {tab === "settings" && (
         <div className="grid max-w-3xl gap-5">
@@ -412,6 +415,50 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
         ))
       )}
 
+    </div>
+  );
+}
+
+/** Müəllim üçün: tələbənin bu müəllimin testlərindəki cəhdləri, testlər üzrə qruplaşdırılmış */
+function HistoryTab({ studentId }: { studentId: string }) {
+  const { data, loading, error, reload } = useFetch<{ attempts: (Attempt & { package: { id: string; name: string; isBank: boolean; isMonthly: boolean } })[] }>(
+    `/api/teacher/student-attempts/${studentId}`,
+  );
+  if (loading && !data) return <SkeletonList />;
+  if (error || !data) return <ErrorBox message={error ?? "Xəta"} onRetry={reload} />;
+  if (data.attempts.length === 0) return <Empty icon="file" title="Testlərinizdə hələ cəhd yoxdur" />;
+  const groups = new Map<string, typeof data.attempts>();
+  for (const a of data.attempts) groups.set(a.package.id, [...(groups.get(a.package.id) ?? []), a]);
+  return (
+    <div className="max-w-3xl space-y-4">
+      {[...groups.values()].map((list) => {
+        const pk = list[0].package;
+        const avg = Math.round((list.reduce((n, a) => n + percent(a.score, a.totalScore), 0) / list.length) * 10) / 10;
+        return (
+          <section key={pk.id} className="card overflow-hidden">
+            <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-2.5">
+              <p className="min-w-0 flex-1 break-words font-bold [overflow-wrap:anywhere]">{pk.name}</p>
+              {pk.isBank && <span className="badge-brand">Sual bankı</span>}
+              {pk.isMonthly && <span className="badge-brand">Aylıq sınaq</span>}
+              <span className="text-xs text-muted">{list.length} cəhd · orta <b className="text-[#1d4ed8]">{avg}%</b></span>
+            </header>
+            <div className="divide-y divide-line">
+              {list.map((a) => {
+                const p = percent(a.score, a.totalScore);
+                return (
+                  <Link key={a.id} href={`/teacher/attempts/${a.id}`} className="row-link">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">{a.score}/{a.totalScore} düz</p>
+                      <p className="text-xs text-muted">{fmtDateTime(a.finishedAt)}</p>
+                    </div>
+                    <span className={p >= 70 ? "badge-ok" : p >= 40 ? "badge-warn" : "badge-bad"}>{p}%</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

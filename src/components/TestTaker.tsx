@@ -24,6 +24,10 @@ export interface AttemptStart {
   isTimed: boolean;
   duration: number | null;
   startedAt: string;
+  /** Davam edən testdə əvvəl saxlanmış cavablar */
+  answers?: Record<string, string>;
+  /** Sual bankı: hər cəhddə yeni təsadüfi suallar */
+  isBank?: boolean;
 }
 
 interface Result {
@@ -56,20 +60,57 @@ export function useStartTest() {
   return { start, starting };
 }
 
+/**
+ * Testi açıb-bağlayan ortaq məntiq: `begin(paket)` testi başladır, `node` isə açıq test pəncərəsidir.
+ * Sual bankında nəticə ekranındakı "Yenidən işlə" yeni təsadüfi suallarla dərhal başladır.
+ */
+export function useTestRunner(onDone?: () => void) {
+  const { start, starting } = useStartTest();
+  const [taking, setTaking] = useState<{ name: string; pkgId: string; data: AttemptStart } | null>(null);
+
+  const begin = useCallback(
+    async (pkg: { id: string; name: string }) => {
+      const d = await start(pkg.id);
+      if (d) setTaking({ name: pkg.name, pkgId: pkg.id, data: d });
+    },
+    [start],
+  );
+
+  const node = taking ? (
+    <TestTaker
+      key={taking.data.attemptId}
+      name={taking.name}
+      data={taking.data}
+      onClose={() => {
+        setTaking(null);
+        onDone?.();
+      }}
+      onRetry={async () => {
+        const d = await start(taking.pkgId);
+        if (d) setTaking({ ...taking, data: d });
+      }}
+    />
+  ) : null;
+
+  return { begin, starting, node };
+}
+
 export default function TestTaker({
-  name, data, onClose,
+  name, data, onClose, onRetry,
 }: {
   name: string;
   data: AttemptStart;
   /** Test bağlananda çağırılır (bitmiş və ya yarımçıq). */
   onClose: (finished: boolean) => void;
+  /** Bank testində nəticə ekranından yeni suallarla yenidən başlamaq */
+  onRetry?: () => void;
 }) {
   const { refreshUser } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
 
   const questions = useMemo(() => [...data.questions].sort((a, b) => a.order - b.order), [data.questions]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(() => data.answers ?? {});
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -86,6 +127,24 @@ export default function TestTaker({
     answersRef.current = answers;
   }, [answers]);
   const doneRef = useRef(false);
+
+  // Hər cavab serverdə də saxlanılır: səhifə bağlansa və ya internet kəsilsə, test qaldığı yerdən davam edir
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const setAnswer = useCallback(
+    (qid: string, value: string, delay = 0) => {
+      setAnswers((a) => ({ ...a, [qid]: value }));
+      clearTimeout(timers.current[qid]);
+      timers.current[qid] = setTimeout(() => {
+        if (doneRef.current) return;
+        api(`/api/attempts/${data.attemptId}`, { method: "PATCH", body: { questionId: qid, answer: value } }).catch(() => {});
+      }, delay);
+    },
+    [data.attemptId],
+  );
+  useEffect(() => {
+    const t = timers.current;
+    return () => Object.values(t).forEach(clearTimeout);
+  }, []);
 
   const submit = useCallback(async () => {
     if (doneRef.current) return;
@@ -144,7 +203,9 @@ export default function TestTaker({
   async function leave() {
     const ok = await confirm({
       title: "Testdən çıxmaq istəyirsiniz?",
-      message: "Cavablarınız saxlanmayacaq. Test sonradan davam etdirilə bilər, amma vaxt işləməyə davam edir.",
+      message: data.isTimed
+        ? "Cavablarınız saxlanılır, testi sonra qaldığınız yerdən davam etdirə bilərsiniz. Vaxt isə işləməyə davam edir: bitəndə test avtomatik bitmiş sayılır."
+        : "Cavablarınız saxlanılır, testi sonra qaldığınız yerdən davam etdirə bilərsiniz.",
       confirmText: "Çıx",
       danger: true,
     });
@@ -187,8 +248,12 @@ export default function TestTaker({
           )}
           <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
             <Link href={`/student/attempts/${data.attemptId}`} className="btn-primary flex-1">Cavablara bax</Link>
+            {data.isBank && onRetry && (
+              <button className="btn-soft flex-1" onClick={onRetry}><Icon name="retry" size={16} /> Yenidən işlə</button>
+            )}
             <button className="btn-secondary flex-1" onClick={() => onClose(true)}>Bağla</button>
           </div>
+          {data.isBank && <p className="mt-3 text-xs text-muted">Hər dəfə yeni təsadüfi suallar gəlir.</p>}
         </div>
       </Overlay>
     );
@@ -247,7 +312,7 @@ export default function TestTaker({
                 return (
                   <button
                     key={i}
-                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                    onClick={() => setAnswer(q.id, opt)}
                     className={cx(
                       "flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition",
                       on ? "border-brand bg-brand/5" : "border-line hover:border-brand/40",
@@ -270,7 +335,7 @@ export default function TestTaker({
                 className="input min-h-40"
                 placeholder="Cavabınızı yazın…"
                 value={answers[q.id] ?? ""}
-                onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                onChange={(e) => setAnswer(q.id, e.target.value, 800)}
               />
             )}
           </div>

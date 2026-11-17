@@ -93,7 +93,12 @@ export const testLiteSelect = (studentId?: string) =>
     endsAt: true,
     isPublished: true,
     visibility: true,
-    _count: { select: { questions: true } },
+    isBank: true,
+    isMonthly: true,
+    drawEasy: true,
+    drawMedium: true,
+    drawHard: true,
+    _count: { select: { questions: { where: { isActive: true } } } },
     ...(studentId
       ? { attempts: { where: { studentId }, select: { id: true, score: true, totalScore: true, finishedAt: true, startedAt: true } } }
       : {}),

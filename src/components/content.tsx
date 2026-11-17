@@ -38,6 +38,69 @@ export interface TestPackageLite {
   endsAt?: string | null;
   _count: { questions: number };
   attempts?: AttemptLite[];
+  /** Sual bankı: hər dəfə səviyyələr üzrə təsadüfi suallar */
+  isBank?: boolean;
+  isMonthly?: boolean;
+  drawEasy?: number;
+  drawMedium?: number;
+  drawHard?: number;
+  topicTests?: { topic: { id: string; title: string } }[];
+}
+
+export const perTest = (p: TestPackageLite) => (p.drawEasy ?? 0) + (p.drawMedium ?? 0) + (p.drawHard ?? 0);
+
+/**
+ * Sual bankı sətri: mövzu adı başlıqda, "Testə başla" (hər dəfə yeni suallar) və reytinq.
+ */
+export function BankRow({
+  pkg, title, onStart, busy, canStart = true,
+}: { pkg: TestPackageLite; title?: string; onStart: (p: TestPackageLite) => void; busy?: boolean; canStart?: boolean }) {
+  const attempts = pkg.attempts ?? [];
+  const finished = attempts.filter((a) => a.finishedAt);
+  const inProgress = attempts.find((a) => !a.finishedAt);
+  const last = [...finished].sort((a, b) => +new Date(b.finishedAt!) - +new Date(a.finishedAt!))[0];
+  const [now] = useState(() => Date.now());
+  const notOpen = !!pkg.startsAt && new Date(pkg.startsAt).getTime() > now;
+  const closed = !!pkg.endsAt && new Date(pkg.endsAt).getTime() < now;
+
+  return (
+    <div className="card-flat flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <Icon name="book" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="break-words font-bold [overflow-wrap:anywhere]">{title ?? pkg.name}</p>
+          {title && title !== pkg.name && <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">{pkg.name}</p>}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <span className="badge-brand"><Icon name="retry" size={12} /> Hər dəfə {perTest(pkg)} yeni sual</span>
+            {pkg.isTimed && pkg.duration && <span className="badge-muted"><Icon name="clock" size={12} /> {minutes(pkg.duration)} dəq</span>}
+            {finished.length > 0 && <span>{finished.length} dəfə işləmisiniz</span>}
+            {last && <span>· son nəticə {last.score}/{last.totalScore}</span>}
+            <TestWindowBadge pkg={pkg} />
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
+        <Link href={`/student/results/${pkg.id}`} className="btn-soft btn-sm"><Icon name="chart" size={14} /> Reytinq</Link>
+        <button className="btn-primary btn-sm" disabled={!canStart || busy || notOpen || closed} onClick={() => onStart(pkg)}>
+          {busy ? <Spinner /> : <Icon name="play" size={14} />}
+          {inProgress ? "Davam et" : finished.length ? "Yenidən işlə" : "Testə başla"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Bank paketlərini mövzular üzrə sıralayır: hər mövzu bir sətir (mövzusuz bank öz adı ilə) */
+export function bankEntries(list: TestPackageLite[]) {
+  const out: { key: string; title: string; pkg: TestPackageLite }[] = [];
+  for (const p of list.filter((x) => x.isBank)) {
+    const topics = p.topicTests?.map((t) => t.topic) ?? [];
+    if (topics.length === 0) out.push({ key: p.id, title: p.name, pkg: p });
+    for (const t of topics) out.push({ key: `${t.id}:${p.id}`, title: t.title, pkg: p });
+  }
+  return out.sort((a, b) => a.title.localeCompare(b.title, "az"));
 }
 export interface PostLite {
   id: string;
@@ -133,6 +196,13 @@ export function TestWindowBadge({ pkg }: { pkg: Pick<TestPackageLite, "startsAt"
 }
 
 export function TestRow({
+  pkg, onStart, busy, canStart = true,
+}: { pkg: TestPackageLite; onStart: (p: TestPackageLite) => void; busy?: boolean; canStart?: boolean }) {
+  if (pkg.isBank) return <BankRow pkg={pkg} onStart={onStart} busy={busy} canStart={canStart} />;
+  return <PlainTestRow pkg={pkg} onStart={onStart} busy={busy} canStart={canStart} />;
+}
+
+function PlainTestRow({
   pkg, onStart, busy, canStart = true,
 }: { pkg: TestPackageLite; onStart: (p: TestPackageLite) => void; busy?: boolean; canStart?: boolean }) {
   const attempts = pkg.attempts ?? [];

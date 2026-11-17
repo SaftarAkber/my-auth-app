@@ -18,17 +18,26 @@ interface Question {
   options: string[] | null;
   correctAnswer: string | null;
   imageUrl: string | null;
+  difficulty: Diff | null;
   isActive: boolean;
   order: number;
 }
+type Diff = "EASY" | "MEDIUM" | "HARD";
+const DIFF_LABEL: Record<Diff, string> = { EASY: "Asan", MEDIUM: "Orta", HARD: "Çətin" };
+const DIFF_CLASS: Record<Diff, string> = { EASY: "badge-ok", MEDIUM: "badge-warn", HARD: "badge-bad" };
+const PAGE = 50;
 interface Pkg {
   id: string;
   name: string;
   isPublished: boolean;
+  isBank: boolean;
+  drawEasy: number;
+  drawMedium: number;
+  drawHard: number;
   questions: Question[];
 }
 
-const BLANK = { text: "", type: "MULTIPLE_CHOICE" as Question["type"], options: ["", "", "", ""], correct: -1, image: null as string | null };
+const BLANK = { text: "", type: "MULTIPLE_CHOICE" as Question["type"], options: ["", "", "", ""], correct: -1, image: null as string | null, difficulty: null as Diff | null };
 
 export default function PackageQuestionsPage() {
   const { id, packageId } = useParams<{ id: string; packageId: string }>();
@@ -42,6 +51,9 @@ export default function PackageQuestionsPage() {
   const imgInput = useRef<HTMLInputElement>(null);
   // Yadda saxlanan sual: siyahı yeniləndikdən sonra (yeni sual isə) ona sürüşdürülür və qısa müddət vurğulanır
   const [flash, setFlash] = useState<{ id: string; scroll: boolean } | null>(null);
+  // Böyük bankda: səviyyəyə görə süzgəc və hissə-hissə göstərmə
+  const [filter, setFilter] = useState<Diff | "NONE" | "ALL">("ALL");
+  const [shown, setShown] = useState(PAGE);
 
   useEffect(() => {
     if (!flash || !data) return;
@@ -53,9 +65,9 @@ export default function PackageQuestionsPage() {
 
   function open(q: Question | "new") {
     setEditing(q);
-    if (q === "new") return setForm(BLANK);
+    if (q === "new") return setForm({ ...BLANK, difficulty: filter !== "ALL" && filter !== "NONE" ? filter : null });
     const opts = q.options?.length ? [...q.options] : ["", "", "", ""];
-    setForm({ text: q.text, type: q.type, options: opts, correct: q.correctAnswer ? opts.indexOf(q.correctAnswer) : -1, image: q.imageUrl });
+    setForm({ text: q.text, type: q.type, options: opts, correct: q.correctAnswer ? opts.indexOf(q.correctAnswer) : -1, image: q.imageUrl, difficulty: q.difficulty });
   }
 
   async function pickImage(file: File | undefined) {
@@ -92,7 +104,7 @@ export default function PackageQuestionsPage() {
     }
     setBusy(true);
     try {
-      const body = { text: form.text.trim(), type: form.type, options: options ?? null, correctAnswer, imageUrl: form.image };
+      const body = { text: form.text.trim(), type: form.type, options: options ?? null, correctAnswer, imageUrl: form.image, difficulty: form.difficulty };
       if (editing === "new") {
         const r = await api<{ question: { id: string } }>(`/api/packages/${packageId}/questions`, { body });
         setFlash({ id: r.question.id, scroll: true });
@@ -152,12 +164,18 @@ export default function PackageQuestionsPage() {
 
   const pkg = data.package;
   const qs = [...pkg.questions].sort((a, b) => a.order - b.order);
+  const num = new Map(qs.map((q, i) => [q.id, i + 1]));
+  const cnt = { EASY: 0, MEDIUM: 0, HARD: 0, NONE: 0 };
+  for (const q of qs) if (q.isActive) cnt[q.difficulty ?? "NONE"]++;
+  const filtered = filter === "ALL" ? qs : qs.filter((q) => (q.difficulty ?? "NONE") === filter);
+  const visible = filtered.slice(0, shown);
+  const showFilter = pkg.isBank || qs.some((q) => q.difficulty);
 
   return (
     <div className="page-narrow">
       <PageHeader
         title={pkg.name}
-        subtitle={`${qs.filter((q) => q.isActive).length} aktiv sual · ${pkg.isPublished ? "Dərc olunub" : "Qaralama"}`}
+        subtitle={`${qs.filter((q) => q.isActive).length} aktiv sual${pkg.isBank ? ` · Sual bankı: hər testə ${pkg.drawEasy + pkg.drawMedium + pkg.drawHard} sual` : ""} · ${pkg.isPublished ? "Dərc olunub" : "Qaralama"}`}
         back={`/teacher/tests/${id}`}
         actions={<div className="flex flex-wrap gap-2"><ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
       />
@@ -166,13 +184,29 @@ export default function PackageQuestionsPage() {
         <Empty icon="file" title="Hələ sual yoxdur" text="Test seçimli və ya açıq suallardan ibarət ola bilər." action={<div className="flex flex-wrap justify-center gap-2"><ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}>İlk sualı yaz</button></div>} />
       ) : (
         <div className="space-y-3">
-          {qs.map((q, i) => (
+          {showFilter && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Səviyyə">
+              {([["ALL", `Hamısı (${qs.length})`], ["EASY", `Asan (${cnt.EASY})`], ["MEDIUM", `Orta (${cnt.MEDIUM})`], ["HARD", `Çətin (${cnt.HARD})`], ...(cnt.NONE ? [["NONE", `Səviyyəsiz (${cnt.NONE})`]] : [])] as [typeof filter, string][]).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={filter === k}
+                  onClick={() => { setFilter(k); setShown(PAGE); }}
+                  className={cx("min-h-9 rounded-md border px-3 text-sm font-semibold transition-colors", filter === k ? "border-brand bg-brand text-white" : "border-line bg-surface hover:bg-tint")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {visible.map((q) => { const i = (num.get(q.id) ?? 1) - 1; return (
             <article key={q.id} id={`q-${q.id}`} className={cx("card scroll-mt-24 p-4 transition-shadow duration-500 sm:p-5", !q.isActive && "opacity-60", flash?.id === q.id && "ring-2 ring-accent")}>
               <div className="flex items-start gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-sm font-bold text-muted">{i + 1}</span>
+                <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 px-1 text-sm font-bold text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap gap-1.5">
                     <span className={q.type === "MULTIPLE_CHOICE" ? "badge-brand" : "badge-warn"}>{q.type === "MULTIPLE_CHOICE" ? "Seçimli" : "Açıq"}</span>
+                    {q.difficulty && <span className={DIFF_CLASS[q.difficulty]}>{DIFF_LABEL[q.difficulty]}</span>}
                     {!q.isActive && <span className="badge-muted">Deaktiv</span>}
                   </div>
                   <p className="whitespace-pre-wrap break-words font-semibold">{q.text}</p>
@@ -200,7 +234,12 @@ export default function PackageQuestionsPage() {
                 <button className="btn-ghost btn-sm hover:!text-bad" onClick={() => remove(q)}><Icon name="trash" size={14} /> Sil</button>
               </div>
             </article>
-          ))}
+          ); })}
+          {filtered.length > shown && (
+            <button className="btn-secondary w-full" onClick={() => setShown((n) => n + PAGE)}>
+              Daha çox göstər ({filtered.length - shown} qalıb)
+            </button>
+          )}
         </div>
       )}
 
@@ -224,6 +263,24 @@ export default function PackageQuestionsPage() {
                 {t === "MULTIPLE_CHOICE" ? "Seçimli sual" : "Açıq sual"}
               </button>
             ))}
+          </div>
+
+          <div>
+            <span className="label">Çətinlik</span>
+            <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Çətinlik">
+              {([[null, "Yoxdur"], ["EASY", "Asan"], ["MEDIUM", "Orta"], ["HARD", "Çətin"]] as [Diff | null, string][]).map(([d, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.difficulty === d}
+                  onClick={() => setForm({ ...form, difficulty: d })}
+                  className={cx("min-h-9 rounded-md border text-sm font-semibold transition-colors", form.difficulty === d ? "border-brand bg-tint text-brand" : "border-line bg-surface text-muted hover:bg-tint/50")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <Field label="Sual mətni *"><textarea className="input min-h-24" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} autoFocus /></Field>

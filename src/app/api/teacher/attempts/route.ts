@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { ownedTestWhere } from "@/lib/topics";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
@@ -12,13 +13,9 @@ export async function GET() {
     const attempts = await prisma.studentAttempt.findMany({
       where: {
         finishedAt: { not: null },
-        package: {
-          deletedAt: null,
-          OR: [
-            { collection: { teacherId: currentUser.id } },
-            { group: { teacherId: currentUser.id } },
-          ],
-        },
+        package: ownedTestWhere(currentUser.id),
+        // ?pending=1: yalnız yoxlanmalı açıq cavabı olan cəhdlər
+        ...(req.nextUrl.searchParams.get("pending") ? { answers: { some: { status: "PENDING" as const } } } : {}),
       },
       include: {
         student: {
@@ -51,6 +48,7 @@ export async function GET() {
         },
       },
       orderBy: { finishedAt: "desc" },
+      take: 300,
     });
 
     return NextResponse.json({ attempts });

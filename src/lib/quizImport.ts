@@ -4,6 +4,8 @@
 //   A) variant   B) variant  (A–E, ayrı sətirlərdə və ya bir sətirdə)
 //   Cavab: B                 (sualın altında) — və ya faylın sonunda "Cavablar: 1-A 2-C ..."
 // Düzgün variant "*" və ya "✓" ilə də işarələnə bilər. Variantsız suallar açıq sual olur.
+// Çətinlik: ayrıca sətirdə "Asan" / "Orta" / "Çətin" (və ya "Asan suallar", "Çətinlik: Orta") başlığı
+// özündən sonrakı bütün suallara aiddir.
 
 export interface ParsedQuestion {
   text: string;
@@ -13,6 +15,18 @@ export interface ParsedQuestion {
   correct: number;
   /** Sualın şəkli (DOCX-dən Cloudinary-ə yüklənmiş) */
   image?: string;
+  /** Bölmə başlığından gələn çətinlik */
+  difficulty?: Difficulty;
+}
+
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
+/** Çətinlik başlığı: "Asan", "ORTA suallar", "Çətinlik: Çətin", "Çətin suallar (350)" */
+const DIFF_RE = /^\s*(?:(?:çətinlik|cetinlik|səviyyə|seviyye|dərəcə|derece)\s*[:\-–]?\s*)?(asan|orta|çətin|cetin|çetin|cətin|ÇƏTİN|CƏTİN|ÇETİN|CETİN)(?:\s+(?:suallar|sual|səviyyə|seviyye|dərəcə|derece))?\s*(?:\(\s*\d+\s*\))?\s*:?\s*$/iu;
+const DIFF_OF: Record<string, Difficulty> = { asan: "EASY", orta: "MEDIUM" };
+export function difficultyHeader(line: string): Difficulty | null {
+  const m = line.match(DIFF_RE);
+  if (!m) return null;
+  return DIFF_OF[m[1].toLocaleLowerCase("az")] ?? "HARD";
 }
 
 /** Mətndə şəklin yeri: ayrıca sətirdə [[IMG:url]] */
@@ -55,13 +69,14 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     .map(clean)
     .filter(Boolean);
 
-  type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean; image?: string };
+  type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean; image?: string; difficulty?: Difficulty };
   const drafts: Draft[] = [];
   let cur: Draft | null = null;
   let keyMode = false;
   const key = new Map<number, number>();
   // Sualın nömrəsindən əvvəl gələn şəkil növbəti suala aiddir
   let pendingImage: string | undefined;
+  let difficulty: Difficulty | undefined;
 
   const readKey = (s: string) => {
     for (const m of s.matchAll(/(\d{1,3})\s*[-.):=]?\s*([A-Ea-e])\b/g)) key.set(+m[1], LETTERS.indexOf(m[2].toUpperCase()));
@@ -76,6 +91,12 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     }
     if (keyMode) {
       readKey(rawLine);
+      continue;
+    }
+    const dh = difficultyHeader(rawLine);
+    if (dh) {
+      difficulty = dh;
+      cur = null;
       continue;
     }
     const img = rawLine.match(IMG_LINE_RE);
@@ -110,7 +131,7 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       const q = line.match(QUESTION_RE);
       // Yeni sual: nömrə əvvəlkindən böyük olmalıdır (mətn içindəki "2) ..." ilə qarışmasın)
       if (q && (!cur || +q[1] === drafts.length + 1 || (cur.options.length > 0 && cur.options.length >= 2))) {
-        cur = { text: clean(q[2]), options: [], correct: -1, opt: -1, marks: 0, answered: false, image: pendingImage };
+        cur = { text: clean(q[2]), options: [], correct: -1, opt: -1, marks: 0, answered: false, image: pendingImage, difficulty };
         pendingImage = undefined;
         drafts.push(cur);
         continue;
@@ -130,14 +151,14 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     let correct = d.marks > 1 && !d.answered ? -1 : d.correct;
     if (key.has(i + 1)) correct = key.get(i + 1)!;
     if (!mc || correct >= d.options.length) correct = -1;
-    const image = d.image ? { image: d.image } : {};
+    const image = { ...(d.image ? { image: d.image } : {}), ...(d.difficulty ? { difficulty: d.difficulty } : {}) };
     return mc
       ? { text: d.text, type: "MULTIPLE_CHOICE" as const, options: d.options, correct, ...image }
       : { text: [d.text, ...d.options.map((o, k) => `${LETTERS[k]}) ${o}`)].join(" "), type: "OPEN_ENDED" as const, options: [], correct: -1, ...image };
   });
 }
 
-const MAX_IMAGES = 60;
+const MAX_IMAGES = 150;
 const IMG_TYPES = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
 
 /** Fayldan mətn çıxarır. DOCX şəkilləri `uploadImage` ilə yüklənir və mətndə ayrıca [[IMG:url]] sətri kimi qalır. */

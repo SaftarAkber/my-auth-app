@@ -12,7 +12,11 @@ interface Draft {
   options: string[];
   correct: number;
   image?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
 }
+const DIFF_LABEL = { EASY: "Asan", MEDIUM: "Orta", HARD: "Çətin" } as const;
+/** Bazaya bir sorğuda göndərilən sual sayı (böyük fayl hissə-hissə yazılır) */
+const CHUNK = 200;
 
 const MAX_IMAGES = 10;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -137,23 +141,39 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
   async function store(list: Draft[], fromPick = false) {
     if (!list.length) return;
     if (!fromPick) setBusy(true);
+    const many = list.length > CHUNK;
     try {
-      await api(`/api/packages/${packageId}/questions/bulk`, {
-        body: {
-          questions: list.map((d) => ({
-            text: d.text, type: d.type,
-            options: d.type === "MULTIPLE_CHOICE" ? d.options : undefined,
-            correctAnswer: d.type === "MULTIPLE_CHOICE" ? d.options[d.correct] : null,
-            imageUrl: d.image ?? null,
-          })),
-        },
-      });
+      if (many) {
+        setSlow(true);
+        imgProg.current = 0;
+      }
+      for (let k = 0; k < list.length; k += CHUNK) {
+        if (many) {
+          setImgInfo(`Suallar yazılır: ${Math.min(k + CHUNK, list.length)} / ${list.length}`);
+          imgProg.current = k / list.length;
+        }
+        await api(`/api/packages/${packageId}/questions/bulk`, {
+          body: {
+            questions: list.slice(k, k + CHUNK).map((d) => ({
+              text: d.text, type: d.type,
+              options: d.type === "MULTIPLE_CHOICE" ? d.options : undefined,
+              correctAnswer: d.type === "MULTIPLE_CHOICE" ? d.options[d.correct] : null,
+              imageUrl: d.image ?? null,
+              difficulty: d.difficulty ?? null,
+            })),
+          },
+        });
+      }
+      imgProg.current = null;
+      setImgInfo("");
       await finish(() => {
         toast.success(`${list.length} sual əlavə olundu`);
         close();
         onDone();
       });
     } catch (e) {
+      imgProg.current = null;
+      setImgInfo("");
       setSlow(false);
       toast.error(errMsg(e));
     } finally {
@@ -186,7 +206,8 @@ export default function ImportQuestions({ packageId, onDone }: { packageId: stri
 
       <Modal open={help} onClose={() => setHelp(false)} title="Fayl formatı">
         <div className="text-sm">
-          <pre className="whitespace-pre-wrap font-sans text-muted">{`1. Sual mətni
+          <pre className="whitespace-pre-wrap font-sans text-muted">{`Asan          ← çətinlik başlığı (istəyə görə)
+1. Sual mətni
 [şəkil — istəyə görə, DOCX-də sualın altında]
 A) birinci variant
 B) ikinci variant
@@ -195,7 +216,7 @@ Cavab: B
 
 2. Növbəti sual ...`}</pre>
           <p className="mt-3 text-xs text-muted">
-            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur. DOCX-də sualın mətni ilə variantları arasına qoyulan şəkil (qraf, ağac, cədvəl) həmin sualın şəklinə çevrilir.
+            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur. DOCX-də sualın mətni ilə variantları arasına qoyulan şəkil (qraf, ağac, cədvəl) həmin sualın şəklinə çevrilir. Ayrıca sətirdə yazılan “Asan”, “Orta” və ya “Çətin” başlığı özündən sonrakı bütün sualların çətinliyini təyin edir (sual bankı üçün). Bir faylda 1000 suala qədər ola bilər.
           </p>
         </div>
       </Modal>
@@ -226,6 +247,7 @@ Cavab: B
                 <div className="mb-2 flex items-center gap-2">
                   <span className="grid h-7 w-7 place-items-center rounded-lg bg-surface-2 text-sm font-bold">{i + 1}</span>
                   <span className={d.type === "MULTIPLE_CHOICE" ? "badge-brand" : "badge-warn"}>{d.type === "MULTIPLE_CHOICE" ? "Seçimli" : "Açıq"}</span>
+                  {d.difficulty && <span className="badge-muted">{DIFF_LABEL[d.difficulty]}</span>}
                   <button className="btn-icon ml-auto" aria-label="Sil" onClick={() => setDrafts((x) => x && x.filter((_, j) => j !== i))}><Icon name="trash" size={16} /></button>
                 </div>
                 <textarea className="input min-h-[60px]" value={d.text} onChange={(e) => patch(i, { text: e.target.value })} />

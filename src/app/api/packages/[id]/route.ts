@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { rewardData } from "@/lib/rewards";
+import { ownerTeacherId, rewardData } from "@/lib/rewards";
 import {
   forbidden,
   notFound,
@@ -27,6 +27,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         collection: { select: { name: true, teacherId: true } },
         group: { select: { teacherId: true } },
         testPackageGroups: { include: { group: { select: { id: true, name: true, teacherId: true } } } },
+        topicTests: { select: { topicId: true } },
         _count: { select: { attempts: true } },
       },
     });
@@ -56,13 +57,22 @@ export async function GET(_: NextRequest, { params }: Ctx) {
   }
 }
 
+const drawNum = (v: unknown) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 200) : undefined;
+};
+
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const auth = await requireTeacher();
-    if ("response" in auth) return auth.response;
-
+    const me = await getCurrentUser();
+    if (!me) return unauthorized();
     const { id } = await params;
-    if (!(await teacherOwnsTestPackage(auth.user.id, id))) return forbidden();
+    // Müəllim öz testini, admin isə istənilən testi dəyişə bilər (qrup və mövzular sahib müəllimə aiddir)
+    let ownerId: string | null = null;
+    if (me.role === "ADMIN") ownerId = await ownerTeacherId(id);
+    else if (me.role === "TEACHER" && (await teacherOwnsTestPackage(me.id, id))) ownerId = me.id;
+    if (!ownerId) return forbidden();
+    const auth = { user: { id: ownerId } };
 
     const body = await req.json();
     const {
@@ -128,10 +138,49 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       return NextResponse.json({ error: "Sualsız testi dərc etmək olmaz" }, { status: 400 });
     }
 
+    // Sual bankı və aylıq sınaq
+    const bank: { isBank?: boolean; drawEasy?: number; drawMedium?: number; drawHard?: number; isMonthly?: boolean } = {};
+    if (body.isBank !== undefined) bank.isBank = !!body.isBank;
+    for (const k of ["drawEasy", "drawMedium", "drawHard"] as const) {
+      if (body[k] !== undefined) {
+        const n = drawNum(body[k]);
+        if (n === undefined) return NextResponse.json({ error: "Sual sayı rəqəm olmalıdır" }, { status: 400 });
+        bank[k] = n;
+      }
+    }
+    if (body.isMonthly !== undefined) bank.isMonthly = !!body.isMonthly;
+    const finalBank = bank.isBank ?? existing.isBank;
+    const finalMonthly = bank.isMonthly ?? existing.isMonthly;
+    if (finalBank) {
+      const total = (bank.drawEasy ?? existing.drawEasy) + (bank.drawMedium ?? existing.drawMedium) + (bank.drawHard ?? existing.drawHard);
+      if (total < 1) return NextResponse.json({ error: "Testdə ən azı bir sual olmalıdır" }, { status: 400 });
+      if (finalMonthly) return NextResponse.json({ error: "Sual bankı aylıq sınaq ola bilməz" }, { status: 400 });
+    }
+    const finalVis = vis ?? existing.visibility;
+    const finalPub = pub ?? existing.isPublished;
+    if (finalMonthly && finalPub && finalVis === "PUBLIC") {
+      return NextResponse.json({ error: "Aylıq sınaq yalnız seçilmiş qruplara açıq ola bilər" }, { status: 400 });
+    }
+
+    // Mövzular: yalnız sahib müəllimin mövzuları
+    let topicIds: string[] | undefined;
+    if (Array.isArray(body.topicIds)) {
+      const ids: string[] = [...new Set<string>((body.topicIds as unknown[]).filter((x): x is string => typeof x === "string"))].slice(0, 100);
+      const own = await prisma.topic.count({ where: { id: { in: ids }, teacherId: ownerId } });
+      if (own !== ids.length) return forbidden();
+      topicIds = ids;
+    }
+
     const pkg = await prisma.$transaction(async (tx) => {
       // Qrup bağlantıları yalnız siyahı göndərildikdə yenilənir
       if (linkIds) {
         await tx.testPackageGroup.deleteMany({ where: { packageId: id } });
+      }
+      if (topicIds) {
+        await tx.topicTest.deleteMany({ where: { packageId: id, topicId: { notIn: topicIds } } });
+        const have = new Set((await tx.topicTest.findMany({ where: { packageId: id }, select: { topicId: true } })).map((t) => t.topicId));
+        const add = topicIds.filter((t) => !have.has(t));
+        if (add.length) await tx.topicTest.createMany({ data: add.map((topicId) => ({ topicId, packageId: id, order: 999 })) });
       }
       return tx.testPackage.update({
         where: { id },
@@ -147,6 +196,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           ...(vis !== undefined && { visibility: vis }),
           ...(allowRetry !== undefined && { allowRetry }),
           ...(shareAnswers !== undefined && { shareAnswers: !!shareAnswers }),
+          ...bank,
+          // Bankda təkrar həmişə açıqdır, başqasının cavabına baxmaq isə olmur
+          ...(finalBank ? { allowRetry: true, shareAnswers: false } : {}),
           ...rewardData(body),
           ...(linkIds && linkIds.length
             ? { testPackageGroups: { create: [...new Set<string>(linkIds)].map((groupId) => ({ groupId })) } }

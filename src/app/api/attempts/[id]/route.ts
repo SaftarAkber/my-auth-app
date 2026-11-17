@@ -1,95 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { grantTestReward } from "@/lib/rewards";
+import { closeExpiredAttempts, finishAttempt, isExpired } from "@/lib/attempts";
 import { forbidden, notFound, serverError, teacherOwnsTestPackage, unauthorized } from "@/lib/guards";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// Cavabları saxla və testi bitir
+// Cavabları yoxla və testi bitir
 export async function POST(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
     const currentUser = await getCurrentUser();
     if (!currentUser) return unauthorized();
 
-    const body = await req.json();
-    const answers: { questionId: string; answer: string }[] = Array.isArray(body.answers)
-      ? body.answers
-      : [];
+    const body = await req.json().catch(() => ({}));
+    const list: { questionId: string; answer: string }[] = Array.isArray(body.answers) ? body.answers : [];
 
     const attempt = await prisma.studentAttempt.findUnique({
       where: { id },
-      include: {
-        package: { include: { questions: { where: { isActive: true } } } },
-      },
+      select: { id: true, studentId: true, startedAt: true, finishedAt: true, package: { select: { isTimed: true, duration: true } } },
     });
-
     if (!attempt || attempt.studentId !== currentUser.id) return notFound();
     if (attempt.finishedAt) {
       return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
     }
 
-    // Vaxt limiti (şəbəkə gecikməsi üçün 30 san. tolerans)
-    const { package: pkg } = attempt;
-    if (pkg.isTimed && pkg.duration) {
-      const deadline = attempt.startedAt.getTime() + (pkg.duration + 30) * 1000;
-      if (Date.now() > deadline) {
-        return NextResponse.json({ error: "Testin vaxtı bitib" }, { status: 409 });
-      }
+    // Vaxt bitibsə yalnız əvvəl saxlanmış cavablar sayılır
+    const incoming: Record<string, string> = {};
+    for (const a of list) {
+      if (a && typeof a.questionId === "string" && typeof a.answer === "string" && a.answer.trim()) incoming[a.questionId] = a.answer;
     }
+    const r = await finishAttempt(attempt.id, isExpired(attempt.startedAt, attempt.package) ? null : incoming);
+    if (!r) return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
 
-    const questionMap = new Map(pkg.questions.map((q) => [q.id, q]));
-    const seen = new Set<string>();
-    let correctCount = 0;
+    return NextResponse.json({ ...r.attempt, coinsEarned: r.coinsEarned, rewardPending: r.rewardPending });
+  } catch (error) {
+    return serverError(error);
+  }
+}
 
-    const answerData = answers.flatMap((a) => {
-      const question = questionMap.get(a.questionId);
-      if (!question || seen.has(a.questionId)) return [];
-      if (typeof a.answer !== "string" || !a.answer.trim()) return [];
-      seen.add(a.questionId);
+// Davam edən testdə bir cavabı saxla (səhifə bağlansa da cavab itmir)
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  try {
+    const { id } = await params;
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return unauthorized();
 
-      let isCorrect: boolean | null = null;
-      let status: "APPROVED" | "PENDING" = "PENDING";
-      if (question.type === "MULTIPLE_CHOICE") {
-        isCorrect = question.correctAnswer === a.answer;
-        if (isCorrect) correctCount++;
-        status = "APPROVED";
-      }
-      return [{ attemptId: attempt.id, questionId: a.questionId, answer: a.answer, isCorrect, status }];
+    const body = await req.json().catch(() => ({}));
+    const questionId = typeof body.questionId === "string" ? body.questionId : "";
+    const answer = typeof body.answer === "string" ? body.answer.slice(0, 5000) : "";
+    if (!questionId) return NextResponse.json({ error: "Sual seçilməyib" }, { status: 400 });
+
+    const attempt = await prisma.studentAttempt.findUnique({
+      where: { id },
+      select: {
+        id: true, studentId: true, startedAt: true, finishedAt: true, packageId: true, questionIds: true,
+        package: { select: { isTimed: true, duration: true } },
+      },
     });
-
-    // Yarış vəziyyətinin qarşısı: yalnız hələ bitməmiş cəhd bağlanır
-    const updated = await prisma.$transaction(async (tx) => {
-      const closed = await tx.studentAttempt.updateMany({
-        where: { id: attempt.id, finishedAt: null },
-        data: { finishedAt: new Date(), score: correctCount, totalScore: pkg.questions.length },
-      });
-      if (closed.count === 0) return null;
-      if (answerData.length) await tx.studentAnswer.createMany({ data: answerData });
-      return tx.studentAttempt.findUnique({ where: { id: attempt.id } });
-    });
-
-    if (!updated) {
-      return NextResponse.json({ error: "Test artıq tamamlanıb" }, { status: 409 });
+    if (!attempt || attempt.studentId !== currentUser.id) return notFound();
+    if (attempt.finishedAt || isExpired(attempt.startedAt, attempt.package)) {
+      return NextResponse.json({ error: "Testin vaxtı bitib" }, { status: 409 });
     }
+    const belongs = attempt.questionIds.length
+      ? attempt.questionIds.includes(questionId)
+      : !!(await prisma.question.findFirst({ where: { id: questionId, packageId: attempt.packageId, isActive: true }, select: { id: true } }));
+    if (!belongs) return NextResponse.json({ error: "Sual bu testdə deyil" }, { status: 400 });
 
-    // Mükafat: müəllimin test üçün qoyduğu qayda ödənibsə (avtomatik rejimdə) coin müəllimdən köçürülür.
-    // Açıq cavablar hələ yoxlanmayıbsa, nəticə təsdiqlənənədək gözlənilir.
-    let coinsEarned = 0;
-    let rewardPending = false;
-    const hasOpen = pkg.questions.some((q) => q.type === "OPEN_ENDED");
-    if (pkg.rewardEnabled && pkg.rewardAuto && !hasOpen) {
-      try {
-        const r = await grantTestReward(attempt.id);
-        if (r.status === "granted") coinsEarned = r.coins;
-        if (r.status === "insufficient") rewardPending = true;
-      } catch (coinErr) {
-        console.error("Mükafat xətası:", coinErr);
-      }
+    // Yalnız bir açar yenilənir (eyni anda gələn sorğular bir-birini silmir)
+    if (answer.trim()) {
+      await prisma.$executeRaw`UPDATE "student_attempts" SET "draft" = COALESCE("draft", '{}'::jsonb) || jsonb_build_object(${questionId}::text, ${answer}::text) WHERE "id" = ${id} AND "finishedAt" IS NULL`;
+    } else {
+      await prisma.$executeRaw`UPDATE "student_attempts" SET "draft" = COALESCE("draft", '{}'::jsonb) - ${questionId}::text WHERE "id" = ${id} AND "finishedAt" IS NULL`;
     }
-
-    return NextResponse.json({ ...updated, coinsEarned, rewardPending });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     return serverError(error);
   }
@@ -102,13 +86,16 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const currentUser = await getCurrentUser();
     if (!currentUser) return unauthorized();
 
+    // Vaxtı bitmiş açıq cəhd əvvəlcə bağlanır
+    await closeExpiredAttempts({ id });
+
     const attempt = await prisma.studentAttempt.findUnique({
       where: { id },
       include: {
         student: { select: { id: true, name: true, photo: true } },
         package: {
           select: {
-            id: true, name: true, isTimed: true, duration: true, shareAnswers: true, allowRetry: true,
+            id: true, name: true, isTimed: true, duration: true, shareAnswers: true, allowRetry: true, isBank: true, isMonthly: true,
             group: { select: { id: true, name: true, teacherId: true } },
           },
         },
@@ -126,12 +113,13 @@ export async function GET(_: NextRequest, { params }: Ctx) {
 
     const isOwner = attempt.studentId === currentUser.id;
     const isTeacher =
-      currentUser.role === "TEACHER" &&
-      (attempt.package.group?.teacherId === currentUser.id ||
-        (await teacherOwnsTestPackage(currentUser.id, attempt.package.id)));
-    // Müəllim icazə veribsə, testi özü bitirmiş tələbələr bir-birinin bitmiş cavablarına baxa bilər
+      currentUser.role === "ADMIN" ||
+      (currentUser.role === "TEACHER" &&
+        (attempt.package.group?.teacherId === currentUser.id ||
+          (await teacherOwnsTestPackage(currentUser.id, attempt.package.id))));
+    // Müəllim icazə veribsə, testi özü bitirmiş tələbələr bir-birinin bitmiş cavablarına baxa bilər (bank testində yox)
     const isPeer =
-      !isOwner && !isTeacher && currentUser.role === "STUDENT" && attempt.package.shareAnswers && !!attempt.finishedAt &&
+      !isOwner && !isTeacher && currentUser.role === "STUDENT" && attempt.package.shareAnswers && !attempt.package.isBank && !!attempt.finishedAt &&
       !!(await prisma.studentAttempt.findFirst({
         where: { packageId: attempt.package.id, studentId: currentUser.id, finishedAt: { not: null } },
         select: { id: true },
@@ -139,7 +127,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     if (!isOwner && !isTeacher && !isPeer) return forbidden();
 
     // Davam edən testdə cavab açarı açıqlanmasın
-    if (isOwner && !isTeacher && !attempt.finishedAt) {
+    if (!isTeacher && !attempt.finishedAt) {
       return NextResponse.json({
         ...attempt,
         answers: attempt.answers.map((a) => ({
@@ -149,12 +137,30 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       });
     }
 
+    const qSelect = { id: true, text: true, type: true, options: true, correctAnswer: true, imageUrl: true, order: true } as const;
+
+    // Bank testi: bu cəhdə düşən suallar seçim sırası ilə, cavabsızlar da göstərilir
+    if (attempt.questionIds.length) {
+      const pos = new Map(attempt.questionIds.map((qid, i) => [qid, i]));
+      const numbers: Record<string, number> = Object.fromEntries(attempt.questionIds.map((qid, i) => [qid, i + 1]));
+      const answered = new Set(attempt.answers.map((a) => a.question.id));
+      const blankRows = attempt.finishedAt
+        ? await prisma.question.findMany({ where: { id: { in: attempt.questionIds.filter((q) => !answered.has(q)) } }, select: qSelect })
+        : [];
+      return NextResponse.json({
+        ...attempt,
+        answers: attempt.answers.map((a) => ({ ...a, question: { ...a.question, order: pos.get(a.question.id) ?? 0 } })),
+        numbers,
+        blanks: blankRows.map((q) => ({ ...q, order: pos.get(q.id) ?? 0 })),
+      });
+    }
+
     // Təkrar həllə icazə verilməyən testdə bitmiş nəticədə bütün suallar ardıcıl göstərilir (cavabsızlar da).
     // Təkrar olanlarda yalnız cavab verilmiş suallar (düzgün/səhv) qalır.
     const activeQuestions = await prisma.question.findMany({
       where: { packageId: attempt.package.id, isActive: true },
       orderBy: { order: "asc" },
-      select: { id: true, text: true, type: true, options: true, correctAnswer: true, imageUrl: true, order: true },
+      select: qSelect,
     });
     const numbers: Record<string, number> = Object.fromEntries(activeQuestions.map((q, i) => [q.id, i + 1]));
     const answered = new Set(attempt.answers.map((a) => a.question.id));

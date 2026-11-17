@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         { status: 422 },
       );
     }
-    return NextResponse.json({ questions: questions.slice(0, 200) });
+    return NextResponse.json({ questions: questions.slice(0, 1000) });
   } catch (error) {
     return serverError(error);
   }

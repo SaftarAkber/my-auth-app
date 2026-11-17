@@ -322,7 +322,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
 
           <div className="hidden w-60 min-w-0 xl:block"><Search t={t} className="w-full" wide /></div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 min-[360px]:gap-1">
             <button type="button" className="ib hidden md:grid xl:hidden" aria-label={t("search")} title={t("search")} onClick={() => setSearchOpen(true)}>
               <Icon name="search" size={20} />
             </button>

@@ -191,6 +191,13 @@ body {
   color: rgb(var(--muted));
   transition: color 0.15s, background-color 0.15s;
 }
+/* Çox kiçik telefonlar (320px): yuxarı paneldəki ikonlar sığsın */
+@media (max-width: 359px) {
+  .ib {
+    width: 34px;
+    height: 34px;
+  }
+}
 .ib:hover,
 .ib.open {
   color: rgb(var(--brand));

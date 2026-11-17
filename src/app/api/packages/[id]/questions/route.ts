@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cleanQuestionImage } from "@/lib/questionImage";
+import { cleanDifficulty, cleanQuestionImage } from "@/lib/questionImage";
 import { forbidden, requireTeacher, serverError, teacherOwnsTestPackage } from "@/lib/guards";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id: packageId } = await params;
     if (!(await teacherOwnsTestPackage(auth.user.id, packageId))) return forbidden();
 
-    const { text, type, options, correctAnswer, order, imageUrl } = await req.json();
+    const { text, type, options, correctAnswer, order, imageUrl, difficulty } = await req.json();
 
     if (!text || !type) {
       return NextResponse.json({ error: "Sual mətni və tipi məcburidir" }, { status: 400 });
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         options: type === "MULTIPLE_CHOICE" ? options : undefined,
         correctAnswer: type === "MULTIPLE_CHOICE" ? correctAnswer : null,
         imageUrl: cleanQuestionImage(imageUrl),
+        difficulty: cleanDifficulty(difficulty),
         order: nextOrder,
         packageId,
       },

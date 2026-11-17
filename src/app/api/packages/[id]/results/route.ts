@@ -15,11 +15,13 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const pkg = await prisma.testPackage.findUnique({
       where: { id },
       select: {
-        id: true, name: true, shareAnswers: true,
+        id: true, name: true, shareAnswers: true, isBank: true,
         questions: { where: { isActive: true }, orderBy: { order: "asc" }, select: { id: true } },
       },
     });
     if (!pkg) return notFound();
+    // Sual bankında sual-sual cədvəl olmur: reytinq ayrıca hesablanır (/leaderboard)
+    if (pkg.isBank) return NextResponse.json({ bank: true, package: { id: pkg.id, name: pkg.name } });
 
     const isTeacher = me.role === "TEACHER" && (await teacherOwnsTestPackage(me.id, id));
     const isAdmin = me.role === "ADMIN";

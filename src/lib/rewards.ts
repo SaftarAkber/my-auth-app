@@ -39,7 +39,7 @@ export async function isEligible(attemptId: string) {
 
 /**
  * Qayda ödənibsə, müəllimdən tələbəyə mükafat köçürür.
- * Hər cəhd və hər tələbə-test cütü yalnız bir dəfə mükafatlandırılır.
+ * Hər cəhd bir dəfə; adi testdə hər tələbə-test cütü də bir dəfə mükafatlandırılır.
  */
 export async function grantTestReward(attemptId: string): Promise<RewardResult> {
   const attempt = await prisma.studentAttempt.findUnique({
@@ -53,10 +53,13 @@ export async function grantTestReward(attemptId: string): Promise<RewardResult> 
   if (!pkg.rewardEnabled || !pkg.rewardCoins || pkg.rewardMinCorrect == null) return { status: "not-eligible" };
   if ((attempt.score ?? 0) < pkg.rewardMinCorrect) return { status: "not-eligible" };
 
-  const earlier = await prisma.studentAttempt.count({
-    where: { studentId: attempt.studentId, packageId: pkg.id, rewardGranted: true },
-  });
-  if (earlier > 0) return { status: "already" };
+  // Adi testdə hər tələbə bir dəfə mükafat alır; sual bankında isə şərti ödəyən hər cəhd üçün
+  if (!pkg.isBank) {
+    const earlier = await prisma.studentAttempt.count({
+      where: { studentId: attempt.studentId, packageId: pkg.id, rewardGranted: true },
+    });
+    if (earlier > 0) return { status: "already" };
+  }
 
   const teacherId = await ownerTeacherId(pkg.id);
   if (!teacherId) return { status: "not-eligible" };

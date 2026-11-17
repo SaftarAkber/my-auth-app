@@ -5,8 +5,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useFetch } from "@/lib/api";
 import TopicReader from "@/components/topics/TopicReader";
-import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
-import { TestRow, VideoTile, type TestPackageLite, type VideoLite } from "@/components/content";
+import { useTestRunner } from "@/components/TestTaker";
+import { BankRow, TestRow, VideoTile, type TestPackageLite, type VideoLite } from "@/components/content";
 import { Empty, ErrorBox, Icon, SkeletonList, Tabs } from "@/components/ui";
 
 interface TopicData {
@@ -28,8 +28,7 @@ export default function StudentTopicPage() {
   const g = useSearchParams().get("g");
   const { data, loading, error, reload } = useFetch<TopicData>(`/api/topics/${id}`);
   const [tab, setTab] = useState<"library" | "tests" | "videos">("library");
-  const { start, starting } = useStartTest();
-  const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
+  const { begin: run, starting, node } = useTestRunner(() => reload());
 
   const t = data?.topic;
   const back = useMemo(() => {
@@ -37,10 +36,8 @@ export default function StudentTopicPage() {
     return grp ? { href: `/student/groups/${grp.id}`, name: grp.name } : { href: "/student/teacher", name: "Qruplar" };
   }, [t, g]);
 
-  async function begin(p: TestPackageLite) {
-    const d = await start(p.id);
-    if (d) setTaking({ name: p.name, data: d });
-  }
+  const begin = (p: TestPackageLite) => run(p);
+  const banks = (t?.tests ?? []).filter((p) => p.isBank);
 
   if (loading && !data) return <div className="page"><SkeletonList rows={3} className="h-40" /></div>;
   if (error || !t) return <div className="page"><ErrorBox message={error ?? "Mövzu tapılmadı"} onRetry={reload} /></div>;
@@ -65,7 +62,18 @@ export default function StudentTopicPage() {
           ]}
         />
 
-        {tab === "library" && <TopicReader html={t.content} rememberKey={`topic-page:${t.id}`} />}
+        {tab === "library" && (
+          <>
+            <TopicReader html={t.content} rememberKey={`topic-page:${t.id}`} />
+            {/* Oxuduqdan sonra: mövzu üzrə təsadüfi test */}
+            {banks.length > 0 && (
+              <section className="mt-6 max-w-[760px] space-y-3" aria-label="Mövzu üzrə test">
+                <h2 className="text-lg font-bold">Mövzunu oxudunuz? Özünüzü yoxlayın</h2>
+                {banks.map((p) => <BankRow key={p.id} pkg={p} title={t.title} onStart={begin} busy={starting === p.id} />)}
+              </section>
+            )}
+          </>
+        )}
 
         {tab === "tests" &&
           (t.tests.length === 0 ? (
@@ -86,7 +94,7 @@ export default function StudentTopicPage() {
           ))}
       </div>
 
-      {taking && <TestTaker name={taking.name} data={taking.data} onClose={() => { setTaking(null); reload(); }} />}
+      {node}
     </div>
   );
 }

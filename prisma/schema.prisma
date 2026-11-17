@@ -325,6 +325,13 @@ model TestPackage {
   rewardMinCorrect Int?
   rewardCoins      Int?
   rewardAuto       Boolean @default(true)
+  // Sual bankı: hər cəhddə səviyyələr üzrə təsadüfi suallar seçilir
+  isBank      Boolean @default(false)
+  drawEasy    Int     @default(4)
+  drawMedium  Int     @default(6)
+  drawHard    Int     @default(15)
+  // Aylıq sınaq: qrupun yarış cədvəlinə düşür (ilk cəhd sayılır)
+  isMonthly   Boolean @default(false)
 
   @@map("test_packages")
 }
@@ -336,6 +343,7 @@ model Question {
   options       Json?
   correctAnswer String?
   imageUrl      String?
+  difficulty    Difficulty?
   isActive      Boolean      @default(true)
   order         Int          @default(0)
   createdAt     DateTime     @default(now())
@@ -361,7 +369,12 @@ model StudentAttempt {
   answers     StudentAnswer[]
   rewardGranted Boolean @default(false)
   rewardCoins   Int     @default(0)
+  // Bank testində bu cəhd üçün seçilmiş suallar (sıra ilə); adi testdə boşdur
+  questionIds   String[] @default([])
+  // Davam edən testin yadda saxlanmış cavabları { questionId: answer }
+  draft         Json?
 
+  @@index([packageId, studentId])
   @@map("student_attempts")
 }
 
@@ -403,6 +416,12 @@ enum EnrollmentStatus {
 enum QuestionType {
   MULTIPLE_CHOICE
   OPEN_ENDED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
 }
 
 enum AnswerStatus {
