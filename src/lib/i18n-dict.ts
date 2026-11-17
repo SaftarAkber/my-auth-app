@@ -5,6 +5,13 @@
  * Cəm formaları: {0:bir|bir neçə|çox} (rus) və {0:bir|çox} (ingilis); sayı olmayan tək söz üçün {:...} (əvvəlki rəqəmə baxılır).
  */
 export const UI: Record<string, [string, string, string?]> = {
+  "Hərkəsə açıq": ["Открыто всем", "Open to everyone"],
+  "Mövzunu yalnız seçilmiş qrupların üzvləri görəcək.": ["Тему увидят только участники выбранных групп.", "Only members of the selected groups will see this topic."],
+  "Mövzu hərkəsə açıqdır": ["Тема открыта всем", "The topic is open to everyone"],
+  "Mövzu seçilmiş qruplara açıqdır": ["Тема открыта выбранным группам", "The topic is open to the selected groups"],
+  "Kimə görünsün": ["Кому видна", "Who can see it"],
+  "Yanlış görünmə": ["Неверная видимость", "Invalid visibility"],
+  "Hələ qrupunuz yoxdur.": ["У вас пока нет групп.", "You don't have any groups yet."],
   "Şəkli böyüt": ["Увеличить изображение", "Enlarge image"],
   "Şəkil (qraf, ağac, cədvəl və s.) · istəyə görə": ["Изображение (граф, дерево, таблица и т. п.) · по желанию", "Image (graph, tree, table, etc.) · optional"],
   "Yalnız şəkil (JPG, PNG, WEBP, GIF) yükləmək olar": ["Можно загружать только изображения (JPG, PNG, WEBP, GIF)", "Only images (JPG, PNG, WEBP, GIF) can be uploaded"],
@@ -1004,6 +1011,7 @@ export const UI: Record<string, [string, string, string?]> = {
 
 /** Şablonlar: {0}, {1} dəyişən hissələrdir */
 export const UI_TPL: [string, string, string][] = [
+  ["Qruplar ({0})", "Группы ({0})", "Groups ({0})"],
   ["({0} şəkil oxunmadı)", "({0} изобр. не прочитано)", "({0} {0:image|images} couldn't be read)"],
   [", {0} sualsız test atlandı", ", пропущено тестов без вопросов: {0}", ", {0} {0:test|tests} without questions skipped"],
   [": {0} şəkil", ": {0} изобр.", ": {0} {0:image|images}"],

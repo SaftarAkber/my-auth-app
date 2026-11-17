@@ -102,8 +102,8 @@ export default function StudentGroupPage() {
             onChange={setTab}
             tabs={[
               { id: "feed" as const, label: "Paylaşımlar", count: g.posts.length },
-              // Mövzular yalnız qrup üzvlərinə görünür
-              ...(g.isMember ? [{ id: "topics" as const, label: "Mövzular" }] : []),
+              // Üzv olmayan tələbə yalnız müəllimin hərkəsə açıq mövzularını görür
+              { id: "topics" as const, label: "Mövzular" },
               { id: "tests", label: "Testlər", count: g.testPackages.length },
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
               { id: "members", label: "Üzvlər", count: g.members.length },
@@ -119,7 +119,7 @@ export default function StudentGroupPage() {
               </div>
             ))}
 
-          {tab === "topics" && g.isMember && <TopicList groupId={g.id} />}
+          {tab === "topics" && <TopicList groupId={g.id} />}
 
           {tab === "tests" &&
             (g.testPackages.length === 0 ? (

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { forbidden, notFound, optionalUser, requireTeacher, serverError, teacherOwnsGroups, unauthorized } from "@/lib/guards";
-import { cleanIds, studentGroupIds, visibleTestWhere } from "@/lib/topics";
+import { cleanIds, groupTopicsForStudent, studentGroupIds, visibleTestWhere } from "@/lib/topics";
 
-/** Qrupun mövzuları. Müəllim (qrupun sahibi) qaralamaları da görür; tələbə yalnız üzv olduğu qrupun dərc olunmuş mövzularını. */
+/** Qrupun mövzuları. Müəllim (qrupun sahibi) qaralamaları və hərkəsə açıq mövzularını da görür; tələbə – qrupa paylaşılan (üzvdürsə) və hərkəsə açıq dərc olunmuş mövzuları. */
 export async function GET(req: NextRequest) {
   try {
     const user = await optionalUser();
@@ -15,25 +15,30 @@ export async function GET(req: NextRequest) {
     if (!group) return notFound("Qrup tapılmadı");
 
     if (user.id === group.teacherId) {
-      const topics = await prisma.topic.findMany({
-        where: { teacherId: user.id, groups: { some: { groupId } } },
-        select: {
-          id: true, title: true, isPublished: true, order: true, updatedAt: true,
-          _count: { select: { tests: { where: { package: { deletedAt: null } } }, videos: true } },
-        },
-        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-      });
-      return NextResponse.json({ topics, owner: true });
+      const [rows, myGroups] = await Promise.all([
+        prisma.topic.findMany({
+          where: { teacherId: user.id, OR: [{ groups: { some: { groupId } } }, { visibility: "PUBLIC", isPublished: true }] },
+          select: {
+            id: true, title: true, isPublished: true, visibility: true, order: true, updatedAt: true,
+            groups: { select: { groupId: true } },
+            _count: { select: { tests: { where: { package: { deletedAt: null } } }, videos: true } },
+          },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        }),
+        prisma.group.findMany({ where: { teacherId: user.id }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
+      ]);
+      const topics = rows.map(({ groups, ...t }) => ({ ...t, groupIds: groups.map((x) => x.groupId) }));
+      return NextResponse.json({ topics, owner: true, myGroups });
     }
 
     if (user.role !== "STUDENT") return forbidden();
     const gids = await studentGroupIds(user.id);
-    if (!gids.includes(groupId)) return forbidden();
+    const isMember = gids.includes(groupId);
 
     const topics = await prisma.topic.findMany({
-      where: { isPublished: true, groups: { some: { groupId } } },
+      where: groupTopicsForStudent(groupId, group.teacherId, isMember),
       select: {
-        id: true, title: true, isPublished: true, order: true, updatedAt: true,
+        id: true, title: true, isPublished: true, visibility: true, order: true, updatedAt: true,
         _count: {
           select: {
             tests: { where: { package: visibleTestWhere(gids) } },

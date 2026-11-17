@@ -115,16 +115,24 @@ export async function studentGroupIds(studentId: string) {
   return rows.map((r) => r.groupId);
 }
 
-/** Tələbə bu mövzunu görə bilərmi: dərc olunub və onun qruplarından birinə paylaşılıb */
+/** Tələbə bu mövzunu görə bilərmi: dərc olunub və ya hərkəsə açıqdır, ya da onun qruplarından birinə paylaşılıb */
 export async function studentCanSeeTopic(topicId: string, studentId: string) {
   const gids = await studentGroupIds(studentId);
-  if (!gids.length) return { allowed: false as const, groupIds: gids };
   const t = await prisma.topic.findFirst({
-    where: { id: topicId, isPublished: true, groups: { some: { groupId: { in: gids } } } },
+    where: { id: topicId, isPublished: true, OR: [{ visibility: "PUBLIC" }, { groups: { some: { groupId: { in: gids } } } }] },
     select: { id: true },
   });
   return { allowed: !!t, groupIds: gids };
 }
+
+/** Qrupun «Mövzular» tabında tələbənin görəcəyi mövzular: qrupa paylaşılanlar (üzvdürsə) + müəllimin hərkəsə açıq mövzuları */
+export const groupTopicsForStudent = (groupId: string, teacherId: string, isMember: boolean): Prisma.TopicWhereInput => ({
+  isPublished: true,
+  OR: [
+    { visibility: "PUBLIC", teacherId },
+    ...(isMember ? [{ groups: { some: { groupId } } }] : []),
+  ],
+});
 
 /** Siyahıdakı id-ləri təmizləyir: yalnız sətirlər, təkrarsız, ən çoxu `max` */
 export function cleanIds(v: unknown, max = 200): string[] | null {

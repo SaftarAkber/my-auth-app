@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { Empty, ErrorBox, Field, Icon, Modal, SkeletonList, Spinner, useToast } from "@/components/ui";
+import TopicAccess from "@/components/topics/TopicAccess";
 
 interface TopicItem {
   id: string;
   title: string;
   isPublished: boolean;
+  visibility: "PUBLIC" | "GROUP_ONLY";
+  groupIds?: string[];
   order: number;
   _count: { tests: number; videos: number };
 }
@@ -18,7 +21,7 @@ interface TopicItem {
 export default function TopicList({ groupId }: { groupId: string }) {
   const router = useRouter();
   const toast = useToast();
-  const { data, loading, error, reload } = useFetch<{ topics: TopicItem[]; owner: boolean }>(`/api/topics?groupId=${groupId}`);
+  const { data, loading, error, reload } = useFetch<{ topics: TopicItem[]; owner: boolean; myGroups?: { id: string; name: string }[] }>(`/api/topics?groupId=${groupId}`);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -91,9 +94,13 @@ export default function TopicList({ groupId }: { groupId: string }) {
                 </div>
               </Link>
               {owner && (
-                <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
-                  <span className={t.isPublished ? "badge-ok" : "badge-warn"}>{t.isPublished ? "Dərc olunub" : "Qaralama"}</span>
-                  <span className="flex gap-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
+                  <TopicAccess
+                    topic={{ id: t.id, isPublished: t.isPublished, visibility: t.visibility, groupIds: t.groupIds ?? [] }}
+                    groups={data?.myGroups ?? []}
+                    onChanged={reload}
+                  />
+                  <span className="ml-auto flex gap-1">
                     <button className="btn-icon h-9 w-9" disabled={moving || i === 0} onClick={() => move(i, -1)} aria-label="Yuxarı"><Icon name="up" size={15} /></button>
                     <button className="btn-icon h-9 w-9" disabled={moving || i === topics.length - 1} onClick={() => move(i, 1)} aria-label="Aşağı"><Icon name="down" size={15} /></button>
                   </span>

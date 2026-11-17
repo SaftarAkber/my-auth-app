@@ -501,6 +501,8 @@ model Topic {
   // Kitabxana: təmizlənmiş HTML (server tərəfdə icazəli teq və stillərlə süzülür)
   content     String   @default("")
   isPublished Boolean  @default(false)
+  // PUBLIC – hərkəsə açıq; GROUP_ONLY – yalnız seçilmiş qruplara (TopicGroup)
+  visibility  ContentVisibility @default(GROUP_ONLY)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

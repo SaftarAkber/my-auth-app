@@ -11,6 +11,7 @@ import { VideoThumb } from "@/components/content";
 import {
   ChipSelect, Empty, ErrorBox, Field, Icon, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
 } from "@/components/ui";
+import TopicAccess from "@/components/topics/TopicAccess";
 
 interface TestItem { id: string; name: string; isPublished: boolean; visibility: "PUBLIC" | "GROUP_ONLY"; _count: { questions: number } }
 interface VideoItem { id: string; title: string; url: string; isPublished: boolean; visibility: "PUBLIC" | "GROUP_ONLY" }
@@ -22,6 +23,7 @@ interface TopicData {
     title: string;
     content: string;
     isPublished: boolean;
+    visibility: "PUBLIC" | "GROUP_ONLY";
     groups: { id: string; name: string }[];
     tests: TestItem[];
     videos: VideoItem[];
@@ -170,20 +172,6 @@ export default function TeacherTopicPage() {
     try { await patch(kind === "tests" ? { testIds: ids } : { videoIds: ids }, "Mövzudan çıxarıldı"); } catch (e) { toast.error(errMsg(e)); }
   }
 
-  async function togglePublish() {
-    if (!t) return;
-    if (!t.isPublished && t.groups.length === 0) {
-      toast.error("Əvvəlcə Ayarlar-da ən azı bir qrup seçin");
-      setTab("settings");
-      return;
-    }
-    try {
-      await patch({ isPublished: !t.isPublished }, t.isPublished ? "Qaralamaya qaytarıldı" : "Mövzu dərc olundu: qrup üzvləri görür");
-    } catch (e) {
-      toast.error(errMsg(e));
-    }
-  }
-
   async function saveSettings() {
     setBusy(true);
     try {
@@ -226,13 +214,15 @@ export default function TeacherTopicPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className={t.isPublished ? "badge-ok" : "badge-warn"}>{t.isPublished ? "Dərc olunub" : "Qaralama: yalnız siz görürsünüz"}</span>
-            {t.groups.map((x) => <span key={x.id} className="badge-muted"><Icon name="users" size={12} /> {x.name}</span>)}
+            {t.isPublished && t.visibility === "GROUP_ONLY" && t.groups.map((x) => <span key={x.id} className="badge-muted"><Icon name="users" size={12} /> {x.name}</span>)}
           </div>
         </div>
-        <button className={t.isPublished ? "btn-secondary" : "btn-primary"} onClick={togglePublish}>
-          <Icon name={t.isPublished ? "eyeOff" : "eye"} size={16} /> {t.isPublished ? "Qaralamaya qaytar" : "Dərc et"}
-        </button>
+        <TopicAccess
+          size="md"
+          topic={{ id: t.id, isPublished: t.isPublished, visibility: t.visibility, groupIds: t.groups.map((x) => x.id) }}
+          groups={data!.myGroups}
+          onChanged={reload}
+        />
       </div>
 
       <div className="mt-6">

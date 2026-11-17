@@ -22,7 +22,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         prisma.topic.findUnique({
           where: { id },
           select: {
-            id: true, title: true, content: true, isPublished: true, updatedAt: true,
+            id: true, title: true, content: true, isPublished: true, visibility: true, updatedAt: true,
             groups: { select: { group: { select: { id: true, name: true } } } },
             tests: { where: { package: { deletedAt: null } }, orderBy: { order: "asc" }, select: { package: { select: testLiteSelect() } } },
             videos: { orderBy: { order: "asc" }, select: { video: { select: { ...videoLiteSelect, isActive: true } } } },
@@ -43,7 +43,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       });
     }
 
-    // Tələbə: dərc olunmuş və qrupuna paylaşılmış mövzu; yalnız ona açıq test və videolar
+    // Tələbə: dərc olunmuş və hərkəsə açıq və ya qrupuna paylaşılmış mövzu; yalnız ona açıq test və videolar
     if (user.role !== "STUDENT") return forbidden();
     const access = await studentCanSeeTopic(id, user.id);
     if (!access.allowed) return forbidden();
@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (topic.teacherId !== teacherId) return forbidden();
 
     const b = await req.json().catch(() => ({}));
-    const data: { title?: string; content?: string; isPublished?: boolean } = {};
+    const data: { title?: string; content?: string; isPublished?: boolean; visibility?: "PUBLIC" | "GROUP_ONLY" } = {};
     if (b.title !== undefined) {
       const title = typeof b.title === "string" ? b.title.trim().slice(0, 120) : "";
       if (!title) return NextResponse.json({ error: "Mövzunun adını yazın" }, { status: 400 });
@@ -106,12 +106,20 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       data.content = sanitizeTopicHtml(b.content);
     }
     if (b.isPublished !== undefined) data.isPublished = !!b.isPublished;
+    if (b.visibility !== undefined) {
+      if (b.visibility !== "PUBLIC" && b.visibility !== "GROUP_ONLY") return NextResponse.json({ error: "Yanlış görünmə" }, { status: 400 });
+      data.visibility = b.visibility;
+    }
 
     const groupIds = cleanIds(b.groupIds, 50);
     const testIds = cleanIds(b.testIds);
     const videoIds = cleanIds(b.videoIds);
 
     if (groupIds && !(await teacherOwnsGroups(teacherId, groupIds))) return forbidden();
+    // «Qruplara» dərc etmək üçün ən azı bir qrup lazımdır
+    if (data.isPublished && data.visibility === "GROUP_ONLY" && groupIds && groupIds.length === 0) {
+      return NextResponse.json({ error: "Ən azı bir qrup seçin" }, { status: 400 });
+    }
     if (testIds?.length) {
       const n = await prisma.testPackage.count({ where: { id: { in: testIds }, ...ownedTestWhere(teacherId) } });
       if (n !== testIds.length) return forbidden();
@@ -134,7 +142,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         await tx.topicVideo.deleteMany({ where: { topicId: id } });
         if (videoIds.length) await tx.topicVideo.createMany({ data: videoIds.map((videoId, order) => ({ topicId: id, videoId, order })) });
       }
-      return tx.topic.update({ where: { id }, data, select: { id: true, content: true, updatedAt: true, isPublished: true, title: true } });
+      return tx.topic.update({ where: { id }, data, select: { id: true, content: true, updatedAt: true, isPublished: true, visibility: true, title: true } });
     });
 
     return NextResponse.json({ topic: updated });
