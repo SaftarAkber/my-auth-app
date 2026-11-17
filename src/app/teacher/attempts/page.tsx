@@ -118,18 +118,22 @@ export default function TeacherAttemptsPage() {
             const isOpen = open === a.id;
             return (
               <article key={a.id} className="card overflow-hidden">
-                <button className="flex w-full items-center gap-3 p-4 text-left" onClick={() => setOpen(isOpen ? null : a.id)}>
+                <button className="flex w-full items-start gap-3 p-4 text-left sm:items-center" onClick={() => setOpen(isOpen ? null : a.id)}>
                   <Avatar src={a.student.photo} name={a.student.name} size={42} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{a.student.name}</p>
-                    <p className="truncate text-xs text-muted">{a.package.name} · {fmtDateTime(a.finishedAt)}</p>
+                    <p className="break-words font-bold [overflow-wrap:anywhere]">{a.student.name}</p>
+                    <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">{a.package.name} · {fmtDateTime(a.finishedAt)}</p>
+                    {(pend > 0 || a.rewardGranted || eligible(a)) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {pend > 0 && <span className="badge-warn">{pend} yoxlanmamış</span>}
+                        {a.rewardGranted && <span className="badge-ok"><Icon name="coin" size={12} /> +{a.rewardCoins}</span>}
+                        {eligible(a) && <span className="badge-warn"><Icon name="coin" size={12} /> Mükafat gözləyir</span>}
+                      </div>
+                    )}
                   </div>
-                  {pend > 0 && <span className="badge-warn">{pend} yoxlanmamış</span>}
-                  {a.rewardGranted && <span className="badge-ok"><Icon name="coin" size={12} /> +{a.rewardCoins}</span>}
-                  {eligible(a) && <span className="badge-warn"><Icon name="coin" size={12} /> Mükafat gözləyir</span>}
-                  <span className="hidden text-sm text-muted sm:inline">{a.score}/{a.totalScore}</span>
-                  <span className={cx("badge", p >= 70 ? "bg-ok/10 text-ok" : p >= 40 ? "bg-warn/10 text-warn" : "bg-bad/10 text-bad")}>{p}%</span>
-                  <Icon name="down" className={cx("text-muted transition", isOpen && "rotate-180")} />
+                  <span className="hidden shrink-0 text-sm text-muted sm:inline">{a.score}/{a.totalScore}</span>
+                  <span className={cx("badge shrink-0", p >= 70 ? "bg-ok/10 text-ok" : p >= 40 ? "bg-warn/10 text-warn" : "bg-bad/10 text-bad")}>{p}%</span>
+                  <Icon name="down" className={cx("shrink-0 text-muted transition", isOpen && "rotate-180")} />
                 </button>
 
                 {isOpen && (

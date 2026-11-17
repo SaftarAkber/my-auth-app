@@ -29,7 +29,7 @@ function Ring({ value }: { value: number }) {
   const r = 22;
   const c = 2 * Math.PI * r;
   return (
-    <span className={cx("relative inline-flex h-14 w-14 items-center justify-center", tone)}>
+    <span className={cx("relative inline-flex h-14 w-14 shrink-0 items-center justify-center", tone)}>
       <svg className="-rotate-90" width="56" height="56" viewBox="0 0 56 56">
         <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5" className="stroke-surface-2" />
         <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5" strokeLinecap="round" stroke="currentColor"
@@ -93,14 +93,16 @@ export default function MyTestsPage() {
             const groupName = a.package.group?.name ?? a.package.testPackageGroups[0]?.group.name;
             const isLatest = latestByPackage.get(a.package.id) === a.id;
             return (
-              <div key={a.id} className="card flex flex-wrap items-center gap-4 p-4">
+              // Mobildə: üstdə nəticə və məlumat (uzun ad alt sətrə keçir), düymələr kartın altında; genişlikdə bir sətir
+              <div key={a.id} className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
                 {a.finishedAt ? (
                   <Ring value={pct} />
                 ) : (
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-warn/10 text-warn"><Icon name="clock" size={22} /></span>
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-warn/10 text-warn"><Icon name="clock" size={22} /></span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{a.package.name}</p>
+                  <p className="break-words font-bold [overflow-wrap:anywhere]">{a.package.name}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                     {groupName && <span>{groupName}</span>}
                     <span>{fmtDateTime(a.finishedAt ?? a.startedAt)}</span>
@@ -110,7 +112,8 @@ export default function MyTestsPage() {
                     <p className="mt-1 text-sm font-semibold">{a.score} / {a.totalScore} düzgün</p>
                   )}
                 </div>
-                <div className="flex gap-2">
+                </div>
+                <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">
                   {a.finishedAt ? (
                     <>
                       <Link href={`/student/attempts/${a.id}`} className="btn-secondary btn-sm">Cavablara bax</Link>

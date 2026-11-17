@@ -69,21 +69,23 @@ export default function TeacherStudentsPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {students.map(({ student: s, groups: gs, since }) => (
-            <div key={s.id} className="card flex items-center gap-3 p-4 transition">
+            <div key={s.id} className="card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center">
               <Link href={`/u/${s.id}`} className="flex min-w-0 flex-1 items-center gap-4">
                 <Avatar src={s.photo} name={s.name} size={52} />
                 <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{s.name}</p>
-                <p className="truncate text-xs text-muted">{s.phone ?? s.email ?? "—"} · {fmtDate(since)}</p>
+                <p className="break-words font-bold [overflow-wrap:anywhere]">{s.name}</p>
+                <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">{s.phone ?? s.email ?? "—"} · {fmtDate(since)}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {gs.map((g) => <span key={g.id} className="badge-brand max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">{g.name}</span>)}
                 </div>
                 </div>
               </Link>
-              <button className="btn-secondary btn-sm shrink-0" onClick={() => setGift({ id: s.id, name: s.name })} aria-label={`${s.name} adlı tələbəyə coin göndər`}>
-                <Icon name="coin" size={14} /> Coin
-              </button>
-              <Link href={`/u/${s.id}`} className="btn-icon shrink-0" aria-label="Ətraflı"><Icon name="right" /></Link>
+              <div className="flex items-center justify-end gap-2 sm:shrink-0">
+                <button className="btn-secondary btn-sm" onClick={() => setGift({ id: s.id, name: s.name })} aria-label={`${s.name} adlı tələbəyə coin göndər`}>
+                  <Icon name="coin" size={14} /> Coin
+                </button>
+                <Link href={`/u/${s.id}`} className="btn-icon" aria-label="Ətraflı"><Icon name="right" /></Link>
+              </div>
             </div>
           ))}
         </div>
