@@ -52,30 +52,23 @@ export default function MyTestsPage() {
   const [history, setHistory] = useState<string | null>(null);
 
   const all = useMemo(() => data ?? [], [data]);
-  // Sual bankının çoxlu cəhdi bir kartda toplanır (ən son cəhd kartda, qalanı "Keçmiş"də)
-  const bankAttempts = useMemo(() => {
+  // Bir paketin bütün cəhdləri bir kartda: kartda son nəticə, qalanları "Cəhdlər" pəncərəsində (müəllim görünüşündəki kimi)
+  const groups = useMemo(() => {
     const m = new Map<string, Attempt[]>();
-    for (const a of all) if (a.package.isBank) m.set(a.package.id, [...(m.get(a.package.id) ?? []), a]);
-    return m;
+    for (const a of all) m.set(a.package.id, [...(m.get(a.package.id) ?? []), a]);
+    return [...m.values()].map((list) => {
+      const sorted = [...list].sort((x, y) => +new Date(y.startedAt) - +new Date(x.startedAt));
+      return { pkg: sorted[0].package, running: sorted.find((a) => !a.finishedAt) ?? null, done: sorted.filter((a) => a.finishedAt) };
+    });
   }, [all]);
-  const list = useMemo(() => {
-    const seen = new Set<string>();
-    return all
-      .filter((a) => (tab === "all" ? true : tab === "running" ? !a.finishedAt : !!a.finishedAt))
-      .filter((a) => {
-        if (!a.package.isBank) return true;
-        if (seen.has(a.package.id)) return false;
-        seen.add(a.package.id);
-        return true;
-      });
-  }, [all, tab]);
+  const list = useMemo(
+    () => groups.filter((g) => (tab === "all" ? true : tab === "running" ? !!g.running : g.done.length > 0)),
+    [groups, tab],
+  );
 
   const begin = (a: Attempt) => run(a.package);
-  const histList = history ? (bankAttempts.get(history) ?? []).filter((a) => a.finishedAt) : [];
-
-  // Hər test üçün ən son cəhd "təkrar" düyməsini göstərir
-  const latestByPackage = new Map<string, string>();
-  for (const a of all) if (!latestByPackage.has(a.package.id)) latestByPackage.set(a.package.id, a.id);
+  const histGroup = history ? groups.find((g) => g.pkg.id === history) : undefined;
+  const histList = histGroup?.done ?? [];
 
   return (
     <div className="page-narrow">
@@ -94,9 +87,9 @@ export default function MyTestsPage() {
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: "all", label: "Hamısı", count: all.length },
-          { id: "running", label: "Davam edən", count: all.filter((a) => !a.finishedAt).length },
-          { id: "done", label: "Tamamlanan", count: all.filter((a) => a.finishedAt).length },
+          { id: "all", label: "Hamısı", count: groups.length },
+          { id: "running", label: "Davam edən", count: groups.filter((g) => g.running).length },
+          { id: "done", label: "Tamamlanan", count: groups.filter((g) => g.done.length > 0).length },
         ]}
       />
 
@@ -113,13 +106,15 @@ export default function MyTestsPage() {
         />
       ) : (
         <div className="space-y-3">
-          {list.map((a) => {
+          {list.map((g) => {
+            // "Tamamlanan"da son bitmiş cəhd, qalan hallarda davam edən cəhd (varsa) kartda göstərilir
+            const a = tab !== "done" && g.running ? g.running : g.done[0];
             const pct = percent(a.score, a.totalScore);
             const groupName = a.package.group?.name ?? a.package.testPackageGroups[0]?.group.name;
-            const isLatest = latestByPackage.get(a.package.id) === a.id;
+            const canRetry = (a.package.allowRetry || a.package.isBank) && !g.running;
             return (
               // Mobildə: üstdə nəticə və məlumat (uzun ad alt sətrə keçir), düymələr kartın altında; genişlikdə bir sətir
-              <div key={a.id} className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+              <div key={g.pkg.id} className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
                 <div className="flex min-w-0 flex-1 items-center gap-4">
                 {a.finishedAt ? (
                   <Ring value={pct} />
@@ -133,33 +128,30 @@ export default function MyTestsPage() {
                     <span>{fmtDateTime(a.finishedAt ?? a.startedAt)}</span>
                     {a.package.isTimed && a.package.duration && <span>⏱ {minutes(a.package.duration)} dəq</span>}
                   </p>
-                  {a.finishedAt && (
+                  {(a.finishedAt || g.done.length > 0) && (
                     <p className="mt-1 text-sm font-semibold">
-                      {a.score} / {a.totalScore} düzgün
-                      {a.package.isBank && (bankAttempts.get(a.package.id)?.length ?? 0) > 1 && (
-                        <span className="font-normal text-muted"> · cəmi {bankAttempts.get(a.package.id)!.filter((x) => x.finishedAt).length} cəhd</span>
-                      )}
+                      {a.finishedAt ? <>{a.score} / {a.totalScore} düzgün</> : <span className="font-normal text-warn">Davam edir</span>}
+                      {g.done.length > 1 && <span className="font-normal text-muted"> · cəmi {g.done.length} cəhd</span>}
                     </p>
                   )}
                 </div>
                 </div>
                 <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">
-                  {a.finishedAt ? (
-                    <>
-                      <Link href={`/student/attempts/${a.id}`} className="btn-secondary btn-sm">Cavablara bax</Link>
-                      <Link href={`/student/results/${a.package.id}`} className="btn-soft btn-sm"><Icon name="chart" size={14} /> {a.package.isBank ? "Reytinq" : "Cədvəl"}</Link>
-                      {a.package.isBank && (bankAttempts.get(a.package.id)?.filter((x) => x.finishedAt).length ?? 0) > 1 && (
-                        <button className="btn-soft btn-sm" onClick={() => setHistory(a.package.id)}><Icon name="calendar" size={14} /> Keçmiş</button>
-                      )}
-                      {(a.package.allowRetry || a.package.isBank) && isLatest && (
-                        <button className="btn-soft btn-sm" onClick={() => begin(a)} disabled={starting === a.package.id}>
-                          {starting === a.package.id ? <Spinner /> : <Icon name="retry" size={14} />} {a.package.isBank ? "Yenidən işlə" : "Təkrar"}
-                        </button>
-                      )}
-                    </>
-                  ) : (
+                  {!a.finishedAt && (
                     <button className="btn-primary btn-sm" onClick={() => begin(a)} disabled={starting === a.package.id}>
                       {starting === a.package.id ? <Spinner /> : <Icon name="play" size={14} />} Davam et
+                    </button>
+                  )}
+                  {g.done.length === 1 && <Link href={`/student/attempts/${g.done[0].id}`} className="btn-secondary btn-sm">Cavablara bax</Link>}
+                  {g.done.length > 1 && (
+                    <button className="btn-secondary btn-sm" onClick={() => setHistory(g.pkg.id)}><Icon name="calendar" size={14} /> Cəhdlər ({g.done.length})</button>
+                  )}
+                  {g.done.length > 0 && (
+                    <Link href={`/student/results/${a.package.id}`} className="btn-soft btn-sm"><Icon name="chart" size={14} /> {a.package.isBank ? "Reytinq" : "Cədvəl"}</Link>
+                  )}
+                  {canRetry && (
+                    <button className="btn-soft btn-sm" onClick={() => begin(a)} disabled={starting === a.package.id}>
+                      {starting === a.package.id ? <Spinner /> : <Icon name="retry" size={14} />} {a.package.isBank ? "Yenidən işlə" : "Təkrar"}
                     </button>
                   )}
                 </div>
@@ -171,16 +163,19 @@ export default function MyTestsPage() {
 
       {node}
 
-      <Modal open={!!history} onClose={() => setHistory(null)} title={histList[0]?.package.name ?? "Keçmiş"}>
+      <Modal open={!!history} onClose={() => setHistory(null)} title={histGroup?.pkg.name ?? "Cəhdlər"}>
         <ul className="divide-y divide-line">
           {histList.map((a, i) => {
             const pct = percent(a.score, a.totalScore);
+            const no = histList.length - i;
             return (
               <li key={a.id}>
                 <Link href={`/student/attempts/${a.id}`} className="flex items-center gap-3 py-2.5 hover:bg-tint/50">
-                  <span className="w-8 shrink-0 text-center text-sm font-bold text-muted">{histList.length - i}</span>
+                  <span className="w-8 shrink-0 text-center text-sm font-bold text-muted">{no}</span>
                   <span className="min-w-0 flex-1 text-sm">
                     <span className="font-semibold">{a.score}/{a.totalScore}</span>
+                    {/* Aylıq sınaqda yalnız birinci cəhd cədvələ düşür */}
+                    {a.package.isMonthly && <span className={cx("badge ml-2", no === 1 ? "bg-tint text-accent" : "bg-surface-2 text-muted")}>{no === 1 ? "Cədvələ düşən" : "Məşq"}</span>}
                     <span className="block text-xs text-muted">{fmtDateTime(a.finishedAt)}</span>
                   </span>
                   <span className={cx("badge shrink-0", pct >= 70 ? "bg-ok/10 text-ok" : pct >= 40 ? "bg-warn/10 text-warn" : "bg-bad/10 text-bad")}>{pct}%</span>

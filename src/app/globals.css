@@ -321,6 +321,41 @@ main > * {
 
 /* Scrollbar */
 * { scrollbar-width: thin; scrollbar-color: rgb(var(--ink) / 0.35) transparent; }
+/* Telefonda üfüqi sürüşən yerlərdə boz zolaq görünmür (sürüşmə işləyir) */
+@media (max-width: 767px), (hover: none) {
+  .overflow-x-auto { scrollbar-width: none; }
+  .overflow-x-auto::-webkit-scrollbar { display: none; }
+}
+
+/* ───────────── Reytinq: 1-ci yer kubok, 2–3 medal ───────────── */
+.lb-trophy { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; vertical-align: middle; }
+.lb-trophy svg { filter: drop-shadow(0 1px 1.5px rgb(150 95 0 / 0.45)); animation: lb-bob 2.8s ease-in-out infinite; }
+.lb-halo {
+  position: absolute; inset: 3px; border-radius: 9999px;
+  background: radial-gradient(circle, rgb(255 214 64 / 0.75) 0%, rgb(255 196 0 / 0.28) 45%, transparent 70%);
+  animation: lb-halo 2.4s ease-in-out infinite;
+}
+.lb-rays {
+  position: absolute; inset: -4px; border-radius: 9999px;
+  background: repeating-conic-gradient(from 0deg, rgb(255 205 40 / 0.55) 0deg 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%);
+  mask: radial-gradient(circle, #000 30%, transparent 70%);
+  animation: lb-spin 9s linear infinite;
+}
+.lb-medal { display: inline-grid; place-items: center; width: 32px; height: 32px; vertical-align: middle; }
+.lb-medal svg { filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25)); }
+.lb-shine { animation: lb-shine 3s ease-in-out infinite; }
+.lb-medal .lb-shine { animation-duration: 3.4s; animation-delay: 0.6s; }
+.lb-medal3 .lb-shine { animation-delay: 1.3s; }
+.lb-spark { transform-box: fill-box; transform-origin: center; animation: lb-twinkle 1.8s ease-in-out infinite; }
+.lb-spark2 { animation-delay: 0.6s; }
+.lb-spark3 { animation-delay: 1.2s; }
+.lb-first { background: linear-gradient(90deg, rgb(255 210 60 / 0.18), rgb(255 210 60 / 0.05) 60%, transparent); }
+@keyframes lb-shine { 0% { transform: translateX(0) skewX(-20deg); } 55%, 100% { transform: translateX(46px) skewX(-20deg); } }
+@keyframes lb-halo { 0%, 100% { transform: scale(0.85); opacity: 0.55; } 50% { transform: scale(1.12); opacity: 1; } }
+@keyframes lb-spin { to { transform: rotate(360deg); } }
+@keyframes lb-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes lb-twinkle { 0%, 100% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.15); } }
 
 /* ───────────── Mövzu kitabxanası (redaktor və oxu görünüşü eyni ölçülərlə) ───────────── */
 .topic-content {

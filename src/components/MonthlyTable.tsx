@@ -98,8 +98,8 @@ export default function MonthlyTable({ groupId, attemptBase }: { groupId: string
                 <table className="w-full border-separate border-spacing-0 text-[13px] sm:text-sm">
                   <thead>
                     <tr className="bg-surface-2 text-xs text-muted">
-                      <th className="sticky left-0 z-20 w-9 bg-surface-2 px-1 py-2 text-center font-bold">Yer</th>
-                      <th className="sticky left-9 z-20 min-w-[76px] border-r border-line bg-surface-2 px-1.5 py-2 text-left font-bold">Ad</th>
+                      <th className="sticky left-0 z-20 w-12 min-w-12 bg-surface-2 px-1 py-2 text-center font-bold">Yer</th>
+                      <th className="sticky left-12 z-20 min-w-[76px] border-r border-line bg-surface-2 px-1.5 py-2 text-left font-bold">Ad</th>
                       {data.packages.map((p) => (
                         <th key={p.id} className="min-w-[48px] max-w-[96px] px-1 py-2 text-center align-bottom font-bold">
                           <span className="line-clamp-2 break-words leading-tight" title={p.name}>{p.name}</span>
@@ -116,8 +116,8 @@ export default function MonthlyTable({ groupId, attemptBase }: { groupId: string
                       const bg = r.mine ? "bg-tint" : "bg-surface";
                       return (
                         <tr key={r.student.id}>
-                          <td className={cx("sticky left-0 z-10 border-t border-line px-1 py-1.5 text-center", bg)}><RankBadge rank={r.rank} /></td>
-                          <td className={cx("sticky left-9 z-10 max-w-[120px] border-r border-t border-line px-1.5 py-1.5", bg)}><NameCell student={r.student} /></td>
+                          <td className={cx("sticky left-0 z-10 w-12 min-w-12 border-t border-line px-1 py-1.5 text-center", bg)}><RankBadge rank={r.rank} /></td>
+                          <td className={cx("sticky left-12 z-10 max-w-[120px] border-r border-t border-line px-1.5 py-1.5", bg)}><NameCell student={r.student} /></td>
                           {data.packages.map((p) => {
                             const c = r.cells[p.id];
                             const body = c ? (
