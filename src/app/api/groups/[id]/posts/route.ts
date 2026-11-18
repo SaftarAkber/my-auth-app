@@ -43,10 +43,18 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     const postId = new URL(req.url).searchParams.get("postId");
     if (!postId) return NextResponse.json({ error: "Post ID lazımdır" }, { status: 400 });
 
-    const result = await prisma.groupPost.deleteMany({
+    const post = await prisma.groupPost.findFirst({
       where: { id: postId, groupId, teacherId: auth.user.id },
+      select: { content: true, createdAt: true },
     });
-    if (result.count === 0) return forbidden();
+    if (!post) return forbidden();
+    // ?all=1 – bir neçə qrupa birlikdə göndərilmiş paylaşımın bütün nüsxələri silinir (profildən silmə)
+    const all = new URL(req.url).searchParams.get("all") === "1";
+    await prisma.groupPost.deleteMany({
+      where: all
+        ? { teacherId: auth.user.id, content: post.content, createdAt: post.createdAt }
+        : { id: postId, groupId, teacherId: auth.user.id },
+    });
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
     return serverError(error);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound, serverError, unauthorized } from "@/lib/guards";
+import { collapsePosts } from "@/lib/posts";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -83,9 +84,10 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       orderBy: { createdAt: "desc" },
       take: 60,
     });
-    const visible = allPosts.filter(
+    // Bir neçə qrupa birlikdə göndərilmiş paylaşım bir kart kimi göstərilir
+    const visible = collapsePosts(allPosts.filter(
       (p) => full || p.visibility === "PUBLIC" || myGroupIds.includes(p.groupId),
-    );
+    ));
 
     const testWhere = {
       OR: [
@@ -138,7 +140,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       stats: { students: studentCount, groups: groups.length, posts: visible.length },
       groups,
       posts: visible,
-      hiddenPosts: allPosts.length - visible.length,
+      hiddenPosts: collapsePosts(allPosts).length - visible.length,
       tests: tests.map((t) => ({
         ...t,
         member: myGroupIds.some((g) => t.groupId === g || t.testPackageGroups.some((x) => x.groupId === g)),

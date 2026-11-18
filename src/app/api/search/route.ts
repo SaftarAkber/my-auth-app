@@ -52,6 +52,8 @@ export async function GET(req: NextRequest) {
         where: { content: contains, ...(admin ? {} : { visibility: "PUBLIC" }) },
         select: { id: true, content: true, teacherId: true, teacher: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
+        // Bir neçə qrupa göndərilmiş paylaşımın nüsxələri bir dəfə göstərilir
+        distinct: ["teacherId", "content"],
         take: 5,
       }),
     ]);

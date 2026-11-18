@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireStudent, serverError } from "@/lib/guards";
+import { collapsePosts } from "@/lib/posts";
 
 const PAGE = 10;
 
@@ -37,10 +38,12 @@ export async function GET(req: NextRequest) {
         teacher: { select: { id: true, name: true, photo: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: PAGE + 1,
+      // Bir neçə qrupa göndərilmiş paylaşımın nüsxələri bir karta yığılır, ona görə ehtiyatla çox götürürük
+      take: PAGE * 6,
     });
+    const posts = collapsePosts(rows);
 
-    return NextResponse.json({ posts: rows.slice(0, PAGE), hasMore: rows.length > PAGE });
+    return NextResponse.json({ posts: posts.slice(0, PAGE), hasMore: posts.length > PAGE });
   } catch (error) {
     return serverError(error);
   }

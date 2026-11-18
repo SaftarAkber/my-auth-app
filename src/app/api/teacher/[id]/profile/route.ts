@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { collapsePosts } from "@/lib/posts";
 
 export async function GET(
   _: NextRequest,
@@ -152,7 +153,7 @@ export async function GET(
       memberGroupIds,
       publicTestPackages,
       publicVideoPackages,
-      publicPosts,
+      publicPosts: collapsePosts(publicPosts),
     });
   } catch (error) {
     console.error(error);

@@ -320,7 +320,8 @@ function JoinModal({ group, onClose, onDone }: { group: GroupCard | null; onClos
 function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; reload: () => void }) {
   const toast = useToast();
   const confirm = useConfirm();
-  const [groupId, setGroupId] = useState("");
+  // Paylaşım bir neçə qrupa birlikdə göndərilə bilər
+  const [picked, setPicked] = useState<string[]>([]);
   const [content, setContent] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
@@ -329,7 +330,9 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
   const fileRef = useRef<HTMLInputElement>(null);
 
   const groups = data.groups;
-  const target = groupId || groups[0]?.id || "";
+  const chosen = picked.filter((id) => groups.some((g) => g.id === id));
+  const allPicked = groups.length > 0 && chosen.length === groups.length;
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   async function pickImages(files: FileList | null) {
     if (!files?.length) return;
@@ -346,14 +349,15 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
   }
 
   async function publish() {
-    if (!target) return toast.error("Əvvəlcə qrup yaradın");
+    if (!groups.length) return toast.error("Əvvəlcə qrup yaradın");
+    if (!chosen.length) return toast.error("Ən azı bir qrup seçin");
     if (!content.trim()) return;
     setPosting(true);
     try {
-      await api(`/api/groups/${target}/posts`, { body: { content, images, visibility: isPublic ? "PUBLIC" : "GROUP" } });
+      await api("/api/posts", { body: { groupIds: chosen, content, images, visibility: isPublic ? "PUBLIC" : "GROUP" } });
       setContent("");
       setImages([]);
-      toast.success("Paylaşıldı");
+      toast.success(chosen.length > 1 ? `${chosen.length} qrupda paylaşıldı` : "Paylaşıldı");
       reload();
     } catch (e) {
       toast.error(errMsg(e));
@@ -365,7 +369,8 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
   async function removePost(p: PostLite & { group: { id: string } }) {
     if (!(await confirm({ title: "Paylaşım silinsin?", confirmText: "Sil", danger: true }))) return;
     try {
-      await api(`/api/groups/${p.group.id}/posts?postId=${p.id}`, { method: "DELETE" });
+      // Bir neçə qrupa göndərilibsə hamısından silinir
+      await api(`/api/groups/${p.group.id}/posts?postId=${p.id}&all=1`, { method: "DELETE" });
       reload();
     } catch (e) {
       toast.error(errMsg(e));
@@ -389,10 +394,35 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
               ))}
             </div>
           )}
+          {/* Qruplar: bir neçəsini birlikdə seçmək olar */}
+          {groups.length > 0 && (
+            <fieldset className="mt-3">
+              <legend className="mb-1.5 flex w-full items-center justify-between text-xs font-bold text-muted">
+                <span>Hansı qruplarda paylaşılsın?</span>
+                <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setPicked(allPicked ? [] : groups.map((g) => g.id))}>
+                  {allPicked ? "Seçimi təmizlə" : "Hamısını seç"}
+                </button>
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {groups.map((g) => {
+                  const on = chosen.includes(g.id);
+                  return (
+                    <label
+                      key={g.id}
+                      className={cx(
+                        "flex max-w-full cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm transition",
+                        on ? "border-brand bg-tint font-semibold" : "border-line hover:bg-surface-2",
+                      )}
+                    >
+                      <input type="checkbox" className="h-4 w-4 shrink-0 accent-[rgb(var(--brand))]" checked={on} onChange={() => toggle(g.id)} />
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{g.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <select className="input !w-auto min-w-0 max-w-full !py-1.5 text-xs" value={target} onChange={(e) => setGroupId(e.target.value)} aria-label="Qrup">
-              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
             <button className="btn-ghost btn-sm" onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4} aria-label="Şəkil əlavə et">
               {uploading ? <Spinner /> : <Icon name="image" size={16} />}
             </button>
@@ -400,8 +430,8 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
             <button type="button" onClick={() => setIsPublic((v) => !v)} className={cx("btn-secondary btn-sm", isPublic && "!bg-iris/30")}>
               <Icon name={isPublic ? "globe" : "lock"} size={14} /> {isPublic ? "Hamıya açıq" : "Yalnız qrup"}
             </button>
-            <button className="btn-primary btn-sm ml-auto" onClick={publish} disabled={posting || !content.trim() || !target}>
-              {posting ? <Spinner /> : <Icon name="send" size={14} />} Paylaş
+            <button className="btn-primary btn-sm ml-auto" onClick={publish} disabled={posting || !content.trim() || chosen.length === 0}>
+              {posting ? <Spinner /> : <Icon name="send" size={14} />} Paylaş{chosen.length > 1 ? ` (${chosen.length})` : ""}
             </button>
           </div>
         </div>

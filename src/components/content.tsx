@@ -110,6 +110,8 @@ export interface PostLite {
   images: { id: string; url: string }[];
   teacher?: { id: string; name: string; photo: string | null };
   group?: { id: string; name: string };
+  /** Bir neçə qrupa birlikdə göndərilibsə: bütün (baxana görünən) qruplar */
+  groups?: { id: string; name: string }[];
 }
 
 export const ORDER_STATUS = {
@@ -264,7 +266,7 @@ export function PostCard({
           <p className="truncate text-sm font-bold">{post.teacher?.name ?? "Müəllim"}</p>
           <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">
             {timeAgo(post.createdAt)}
-            {showGroup && post.group ? ` · ${post.group.name}` : ""}
+            {showGroup && (post.groups?.length || post.group) ? ` · ${post.groups?.length ? post.groups.map((g) => g.name).join(", ") : post.group!.name}` : ""}
           </p>
         </div>
         <span className={post.visibility === "PUBLIC" ? "badge-info" : "badge-muted"}>
