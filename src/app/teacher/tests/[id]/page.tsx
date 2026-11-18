@@ -135,7 +135,7 @@ export default function CollectionPage() {
   async function togglePublish(p: Pkg) {
     try {
       await api(`/api/packages/${p.id}`, { method: "PATCH", body: { isPublished: !p.isPublished } });
-      toast.success(p.isPublished ? "Dərcdən çıxarıldı" : "Dərc edildi (+5 coin)");
+      toast.success(p.isPublished ? "Dərcdən çıxarıldı" : "Dərc edildi");
       col.reload();
     } catch (e) {
       toast.error(errMsg(e));

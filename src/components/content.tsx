@@ -262,7 +262,7 @@ export function PostCard({
         <Avatar src={post.teacher?.photo} name={post.teacher?.name ?? "Müəllim"} size={40} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{post.teacher?.name ?? "Müəllim"}</p>
-          <p className="text-xs text-muted">
+          <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">
             {timeAgo(post.createdAt)}
             {showGroup && post.group ? ` · ${post.group.name}` : ""}
           </p>

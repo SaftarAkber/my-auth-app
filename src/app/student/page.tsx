@@ -8,6 +8,7 @@ import { fmtDate, percent } from "@/lib/format";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
 import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
 import { SubjectBadges } from "@/components/Subjects";
+import StudentFeed from "@/components/StudentFeed";
 
 interface Enrollment {
   id: string;
@@ -92,6 +93,12 @@ export default function StudentHome() {
         </section>
       )}
 
+      {/* Kompüterdə: solda paylaşımlar lenti, sağda qruplar və müəllimlər; telefonda lent yuxarıda */}
+      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="min-w-0 lg:col-span-2">
+        <StudentFeed />
+      </div>
+      <div className="min-w-0 space-y-8">
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold">Qruplarım</h2>
@@ -107,7 +114,7 @@ export default function StudentHome() {
             action={<Link href="/student/teacher" className="btn-primary">Müəllimlərə bax</Link>}
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {groups.map((e) => (
               <Link key={e.id} href={`/student/groups/${e.group.id}`} className="card group p-5 transition hover:border-brand/40">
                 <div className="flex items-center gap-3">
@@ -158,6 +165,8 @@ export default function StudentHome() {
           )}
         </section>
 
+      </div>
+      </div>
       </div>
     </div>
   );

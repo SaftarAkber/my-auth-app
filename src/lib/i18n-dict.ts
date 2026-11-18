@@ -5,6 +5,7 @@
  * Cəm formaları: {0:bir|bir neçə|çox} (rus) və {0:bir|çox} (ingilis); sayı olmayan tək söz üçün {:...} (əvvəlki rəqəmə baxılır).
  */
 export const UI: Record<string, [string, string, string?]> = {
+  "Qoşulduğunuz qrupların müəllimləri paylaşım edəndə burada görünəcək.": ["Здесь появятся публикации учителей ваших групп.", "Posts from your groups' teachers will appear here."],
   "Test ayarları": ["Настройки теста", "Test settings"],
   "Test növü": ["Тип теста", "Test type"],
   "Adi test": ["Обычный тест", "Regular test"],
@@ -250,7 +251,7 @@ export const UI: Record<string, [string, string, string?]> = {
   "Düzgün sayıldı": ["Засчитано как верное", "Marked correct"],
   "Düzəliş et": ["Изменить", "Edit"],
   "Dəniz və gün batımı": ["Море и закат", "Sea and sunset"],
-  "Dərc edildi (+5 coin)": ["Опубликовано (+5 монет)", "Published (+5 coins)"],
+  "Dərc edildi": ["Опубликовано", "Published"],
   "Dərc et": ["Опубликовать", "Publish"],
   "Dərc olunmuş test": ["Опубликованные тесты", "Published tests"],
   "Dərc olunmuş video paketi yoxdur": ["Нет опубликованных видеопакетов", "No published video packages"],
