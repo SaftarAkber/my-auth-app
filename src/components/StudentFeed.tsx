@@ -53,7 +53,7 @@ export default function StudentFeed() {
         />
       ) : (
         <div className="space-y-4">
-          {posts.map((p) => <PostCard key={p.id} post={p} showGroup />)}
+          {posts.map((p) => <PostCard key={p.id} post={p} />)}
           {canMore && (
             <div className="flex justify-center">
               <button className="btn-secondary" onClick={loadMore} disabled={busy}>

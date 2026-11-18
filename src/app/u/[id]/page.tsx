@@ -441,7 +441,7 @@ function PostsTab({ data, isOwn, reload }: { data: Profile; isOwn: boolean; relo
         <Empty icon="message" title="Hələ paylaşım yoxdur" />
       ) : (
         data.posts.map((p) => (
-          <PostCard key={p.id} post={{ ...p, teacher: { id: data.user.id, name: data.user.name, photo: data.user.photo } }} showGroup onDelete={isOwn ? () => removePost(p) : undefined} />
+          <PostCard key={p.id} post={{ ...p, teacher: { id: data.user.id, name: data.user.name, photo: data.user.photo } }} onDelete={isOwn ? () => removePost(p) : undefined} />
         ))
       )}
 
