@@ -120,6 +120,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         }
         pub = true; vis = "GROUP_ONLY"; open = false; linkIds = ids;
       }
+    } else if (restricted && visibility === "PUBLIC" && isPublished === false) {
+      // Yeni test: «Hərkəsə açıq» seçimi qaralama kimi yadda saxlanılır (dərc sonra)
+      vis = "PUBLIC"; open = true; pub = false; linkIds = [];
     } else if (restricted) {
       const allowed = new Set(existing.collection!.groups.map((g) => g.groupId));
       if (linkIds && linkIds.some((g: string) => !allowed.has(g))) {

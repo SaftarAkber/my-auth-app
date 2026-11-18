@@ -216,7 +216,7 @@ Cavab: B
 
 2. Növbəti sual ...`}</pre>
           <p className="mt-3 text-xs text-muted">
-            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. Variantsız suallar açıq sual olur. DOCX-də sualın mətni ilə variantları arasına qoyulan şəkil (qraf, ağac, cədvəl) həmin sualın şəklinə çevrilir. Ayrıca sətirdə yazılan “Asan”, “Orta” və ya “Çətin” başlığı özündən sonrakı bütün sualların çətinliyini təyin edir (sual bankı üçün). Bir faylda 1000 suala qədər ola bilər.
+            PDF, DOCX və ya TXT (maksimum 4 MB). Şəkil də seçə bilərsiniz: bir dəfəyə ən çoxu 10 şəkil, hər biri 5 MB-a qədər (JPG, PNG, WEBP). Şəkillərdən oxunan suallar əlavə olunmazdan əvvəl yoxlanış üçün göstərilir. Variantlar A–E ola bilər. Düzgün cavab sualın altında &quot;Cavab: B&quot; kimi, ya faylın sonunda &quot;Cavablar: 1-A 2-C 3-B&quot; kimi, ya da variantın sonunda * ilə göstərilir. &quot;Cavab:&quot; sətri və ya cavab açarı varsa, düzgün cavab yalnız ondan götürülür və variantların mətni olduğu kimi qalır (məs. &quot;B) *&quot; variantı ulduz simvolunun özüdür). Variantsız suallar açıq sual olur. DOCX-də sualın mətni ilə variantları arasına qoyulan şəkil (qraf, ağac, cədvəl) həmin sualın şəklinə çevrilir. Ayrıca sətirdə yazılan “Asan”, “Orta” və ya “Çətin” başlığı özündən sonrakı bütün sualların çətinliyini təyin edir (sual bankı üçün). Bir faylda 1000 suala qədər ola bilər.
           </p>
         </div>
       </Modal>

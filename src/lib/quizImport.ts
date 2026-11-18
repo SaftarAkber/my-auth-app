@@ -47,6 +47,9 @@ const GLYPH_RE = new RegExp("^\\s*([" + GLYPH + "])\\s*");
 const GLYPH_BEFORE_OPTION_RE = new RegExp("\\s*([" + GLYPH + "])\\s*(?=[(]?[A-Ea-e]\\s*[.)])", "g");
 const FILLED_RE = /[●◉⚫☑✔✅]/;
 const MARK_RE = /(^\s*[*✓✔✅]\s*)|(\s*[*✓✔✅]\s*$)/;
+const LEAD_MARK_RE = /^\s*[*✓✔✅]\s*(?=[(]?[A-Ea-e]\s*[.)]\s*\S)/;
+/** Yalnız mətndən boşluqla ayrılmış nişan: "* Bakı", "Bakı *" (amma "*", "test*" yox) */
+const SEP_MARK_RE = /(^[*✓✔✅]\s+(?=\S))|((?<=\S)\s+[*✓✔✅]$)/;
 
 function clean(s: string) {
   return s.replace(/ /g, " ").replace(/[ \t]+/g, " ").trim();
@@ -56,7 +59,8 @@ function clean(s: string) {
 function splitInlineOptions(line: string): string[] {
   const m = line.match(/^\s*[(]?[A-Ea-e]\s*[.)]/);
   if (!m) return [line];
-  const parts = line.split(/\s+(?=[(]?[B-Eb-e]\s*[.)]\s*\S)/);
+  // "B) y" / "B. y" yeni variantdır; "b.doc", "c.txt" kimi mətn isə yox (nöqtədən sonra boşluq tələb olunur)
+  const parts = line.split(/\s+(?=(?:[(]?[B-Eb-e]\s*\)|[(]?[B-E]\.\s)\s*\S)/);
   return parts.length > 1 ? parts : [line];
 }
 
@@ -69,7 +73,8 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
     .map(clean)
     .filter(Boolean);
 
-  type Draft = { text: string; options: string[]; correct: number; opt: number; marks: number; answered: boolean; image?: string; difficulty?: Difficulty };
+  // options – xam mətn; loose – işarə silinmiş (cavab sətri olmayanda); sep – yalnız ayrıca nişan silinmiş (cavab sətri olanda)
+  type Draft = { text: string; options: string[]; loose: string[]; sep: string[]; correct: number; opt: number; marks: number; answered: boolean; image?: string; difficulty?: Difficulty };
   const drafts: Draft[] = [];
   let cur: Draft | null = null;
   let keyMode = false;
@@ -107,8 +112,12 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    for (const piece of splitInlineOptions(rawLine.replace(GLYPH_RE, ""))) {
-      const filled = FILLED_RE.test(rawLine.match(GLYPH_RE)?.[1] ?? "") && piece === splitInlineOptions(rawLine.replace(GLYPH_RE, ""))[0];
+    // "* B) Bakı" – nişan variant hərfindən əvvəl yazılıb
+    const lead = rawLine.match(LEAD_MARK_RE);
+    const body = lead ? rawLine.slice(lead[0].length) : rawLine.replace(GLYPH_RE, "");
+    const pieces = splitInlineOptions(body);
+    for (const piece of pieces) {
+      const filled = (!!lead || FILLED_RE.test(rawLine.match(GLYPH_RE)?.[1] ?? "")) && piece === pieces[0];
       const line = piece;
       const ans = line.match(ANSWER_RE);
       if (ans && cur) {
@@ -119,8 +128,15 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       const opt = line.match(OPTION_RE);
       // Sual yoxdursa variant sayılmır; A–E ardıcıllığı pozulursa mətnin davamıdır
       if (opt && cur && LETTERS.indexOf(opt[1].toUpperCase()) === cur.options.length && cur.options.length < MAX_OPTIONS) {
-        const marked = filled || MARK_RE.test(opt[2]);
-        cur.options.push(clean(opt[2].replace(MARK_RE, "")));
+        // Variantın üç forması saxlanılır; hansının istifadə olunacağı sonda – cavab sətrinin olub-olmamasına görə seçilir
+        const raw = clean(opt[2]);
+        const stripped = clean(opt[2].replace(MARK_RE, ""));
+        // Variantın özü işarədirsə (məs. "B) *" – fayl adında qadağan simvol), onu düzgün cavab nişanı saymırıq
+        const markOnly = stripped === "" && raw !== "";
+        const marked = filled || (!markOnly && MARK_RE.test(opt[2]));
+        cur.options.push(raw);
+        cur.loose.push(marked && !filled ? stripped : raw);
+        cur.sep.push(clean(raw.replace(SEP_MARK_RE, "")) || raw);
         cur.opt = cur.options.length - 1;
         if (marked) {
           cur.correct = cur.options.length - 1;
@@ -131,14 +147,19 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
       const q = line.match(QUESTION_RE);
       // Yeni sual: nömrə əvvəlkindən böyük olmalıdır (mətn içindəki "2) ..." ilə qarışmasın)
       if (q && (!cur || +q[1] === drafts.length + 1 || (cur.options.length > 0 && cur.options.length >= 2))) {
-        cur = { text: clean(q[2]), options: [], correct: -1, opt: -1, marks: 0, answered: false, image: pendingImage, difficulty };
+        cur = { text: clean(q[2]), options: [], loose: [], sep: [], correct: -1, opt: -1, marks: 0, answered: false, image: pendingImage, difficulty };
         pendingImage = undefined;
         drafts.push(cur);
         continue;
       }
       if (!cur) continue;
       // Davam sətri: variantın və ya sualın mətninə əlavə olunur
-      if (cur.options.length > 0 && cur.opt >= 0) cur.options[cur.opt] = clean(`${cur.options[cur.opt]} ${line}`);
+      if (cur.options.length > 0 && cur.opt >= 0) {
+        const k = cur.opt;
+        cur.options[k] = clean(`${cur.options[k]} ${line}`);
+        cur.loose[k] = clean(`${cur.loose[k]} ${line}`);
+        cur.sep[k] = clean(`${cur.sep[k]} ${line}`);
+      }
       else cur.text = LIST_ITEM_RE.test(line) ? `${cur.text}\n${line}` : `${cur.text} ${line}`.trim();
     }
   }
@@ -147,19 +168,44 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
 
   return drafts.map((d, i) => {
     const mc = d.options.length >= 2;
+    // Qayda: cavab sətri («Cavab: B») və ya cavab açarı varsa, düzgün cavab YALNIZ ondan götürülür və variantların mətni
+    // olduğu kimi qalır (məs. "*" fayl adında qadağan simvol kimi cavabın özüdür). Yalnız ayrıca dayanan nişan
+    // ("Bakı *" – qalın variantın avtomatik nişanı) silinir. Cavab sətri yoxdursa, variantdakı işarə düzgün cavab nişanıdır.
+    const explicit = d.answered || key.has(i + 1);
+    const options = explicit ? d.sep : d.loose;
     // Bir neçə variant işarələnibsə (məs. hamısı qalındır) qeyri-müəyyəndir: müəllim seçsin
     let correct = d.marks > 1 && !d.answered ? -1 : d.correct;
     if (key.has(i + 1)) correct = key.get(i + 1)!;
-    if (!mc || correct >= d.options.length) correct = -1;
+    if (!mc || correct >= options.length || (correct >= 0 && !options[correct])) correct = -1;
     const image = { ...(d.image ? { image: d.image } : {}), ...(d.difficulty ? { difficulty: d.difficulty } : {}) };
     return mc
-      ? { text: d.text, type: "MULTIPLE_CHOICE" as const, options: d.options, correct, ...image }
+      ? { text: d.text, type: "MULTIPLE_CHOICE" as const, options, correct, ...image }
       : { text: [d.text, ...d.options.map((o, k) => `${LETTERS[k]}) ${o}`)].join(" "), type: "OPEN_ENDED" as const, options: [], correct: -1, ...image };
   });
 }
 
-const MAX_IMAGES = 150;
+const MAX_IMAGES = 400;
+const UPLOAD_CONCURRENCY = 8;
 const IMG_TYPES = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
+const PENDING = "https://pending.img/";
+
+/** Şəkilləri paralel yükləyir (eyni şəkil bir dəfə); nəticə – yükləmə sırası ilə url-lər */
+async function uploadAll(dataUris: string[], upload: (dataUri: string) => Promise<string>): Promise<string[]> {
+  const out: string[] = new Array(dataUris.length);
+  const seen = new Map<string, Promise<string>>();
+  let next = 0;
+  const worker = async () => {
+    while (next < dataUris.length) {
+      const i = next++;
+      const uri = dataUris[i];
+      let p = seen.get(uri);
+      if (!p) seen.set(uri, (p = upload(uri)));
+      out[i] = await p;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, dataUris.length) }, worker));
+  return out;
+}
 
 /** Fayldan mətn çıxarır. DOCX şəkilləri `uploadImage` ilə yüklənir və mətndə ayrıca [[IMG:url]] sətri kimi qalır. */
 export async function extractText(file: File, uploadImage?: (dataUri: string) => Promise<string>): Promise<string> {
@@ -174,17 +220,20 @@ export async function extractText(file: File, uploadImage?: (dataUri: string) =>
   if (name.endsWith(".docx")) {
     // HTML-ə çevirib qalın/altından xətli variantları düzgün cavab kimi işarələyirik (sətir sonuna *)
     const mammoth = await import("mammoth");
-    let images = 0;
-    const { value: html } = await mammoth.convertToHtml(
+    // Şəkillər əvvəlcə yer tutucu ilə qeyd olunur, sonra hamısı paralel yüklənir (çox şəkilli faylda vaxt limitinə sığmaq üçün)
+    const pending: string[] = [];
+    const { value: rawHtml } = await mammoth.convertToHtml(
       { buffer: Buffer.from(buf) },
       {
         convertImage: mammoth.images.imgElement(async (image) => {
-          if (!uploadImage || images >= MAX_IMAGES || !IMG_TYPES.test(image.contentType)) return { src: "" };
-          images++;
-          return { src: await uploadImage(`data:${image.contentType};base64,${await image.read("base64")}`) };
+          if (!uploadImage || pending.length >= MAX_IMAGES || !IMG_TYPES.test(image.contentType)) return { src: "" };
+          pending.push(`data:${image.contentType};base64,${await image.read("base64")}`);
+          return { src: `${PENDING}${pending.length - 1}` };
         }),
       },
     );
+    const urls = uploadImage && pending.length ? await uploadAll(pending, uploadImage) : [];
+    const html = rawHtml.replace(new RegExp(`${PENDING.replace(/[./]/g, "\\$&")}(\\d+)`, "g"), (_m, i: string) => urls[Number(i)] ?? "");
     // Word-un avtomatik nömrələməsi (1. 2. 3.) mətndə itir: nömrələnmiş siyahı elementlərinə əlavə edirik
     const stack: { ordered: boolean; n: number }[] = [];
     const numbered = html.replace(/<(\/?)(ol|ul|li)>/gi, (m, close: string, tag: string) => {

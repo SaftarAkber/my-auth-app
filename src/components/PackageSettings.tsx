@@ -174,7 +174,11 @@ export default function PackageSettings({
         // Yeni test hələ sualsızdır: qaralama qalır, qrup seçimi isə yadda saxlanılır
         await api(`/api/packages/${id}`, {
           method: "PATCH",
-          body: { ...extra, ...(form.state === "groups" ? { groupIds: form.groupIds, visibility: "GROUP_ONLY", isPublished: false } : {}) },
+          body: {
+            ...extra,
+            ...(form.state === "groups" ? { groupIds: form.groupIds, visibility: "GROUP_ONLY", isPublished: false } : {}),
+            ...(form.state === "public" ? { groupIds: [], visibility: "PUBLIC", isPublic: true, isPublished: false } : {}),
+          },
         });
       } else {
         await api(`/api/packages/${id}`, {
@@ -294,11 +298,11 @@ export default function PackageSettings({
           <section>
             <span className="label">Kimə açıqdır?</span>
             {isNew ? (
-              <p className="mb-2 text-xs text-muted">Test sualsız dərc olunmur: sualları əlavə edəndən sonra buradan dərc edin. Qrupları indi də seçə bilərsiniz.</p>
+              <p className="mb-2 text-xs text-muted">Seçiminiz yadda saxlanılır. Test sualsız dərc olunmur: sualları əlavə edəndən sonra kartdakı “Dərc et” düyməsi ilə dərc edin.</p>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Kimə açıqdır">
               {states.map((s) => {
-                const disabled = (s.id === "public" && (form.kind === "monthly" || data.restricted)) || (isNew && s.id === "public");
+                const disabled = s.id === "public" && form.kind === "monthly";
                 return (
                   <button
                     key={s.id}
@@ -323,6 +327,7 @@ export default function PackageSettings({
                 );
               })}
             </div>
+            {form.kind === "monthly" && <p className="mt-2 text-xs text-muted">Aylıq sınaq hərkəsə açıq ola bilməz: yarış cədvəli qrupların içindədir.</p>}
             {form.state === "groups" && (
               <div className="mt-3">
                 <ChipSelect
