@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errMsg } from "@/lib/api";
 import { cx, fmtDate, minutes, percent, timeAgo, videoThumb } from "@/lib/format";
 import { Avatar, Icon, Img, Modal, Spinner, useToast } from "@/components/ui";
+import { CommentThread } from "@/components/VideoComments";
 
 /* ───────── Tiplər (API cavablarının ortaq hissəsi) ───────── */
 export interface VideoLite {
@@ -259,7 +260,7 @@ function PlainTestRow({
 
 /* ───────── Paylaşım ───────── */
 /* ───────── Paylaşım bəyənmələri ───────── */
-type LikeState = { n: number; liked: boolean };
+type LikeState = { n: number; liked: boolean; c?: number };
 /** Eyni anda görünən kartların bəyənmə sayları bir sorğuda yığılır */
 const likeQueue = new Map<string, ((s: LikeState) => void)[]>();
 let likeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -275,7 +276,7 @@ function loadLikes(id: string, cb: (s: LikeState) => void) {
       const part = ids.slice(i, i + 50);
       try {
         const r = await api<{ likes: Record<string, LikeState> }>(`/api/posts/likes?ids=${part.join(",")}`);
-        for (const pid of part) for (const f of batch.get(pid) ?? []) f(r.likes[pid] ?? { n: 0, liked: false });
+        for (const pid of part) for (const f of batch.get(pid) ?? []) f(r.likes[pid] ?? { n: 0, liked: false, c: 0 });
       } catch { /* sayğac görünməsin, kart işləsin */ }
     }
   }, 30);
@@ -289,9 +290,12 @@ export const shortName = (name: string) => {
 
 type Liker = { id: string; name: string; photo: string | null };
 
-function PostLikes({ postId }: { postId: string }) {
+function PostLikes({ postId, ownerId }: { postId: string; ownerId: string }) {
   const toast = useToast();
   const [st, setSt] = useState<LikeState | null>(null);
+  const [talk, setTalk] = useState(false);
+  const [cn, setCn] = useState<number | null>(null);
+  const onTotal = useCallback((t: number) => setCn(t), []);
   const [busy, setBusy] = useState(false);
   const [pop, setPop] = useState(false);
   const [all, setAll] = useState(false);
@@ -329,7 +333,7 @@ function PostLikes({ postId }: { postId: string }) {
     setBusy(true);
     try {
       const r = await api<{ liked: boolean; likes: number }>(`/api/posts/${postId}/like`, { method: "POST" });
-      setSt({ n: r.likes, liked: r.liked });
+      setSt((o) => ({ ...o, n: r.likes, liked: r.liked }));
       if (pop) fetchUsers();
     } catch (e) {
       toast.error(errMsg(e));
@@ -339,28 +343,44 @@ function PostLikes({ postId }: { postId: string }) {
   }
 
   const n = st?.n ?? 0;
+  const comments = cn ?? st?.c ?? 0;
   return (
-    <div ref={box} className="relative mt-4 flex items-center gap-3 border-t border-line pt-3">
+    <>
+    <div ref={box} className="relative mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3">
       <button
         type="button"
         onClick={toggle}
         disabled={busy || !st}
         aria-pressed={!!st?.liked}
+        aria-label={st?.liked ? "Bəyənməni geri al" : "Bəyən"}
+        title={st?.liked ? "Bəyənməni geri al" : "Bəyən"}
         className={cx(
-          "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-bold transition active:scale-[0.97]",
-          st?.liked ? "border-ok/40 bg-ok/10 text-ok" : "border-line bg-white hover:bg-tint",
+          "-ml-1 inline-flex items-center p-1 transition active:scale-90",
+          st?.liked ? "text-ok" : "text-ink hover:text-ok",
         )}
       >
-        <Icon name="thumb" size={16} /> {st?.liked ? "Bəyəndin" : "Bəyən"}
+        <Icon name="thumb" size={20} stroke={st?.liked ? 2.4 : 2} />
       </button>
       <button
         type="button"
         onClick={() => { if (n === 0) return; const o = !pop; setPop(o); if (o) fetchUsers(); }}
         disabled={n === 0}
         aria-expanded={pop}
-        className={cx("text-sm tabular-nums", n > 0 ? "font-semibold text-ink hover:underline" : "text-muted")}
+        aria-label={`${n} bəyənmə — kimlər bəyənib`}
+        className={cx("-ml-2 min-w-[1.5rem] px-1 text-left text-sm tabular-nums", n > 0 ? "font-semibold text-ink hover:underline" : "text-muted")}
       >
-        {n.toLocaleString("az-AZ")} bəyənmə
+        {n.toLocaleString("az-AZ")}
+      </button>
+      <button
+        type="button"
+        onClick={() => setTalk((v) => !v)}
+        aria-controls={`comments-${postId}`}
+        className={cx(
+          "ml-auto inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-semibold transition hover:bg-tint",
+          talk ? "text-ink" : "text-muted",
+        )}
+      >
+        <Icon name="message" size={16} /> {comments > 0 ? `${comments.toLocaleString("az-AZ")} şərh` : "Şərh yaz"}
       </button>
 
       {pop && (
@@ -400,6 +420,19 @@ function PostLikes({ postId }: { postId: string }) {
         )}
       </Modal>
     </div>
+    {talk && (
+      <div id={`comments-${postId}`}>
+        <CommentThread
+          base={`/api/posts/${postId}/comments`}
+          likeBase="/api/posts/comments"
+          ownerId={ownerId}
+          groupAccess={false}
+          compact
+          onTotal={onTotal}
+        />
+      </div>
+    )}
+    </>
   );
 }
 
@@ -437,7 +470,7 @@ export function PostCard({
           ))}
         </div>
       )}
-      <PostLikes postId={post.id} />
+      <PostLikes postId={post.id} ownerId={post.teacher?.id ?? ""} />
     </article>
   );
 }

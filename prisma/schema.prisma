@@ -33,6 +33,8 @@ model User {
   videoViews       VideoView[]
   videoLikes       VideoLike[]
   postLikes        PostLike[]
+  postComments     PostComment[]
+  postCommentLikes PostCommentLike[]
   coinBalance Int    @default(0) 
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
@@ -158,6 +160,7 @@ model GroupPost {
   teacher   User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   images    GroupPostImage[]
   likes     PostLike[]
+  comments  PostComment[]
 
   @@map("group_posts")
 }
@@ -175,6 +178,38 @@ model PostLike {
   @@unique([postId, userId])
   @@index([userId])
   @@map("post_likes")
+}
+
+// Paylaşım şərhi (videodakı kimi bir səviyyə cavab). Qardaş sətirlərin şərhləri bir kartda yığılır
+model PostComment {
+  id        String            @id @default(cuid())
+  content   String
+  createdAt DateTime          @default(now())
+  postId    String
+  userId    String
+  parentId  String?
+  post      GroupPost         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    PostComment?      @relation("PostCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PostComment[]     @relation("PostCommentReplies")
+  likes     PostCommentLike[]
+
+  @@index([postId, parentId, createdAt])
+  @@index([parentId])
+  @@map("post_comments")
+}
+
+model PostCommentLike {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  commentId String
+  userId    String
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("post_comment_likes")
 }
 
 model GroupPostImage {

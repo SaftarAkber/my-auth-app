@@ -14,6 +14,9 @@ interface Comment {
   parentId: string | null;
   user: { id: string; name: string; photo: string | null; role: "STUDENT" | "TEACHER" | "ADMIN" };
   replyCount: number;
+  /** Yalnız bəyənilə bilən şərhlərdə (paylaşım şərhləri) */
+  likes?: number;
+  liked?: boolean;
 }
 interface Page { comments: Comment[]; nextCursor: string | null; total: number }
 
@@ -71,11 +74,46 @@ function Composer({
   );
 }
 
+/** Şərhin bəyənmə düyməsi */
+function CommentLike({ c, likeUrl }: { c: Comment; likeUrl: string }) {
+  const toast = useToast();
+  const [st, setSt] = useState({ n: c.likes ?? 0, liked: !!c.liked });
+  const [busy, setBusy] = useState(false);
+  async function toggle() {
+    if (busy) return;
+    setBusy(true);
+    const prev = st;
+    setSt({ n: st.n + (st.liked ? -1 : 1), liked: !st.liked });
+    try {
+      const r = await api<{ liked: boolean; likes: number }>(likeUrl, { method: "POST" });
+      setSt({ n: r.likes, liked: r.liked });
+    } catch (e) {
+      setSt(prev);
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={st.liked}
+      aria-label={st.liked ? "Bəyənməni geri al" : "Bəyən"}
+      title={st.liked ? "Bəyənməni geri al" : "Bəyən"}
+      className={cx("inline-flex items-center gap-1 tabular-nums transition active:scale-90", st.liked ? "text-ok" : "hover:text-ok")}
+    >
+      <Icon name="thumb" size={15} stroke={st.liked ? 2.4 : 2} />{st.n > 0 && <span>{st.n}</span>}
+    </button>
+  );
+}
+
 function CommentItem({
-  c, videoId, ownerId, groupAccess, onDeleted, onReplyAdded,
+  c, base, likeBase, ownerId, groupAccess, onDeleted, onReplyAdded,
 }: {
   c: Comment;
-  videoId: string;
+  base: string;
+  likeBase?: string;
   ownerId: string;
   groupAccess: boolean;
   onDeleted: (id: string, removed: number) => void;
@@ -96,7 +134,7 @@ function CommentItem({
     setLoading(true);
     try {
       const qs = new URLSearchParams({ parentId: c.id, ...(from ? { cursor: from } : {}) });
-      const d = await api<Page>(`/api/videos/${videoId}/comments?${qs}`);
+      const d = await api<Page>(`${base}?${qs}`);
       setReplies((r) => (from ? [...r, ...d.comments] : d.comments));
       setCursor(d.nextCursor);
     } catch (e) {
@@ -104,11 +142,11 @@ function CommentItem({
     } finally {
       setLoading(false);
     }
-  }, [c.id, videoId, toast]);
+  }, [c.id, base, toast]);
 
   async function sendReply(text: string, groupOnly: boolean) {
     try {
-      const d = await api<{ comment: Comment }>(`/api/videos/${videoId}/comments`, {
+      const d = await api<{ comment: Comment }>(base, {
         body: { content: text, parentId: c.id, visibility: groupOnly ? "GROUP_ONLY" : "PUBLIC" },
       });
       setCount((n) => n + 1);
@@ -124,7 +162,7 @@ function CommentItem({
 
   async function removeComment(x: Comment, isReply: boolean) {
     try {
-      await api(`/api/videos/${videoId}/comments?commentId=${x.id}`, { method: "DELETE" });
+      await api(`${base}?commentId=${x.id}`, { method: "DELETE" });
       if (isReply) {
         setReplies((r) => r.filter((y) => y.id !== x.id));
         setCount((n) => Math.max(0, n - 1));
@@ -149,6 +187,7 @@ function CommentItem({
         </p>
         <p className="mt-0.5 whitespace-pre-wrap break-words text-sm">{x.content}</p>
         <div className="mt-1 flex items-center gap-3 text-xs font-semibold text-muted">
+          {likeBase && <CommentLike c={x} likeUrl={`${likeBase}/${x.id}/like`} />}
           {!reply && (
             <button className="hover:text-ink" onClick={() => setReplying((v) => !v)}>Cavab ver</button>
           )}
@@ -205,6 +244,24 @@ function CommentItem({
 }
 
 export default function VideoComments({ videoId, ownerId, groupAccess }: { videoId: string; ownerId: string; groupAccess: boolean }) {
+  return <CommentThread base={`/api/videos/${videoId}/comments`} ownerId={ownerId} groupAccess={groupAccess} />;
+}
+
+/**
+ * Şərh siyahısı + yazma xanası. Video və paylaşım şərhləri eyni görünüşdədir:
+ * `base` – şərh API-si, `likeBase` verilibsə hər şərh bəyənilə bilir (`${likeBase}/:id/like`).
+ * `compact` – paylaşım kartının içində: başlıq yoxdur, xana yuxarıda.
+ */
+export function CommentThread({
+  base, likeBase, ownerId, groupAccess, compact, onTotal,
+}: {
+  base: string;
+  likeBase?: string;
+  ownerId: string;
+  groupAccess: boolean;
+  compact?: boolean;
+  onTotal?: (n: number) => void;
+}) {
   const toast = useToast();
   const [items, setItems] = useState<Comment[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -216,7 +273,7 @@ export default function VideoComments({ videoId, ownerId, groupAccess }: { video
     if (from) setMore(true);
     else setLoading(true);
     try {
-      const d = await api<Page>(`/api/videos/${videoId}/comments${from ? `?cursor=${from}` : ""}`);
+      const d = await api<Page>(`${base}${from ? `?cursor=${from}` : ""}`);
       setItems((x) => (from ? [...x, ...d.comments] : d.comments));
       setCursor(d.nextCursor);
       setTotal(d.total);
@@ -226,7 +283,7 @@ export default function VideoComments({ videoId, ownerId, groupAccess }: { video
       setLoading(false);
       setMore(false);
     }
-  }, [videoId, toast]);
+  }, [base, toast]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -235,7 +292,7 @@ export default function VideoComments({ videoId, ownerId, groupAccess }: { video
 
   async function send(text: string, groupOnly: boolean) {
     try {
-      const d = await api<{ comment: Comment }>(`/api/videos/${videoId}/comments`, {
+      const d = await api<{ comment: Comment }>(base, {
         body: { content: text, visibility: groupOnly ? "GROUP_ONLY" : "PUBLIC" },
       });
       setItems((x) => [d.comment, ...x]);
@@ -246,14 +303,20 @@ export default function VideoComments({ videoId, ownerId, groupAccess }: { video
     }
   }
 
-  return (
-    <section className="mt-6">
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold">
-        <Icon name="message" size={19} /> {total} şərh
-      </h2>
+  useEffect(() => {
+    if (!loading) onTotal?.(total);
+  }, [total, loading, onTotal]);
 
-      <div className="mb-6">
-        <Composer placeholder="Şərh yazın…" canGroupOnly={groupAccess} onSend={send} />
+  return (
+    <section className={compact ? "mt-3" : "mt-6"}>
+      {!compact && (
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold">
+          <Icon name="message" size={19} /> {total} şərh
+        </h2>
+      )}
+
+      <div className={compact ? "mb-4" : "mb-6"}>
+        <Composer placeholder="Şərh yazın…" autoFocus={compact} canGroupOnly={groupAccess} onSend={send} />
       </div>
 
       {loading ? (
@@ -267,7 +330,8 @@ export default function VideoComments({ videoId, ownerId, groupAccess }: { video
               <CommentItem
                 key={c.id}
                 c={c}
-                videoId={videoId}
+                base={base}
+                likeBase={likeBase}
                 ownerId={ownerId}
                 groupAccess={groupAccess}
                 onReplyAdded={() => setTotal((t) => t + 1)}

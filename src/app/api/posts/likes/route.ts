@@ -16,12 +16,16 @@ export async function GET(req: NextRequest) {
     const likes = allIds.length
       ? await prisma.postLike.findMany({ where: { postId: { in: allIds } }, select: { postId: true, userId: true } })
       : [];
+    const comments = allIds.length
+      ? await prisma.postComment.groupBy({ by: ["postId"], where: { postId: { in: allIds } }, _count: { _all: true } })
+      : [];
 
-    const out: Record<string, { n: number; liked: boolean }> = {};
+    const out: Record<string, { n: number; liked: boolean; c: number }> = {};
     for (const id of ids) {
       const rows = new Set((sib.get(id) ?? []).map((r) => r.id));
       const users = new Set(likes.filter((l) => rows.has(l.postId)).map((l) => l.userId));
-      out[id] = { n: users.size, liked: users.has(user.id) };
+      const c = comments.filter((x) => rows.has(x.postId)).reduce((a, x) => a + x._count._all, 0);
+      out[id] = { n: users.size, liked: users.has(user.id), c };
     }
     return NextResponse.json({ likes: out });
   } catch (error) {
