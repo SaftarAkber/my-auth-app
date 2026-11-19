@@ -412,3 +412,19 @@ main > * {
 }
 .topic-editor figure.sel .handle { display: block; }
 .topic-editor:empty::before { content: "Mövzunu burada izah edin…"; color: rgb(var(--muted) / 0.7); }
+
+/* Sürətli əməliyyatlar (müəllim ana səhifəsi): yaşıl axın sözü «Başla →» ilə əvəz edir */
+.qa { --qa-e: cubic-bezier(.2, .7, .2, 1); display: inline-flex; align-items: center; gap: 10px; padding: 10px 4px; width: max-content; max-width: 100%; justify-self: start; font-size: 16px; font-weight: 600; color: rgb(var(--ink)); }
+.qa-ic { transition: color .45s var(--qa-e); }
+.qa-sw { display: inline-grid; }
+.qa-sw > span { grid-area: 1 / 1; white-space: nowrap; }
+.qa-a { clip-path: inset(0 0 0 0); transition: clip-path .45s var(--qa-e), opacity .2s var(--qa-e); }
+.qa-b { color: rgb(var(--ok)); clip-path: inset(0 100% 0 0); transition: clip-path .45s var(--qa-e); }
+.qa-line { justify-self: start; position: relative; color: transparent; pointer-events: none; }
+.qa-line::after { content: ""; position: absolute; left: -34px; right: 0; bottom: -6px; height: 2px; border-radius: 2px; background: rgb(var(--ok)); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--qa-e); }
+.qa:hover .qa-ic, .qa:focus-visible .qa-ic { color: rgb(var(--ok)); }
+.qa:hover .qa-a, .qa:focus-visible .qa-a { clip-path: inset(0 0 0 100%); opacity: 0; transition: clip-path .45s var(--qa-e), opacity .2s var(--qa-e) .25s; }
+.qa:hover .qa-b, .qa:focus-visible .qa-b { clip-path: inset(0 0 0 0); }
+.qa:hover .qa-line::after, .qa:focus-visible .qa-line::after { transform: scaleX(1); }
+.qa:focus-visible { outline: 2px solid rgb(var(--ok)); outline-offset: 3px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .qa *, .qa *::after { transition: none !important; } }

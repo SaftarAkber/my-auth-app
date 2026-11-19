@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
 import { useFetch } from "@/lib/api";
 import { fmtDateTime, percent, timeAgo } from "@/lib/format";
 import { useState } from "react";
 import GiftModal from "@/components/GiftModal";
-import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
+import { Avatar, Empty, Icon, PageHeader, QuickActions, SkeletonList, StatStrip } from "@/components/ui";
 
 interface Stats {
   students: number;
@@ -15,6 +14,7 @@ interface Stats {
   attempts: number;
   pendingRequests: number;
   groups: number;
+  topics: number;
 }
 interface Enrollment {
   id: string;
@@ -34,7 +34,6 @@ interface Attempt {
 }
 
 export default function TeacherDashboard() {
-  const { user } = useAuth();
   const [gift, setGift] = useState(false);
   const stats = useFetch<Stats>("/api/teacher/stats");
   const reqs = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
@@ -63,30 +62,19 @@ export default function TeacherDashboard() {
       />
       <GiftModal open={gift} onClose={() => setGift(false)} />
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.loading || !s ? (
-          Array.from({ length: 7 }).map((_, i) => <div key={i} className="skeleton h-[84px]" />)
-        ) : (
-          <>
-            <StatCard label="Coin balansım" value={user?.coinBalance ?? 0} icon="coin" tone="warn" href={`/u/${user?.id}?tab=coins`} />
-            <StatCard label="Qrup" value={s.groups} icon="users" href="/teacher/groups" />
-            <StatCard label="Tələbə" value={s.students} icon="grad" tone="ok" href="/teacher/students" />
-            <StatCard label="Dərc olunmuş test" value={s.packages} icon="file" tone="info" href="/teacher/tests" />
-            <StatCard label="Video" value={s.videos} icon="video" tone="warn" href="/teacher/lessons" />
-            <StatCard label="Tamamlanan cəhd" value={s.attempts} icon="chart" href="/teacher/attempts" />
-            <StatCard label="Yeni müraciət" value={s.pendingRequests} icon="inbox" tone="bad" href="/teacher/requests" />
-          </>
-        )}
-      </section>
+      <StatStrip
+        loading={!s}
+        items={[
+          { label: "Qrup", value: s?.groups ?? 0, icon: "users", href: "/teacher/groups" },
+          { label: "Tələbə", value: s?.students ?? 0, icon: "grad", href: "/teacher/students" },
+          { label: "Mövzu", value: s?.topics ?? 0, icon: "book", href: "/teacher/groups" },
+          { label: "Dərc olunmuş test", value: s?.packages ?? 0, icon: "file", href: "/teacher/tests" },
+          { label: "Video", value: s?.videos ?? 0, icon: "video", href: "/teacher/lessons" },
+          { label: "Tamamlanan cəhd", value: s?.attempts ?? 0, icon: "chart", href: "/teacher/attempts" },
+        ]}
+      />
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {actions.map((a) => (
-          <Link key={a.href} href={a.href} className="card flex flex-col items-center gap-2 p-4 text-center transition hover:border-brand/40">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand"><Icon name={a.icon} /></span>
-            <span className="text-sm font-semibold">{a.label}</span>
-          </Link>
-        ))}
-      </section>
+      <QuickActions items={[...actions]} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <section>

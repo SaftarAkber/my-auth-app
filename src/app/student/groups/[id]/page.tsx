@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { useTestRunner } from "@/components/TestTaker";
 import {
@@ -44,6 +44,26 @@ export default function StudentGroupPage() {
   const [tab, setTab] = useState<"feed" | "topics" | "tests" | "monthly" | "videos" | "members">("feed");
   const { begin: run, starting, node } = useTestRunner(() => reload());
   const begin = (p: TestPackageLite) => run(p);
+
+  // Bildirişdən gələn keçid: ?tab=tests&pkg=<id> – Testlər sekməsi açılır və paket görünənə qədər sürüşdürülür (test başlamır)
+  const [lit, setLit] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get("tab");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (t === "tests" || t === "topics" || t === "videos" || t === "feed") setTab(t);
+  }, []);
+  useEffect(() => {
+    if (!g) return;
+    const pkg = new URLSearchParams(window.location.search).get("pkg");
+    if (!pkg) return;
+    const t = setTimeout(() => {
+      document.getElementById(`pkg-${pkg}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setLit(pkg);
+      setTimeout(() => setLit(null), 2200);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [g]);
 
   async function leave() {
     const ok = await confirm({
@@ -128,7 +148,9 @@ export default function StudentGroupPage() {
                   <section className="space-y-3">
                     <h2 className="text-base font-bold">Mövzu testləri</h2>
                     {bankEntries(g.testPackages).map((e) => (
-                      <BankRow key={e.key} pkg={e.pkg} title={e.title} onStart={begin} busy={starting === e.pkg.id} canStart={!g.isTeacher} />
+                      <div key={e.key} id={`pkg-${e.pkg.id}`} className={`scroll-mt-24 rounded-2xl transition-shadow duration-700 ${lit === e.pkg.id ? "ring-2 ring-ok ring-offset-2" : ""}`}>
+                        <BankRow pkg={e.pkg} title={e.title} onStart={begin} busy={starting === e.pkg.id} canStart={!g.isTeacher} />
+                      </div>
                     ))}
                   </section>
                 )}
@@ -136,7 +158,9 @@ export default function StudentGroupPage() {
                   <section className="space-y-3">
                     {g.testPackages.some((p) => p.isBank) && <h2 className="text-base font-bold">Testlər</h2>}
                     {g.testPackages.filter((p) => !p.isBank).map((p) => (
-                      <TestRow key={p.id} pkg={p} onStart={begin} busy={starting === p.id} canStart={!g.isTeacher} />
+                      <div key={p.id} id={`pkg-${p.id}`} className={`scroll-mt-24 rounded-2xl transition-shadow duration-700 ${lit === p.id ? "ring-2 ring-ok ring-offset-2" : ""}`}>
+                        <TestRow pkg={p} onStart={begin} busy={starting === p.id} canStart={!g.isTeacher} />
+                      </div>
                     ))}
                   </section>
                 )}

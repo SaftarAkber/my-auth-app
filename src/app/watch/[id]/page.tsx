@@ -81,7 +81,11 @@ function WatchView({ id }: { id: string }) {
     );
   }
 
-  const embed = videoEmbed(v.url);
+  // Bildirişdən gələndə (?play=1) telefonda da oynasın: səssiz başlayır (brauzer səsli avtomatik oynatmanı bloklayır)
+  const coarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  const playReq = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("play") === "1";
+  const embedBase = videoEmbed(v.url);
+  const embed = embedBase && coarse && playReq ? `${embedBase}&mute=1&playsinline=1` : embedBase;
   const likeCount = likes?.n ?? v.likes;
   const liked = likes?.liked ?? v.liked;
   const viewCount = views ?? v.views;
@@ -108,7 +112,8 @@ function WatchView({ id }: { id: string }) {
                   playsInline
                   preload="metadata"
                   // Telefonlarda səsli avtomatik oynatma bloklanır, orada istifadəçi özü başladır
-                  autoPlay={typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches}
+                  autoPlay={typeof window !== "undefined" && (!coarse || playReq)}
+                  muted={coarse && playReq}
                   className="h-full w-full bg-black"
                 />
               )

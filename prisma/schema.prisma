@@ -32,6 +32,7 @@ model User {
   videoComments    VideoComment[]
   videoViews       VideoView[]
   videoLikes       VideoLike[]
+  postLikes        PostLike[]
   coinBalance Int    @default(0) 
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
@@ -156,8 +157,24 @@ model GroupPost {
   group     Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher   User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   images    GroupPostImage[]
+  likes     PostLike[]
 
   @@map("group_posts")
+}
+
+// Paylaşım bəyənməsi. Bir neçə qrupa göndərilmiş paylaşımın sətirləri bir kart sayılır:
+// bəyənmələr bütün qardaş sətirlər üzrə yığılır (lib/posts.ts)
+model PostLike {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  postId    String
+  userId    String
+  post      GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
 }
 
 model GroupPostImage {
@@ -231,6 +248,8 @@ model Video {
   videoGroups  VideoGroup[]
   // Hər video öz vəziyyətindədir: qaralama (isPublished=false), hamıya açıq (PUBLIC) və ya seçilmiş qruplar (GROUP_ONLY + videoGroups)
   isPublished  Boolean      @default(false)
+  // Son dərc vaxtı (tələbə bildirişləri üçün; lib/prisma.ts avtomatik yazır)
+  publishedAt  DateTime?
   // Admin sancağı (1-3): sancılmış video bütün istifadəçilərə sağ siyahının yuxarısında göstərilir
   pinOrder     Int?
   views        VideoView[]
@@ -300,6 +319,7 @@ model TestPackage {
   name         String
   description  String?
   isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
   isPublic     Boolean   @default(false)
   isTimed      Boolean   @default(false)
   duration     Int?
@@ -520,6 +540,7 @@ model Topic {
   // Kitabxana: təmizlənmiş HTML (server tərəfdə icazəli teq və stillərlə süzülür)
   content     String   @default("")
   isPublished Boolean  @default(false)
+  publishedAt DateTime?
   // PUBLIC – hərkəsə açıq; GROUP_ONLY – yalnız seçilmiş qruplara (TopicGroup)
   visibility  ContentVisibility @default(GROUP_ONLY)
   order       Int      @default(0)

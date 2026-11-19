@@ -75,6 +75,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     return NextResponse.json({
       package: { id: pkg.id, name: pkg.name },
       total: pkg.questions.length,
+      qids: pkg.questions.map((q) => q.id),
       canOpenAll: isTeacher || isAdmin || pkg.shareAnswers,
       rows,
     });

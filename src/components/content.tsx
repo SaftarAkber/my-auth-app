@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api, errMsg } from "@/lib/api";
 import { cx, fmtDate, minutes, percent, timeAgo, videoThumb } from "@/lib/format";
-import { Avatar, Icon, Img, Spinner } from "@/components/ui";
+import { Avatar, Icon, Img, Modal, Spinner, useToast } from "@/components/ui";
 
 /* ───────── Tiplər (API cavablarının ortaq hissəsi) ───────── */
 export interface VideoLite {
@@ -112,6 +113,8 @@ export interface PostLite {
   group?: { id: string; name: string };
   /** Bir neçə qrupa birlikdə göndərilibsə: bütün (baxana görünən) qruplar */
   groups?: { id: string; name: string }[];
+  /** Kartda birləşmiş bütün sətirlərin ID-ləri (bildirişdən gələn keçid üçün) */
+  ids?: string[];
 }
 
 export const ORDER_STATUS = {
@@ -255,11 +258,156 @@ function PlainTestRow({
 }
 
 /* ───────── Paylaşım ───────── */
-export function PostCard({
-  post, onDelete, showGroup,
-}: { post: PostLite; onDelete?: (p: PostLite) => void; showGroup?: boolean }) {
+/* ───────── Paylaşım bəyənmələri ───────── */
+type LikeState = { n: number; liked: boolean };
+/** Eyni anda görünən kartların bəyənmə sayları bir sorğuda yığılır */
+const likeQueue = new Map<string, ((s: LikeState) => void)[]>();
+let likeTimer: ReturnType<typeof setTimeout> | null = null;
+function loadLikes(id: string, cb: (s: LikeState) => void) {
+  likeQueue.set(id, [...(likeQueue.get(id) ?? []), cb]);
+  if (likeTimer) return;
+  likeTimer = setTimeout(async () => {
+    const batch = new Map(likeQueue);
+    likeQueue.clear();
+    likeTimer = null;
+    const ids = [...batch.keys()];
+    for (let i = 0; i < ids.length; i += 50) {
+      const part = ids.slice(i, i + 50);
+      try {
+        const r = await api<{ likes: Record<string, LikeState> }>(`/api/posts/likes?ids=${part.join(",")}`);
+        for (const pid of part) for (const f of batch.get(pid) ?? []) f(r.likes[pid] ?? { n: 0, liked: false });
+      } catch { /* sayğac görünməsin, kart işləsin */ }
+    }
+  }, 30);
+}
+
+/** "Aysel Məmmədova" → "Aysel M." */
+export const shortName = (name: string) => {
+  const p = name.trim().split(/\s+/);
+  return p.length > 1 ? `${p[0]} ${p[1][0]?.toUpperCase()}.` : p[0] ?? "";
+};
+
+type Liker = { id: string; name: string; photo: string | null };
+
+function PostLikes({ postId }: { postId: string }) {
+  const toast = useToast();
+  const [st, setSt] = useState<LikeState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [pop, setPop] = useState(false);
+  const [all, setAll] = useState(false);
+  const [users, setUsers] = useState<Liker[] | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+    loadLikes(postId, (s) => alive && setSt(s));
+    return () => { alive = false; };
+  }, [postId]);
+
+  // Kiçik panel kənara klikləyəndə və ya Esc ilə bağlanır
+  useEffect(() => {
+    if (!pop) return;
+    const out = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setPop(false); };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setPop(false);
+    document.addEventListener("mousedown", out);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", out); document.removeEventListener("keydown", esc); };
+  }, [pop]);
+
+  async function fetchUsers() {
+    setUsers(null);
+    try {
+      const r = await api<{ users: Liker[] }>(`/api/posts/${postId}/likes`);
+      setUsers(r.users);
+    } catch (e) {
+      toast.error(errMsg(e));
+      setPop(false);
+    }
+  }
+
+  async function toggle() {
+    setBusy(true);
+    try {
+      const r = await api<{ liked: boolean; likes: number }>(`/api/posts/${postId}/like`, { method: "POST" });
+      setSt({ n: r.likes, liked: r.liked });
+      if (pop) fetchUsers();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const n = st?.n ?? 0;
   return (
-    <article className="card p-5">
+    <div ref={box} className="relative mt-4 flex items-center gap-3 border-t border-line pt-3">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={busy || !st}
+        aria-pressed={!!st?.liked}
+        className={cx(
+          "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-bold transition active:scale-[0.97]",
+          st?.liked ? "border-ok/40 bg-ok/10 text-ok" : "border-line bg-white hover:bg-tint",
+        )}
+      >
+        <Icon name="thumb" size={16} /> {st?.liked ? "Bəyəndin" : "Bəyən"}
+      </button>
+      <button
+        type="button"
+        onClick={() => { if (n === 0) return; const o = !pop; setPop(o); if (o) fetchUsers(); }}
+        disabled={n === 0}
+        aria-expanded={pop}
+        className={cx("text-sm tabular-nums", n > 0 ? "font-semibold text-ink hover:underline" : "text-muted")}
+      >
+        {n.toLocaleString("az-AZ")} bəyənmə
+      </button>
+
+      {pop && (
+        <div className="absolute left-0 top-full z-30 mt-2 w-[min(18rem,calc(100vw-3rem))] animate-slide-in rounded-lg border border-line bg-white p-3 text-sm shadow-soft">
+          {users === null ? (
+            <span className="flex items-center gap-2 text-muted"><Spinner /> Yüklənir…</span>
+          ) : users.length === 0 ? (
+            <span className="text-muted">Hələ bəyənən yoxdur</span>
+          ) : (
+            <>
+              <p className="leading-relaxed">
+                {users.slice(0, 3).map((u) => shortName(u.name)).join(", ")}
+                {users.length > 3 && <span className="text-muted"> və daha {users.length - 3} nəfər</span>}
+              </p>
+              <button type="button" className="mt-2 text-sm font-semibold text-brand hover:underline" onClick={() => { setPop(false); setAll(true); }}>
+                Daha çox bax
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      <Modal open={all} onClose={() => setAll(false)} title={`Bəyənənlər (${users?.length ?? n})`} size="sm">
+        {users === null ? (
+          <div className="flex justify-center py-6"><Spinner /></div>
+        ) : (
+          <ul className="-mx-2 divide-y divide-line">
+            {users.map((u) => (
+              <li key={u.id}>
+                <Link href={`/u/${u.id}`} className="flex items-center gap-3 rounded-md px-2 py-2.5 transition hover:bg-tint">
+                  <Avatar src={u.photo} name={u.name} size={36} />
+                  <span className="min-w-0 truncate text-sm font-semibold">{u.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+export function PostCard({
+  post, onDelete, showGroup, highlight,
+}: { post: PostLite; onDelete?: (p: PostLite) => void; showGroup?: boolean; highlight?: boolean }) {
+  return (
+    <article id={`post-${post.id}`} data-post-ids={(post.ids ?? [post.id]).join(",")} className={cx("card relative scroll-mt-24 p-5 transition-shadow duration-700 [&:has([aria-expanded=true])]:z-30", highlight && "ring-2 ring-ok ring-offset-2")}>
       <header className="flex items-center gap-3">
         <Avatar src={post.teacher?.photo} name={post.teacher?.name ?? "Müəllim"} size={40} />
         <div className="min-w-0 flex-1">
@@ -289,6 +437,7 @@ export function PostCard({
           ))}
         </div>
       )}
+      <PostLikes postId={post.id} />
     </article>
   );
 }

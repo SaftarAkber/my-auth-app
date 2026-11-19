@@ -360,7 +360,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
                   <div className="max-h-96 overflow-y-auto">
                     {notes.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted">{t("noNotifications")}</p>}
                     {notes.map((n) => (
-                      <Link key={n.id} href={n.href} className={cx("block border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-tint/60", fresh.has(n.id) && "bg-tint")}>
+                      <Link key={n.id} href={n.href} onClick={() => setMenu(null)} className={cx("block border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-tint/60", fresh.has(n.id) && "bg-tint")}>
                         <p className="text-sm font-medium">{n.text}</p>
                         <p className="mt-0.5 text-xs text-muted">{timeAgo(n.at)}</p>
                       </Link>

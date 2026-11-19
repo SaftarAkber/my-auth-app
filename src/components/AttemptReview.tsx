@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtDateTime, percent } from "@/lib/format";
@@ -31,6 +32,23 @@ interface ReviewAttempt {
 export default function AttemptReview({ id, back, viewer = "student" }: { id: string; back: string; viewer?: "student" | "teacher" }) {
   const { user } = useAuth();
   const { data: a, loading, error, reload } = useFetch<ReviewAttempt>(`/api/attempts/${id}`);
+
+  // Nəticə cədvəlindən gələndə (?q=<sual ID>) kitabça həmin sualda açılır və sual qısa müddət vurğulanır
+  const [lit, setLit] = useState<string | null>(null);
+  const loaded = !!a;
+  useEffect(() => {
+    if (!loaded) return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (!q) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`q-${q}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setLit(q);
+      setTimeout(() => setLit(null), 2200);
+    }, 80);
+    return () => clearTimeout(t);
+  }, [loaded]);
 
   if (loading && !a) return <div className="page-narrow"><SkeletonList rows={4} /></div>;
   if (error || !a) return <div className="page-narrow"><ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} /></div>;
@@ -79,8 +97,10 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
           return (
             <article
               key={r.id}
+              id={`q-${q.id}`}
               className={cx(
-                "card border-l-4 p-5",
+                "card scroll-mt-24 border-l-4 p-5 transition-shadow duration-700",
+                lit === q.id && "ring-2 ring-ok ring-offset-2",
                 state === "ok" && "border-l-ok",
                 state === "bad" && "border-l-bad",
                 state === "pending" && "border-l-warn",

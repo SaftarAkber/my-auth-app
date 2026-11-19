@@ -63,7 +63,7 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export function Icon({ name, className, size = 18 }: { name: IconName; className?: string; size?: number }) {
+export function Icon({ name, className, size = 18, stroke = 2 }: { name: IconName; className?: string; size?: number; stroke?: number }) {
   return (
     <svg
       width={size}
@@ -71,7 +71,7 @@ export function Icon({ name, className, size = 18 }: { name: IconName; className
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={cx("shrink-0", className)}
@@ -201,6 +201,76 @@ export function StatCard({
     </div>
   );
   return href ? <Link href={href} className="block">{body}</Link> : body;
+}
+
+/** Rəqəm 0-dan hədəfə qədər sayılaraq qalxır (~1.2 s, ease-out); azaldılmış hərəkət seçilibsə birbaşa göstərilir */
+export function CountUp({ to, suffix = "", duration = 1200 }: { to: number; suffix?: string; duration?: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0;
+    if (reduce || to === 0) { raf = requestAnimationFrame(() => setN(to)); return () => cancelAnimationFrame(raf); }
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to, duration]);
+  return <>{n.toLocaleString("az-AZ")}{suffix}</>;
+}
+
+/** Statistika: çərçivəsiz ikon + rəqəm + ad; 3 sütun (telefonda 2), rəqəmlər sayılaraq qalxır */
+export function StatStrip({
+  items, loading,
+}: { items: { label: string; value: number; suffix?: string; icon: IconName; href?: string }[]; loading?: boolean }) {
+  return (
+    <section className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3">
+      {loading
+        ? items.map((it) => <div key={it.label} className="skeleton h-14" />)
+        : items.map((it) => {
+            const body = (
+              <>
+                <Icon name={it.icon} size={26} stroke={2.2} className="mt-1 text-ink" />
+                <span className="min-w-0">
+                  <span className="block text-[34px] font-semibold leading-none tracking-tight tabular-nums text-ink">
+                    <CountUp to={it.value} suffix={it.suffix} />
+                  </span>
+                  <span className="mt-1.5 block text-[13px] text-muted">{it.label}</span>
+                </span>
+              </>
+            );
+            return it.href ? (
+              <Link key={it.label} href={it.href} className="group flex items-start gap-3 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ok">
+                {body}
+              </Link>
+            ) : (
+              <div key={it.label} className="flex items-start gap-3">{body}</div>
+            );
+          })}
+    </section>
+  );
+}
+
+/** Sürətli əməliyyatlar: çərçivəsiz ikon + söz; üzərinə gələndə yaşıl axın sözü «Başla →» ilə əvəz edir.
+ *  Toxunuş sahəsi həmişə əvvəlki söz qədər qalır (titrəmə olmasın), xətt isə ikon + «Başla →» qədərdir. */
+export function QuickActions({ items }: { items: { href: string; icon: IconName; label: string }[] }) {
+  return (
+    <section className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
+      {items.map((a) => (
+        <Link key={a.href} href={a.href} className="qa">
+          <Icon name={a.icon} size={24} stroke={2.4} className="qa-ic" />
+          <span className="qa-sw">
+            <span className="qa-a">{a.label}</span>
+            <span className="qa-b" aria-hidden="true">Başla →</span>
+            <span className="qa-line" aria-hidden="true">Başla →</span>
+          </span>
+        </Link>
+      ))}
+    </section>
+  );
 }
 
 export function Empty({

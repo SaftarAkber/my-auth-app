@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    const [students, videos, packages, attempts, pendingRequests, groups] =
+    const [students, videos, packages, attempts, pendingRequests, groups, topics] =
       await Promise.all([
         prisma.user.count({
           where: {
@@ -49,6 +49,9 @@ export async function GET() {
         prisma.group.count({
           where: { teacherId: currentUser.id },
         }),
+        prisma.topic.count({
+          where: { teacherId: currentUser.id },
+        }),
       ]);
 
     return NextResponse.json({
@@ -58,6 +61,7 @@ export async function GET() {
       attempts,
       pendingRequests,
       groups,
+      topics,
     });
   } catch (error) {
     console.error(error);

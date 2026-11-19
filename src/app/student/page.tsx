@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { Suspense, useState } from "react";
 import { useFetch } from "@/lib/api";
 import { fmtDate, percent } from "@/lib/format";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
-import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatCard } from "@/components/ui";
+import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatStrip } from "@/components/ui";
 import { SubjectBadges } from "@/components/Subjects";
 import StudentFeed from "@/components/StudentFeed";
 
@@ -34,7 +33,6 @@ interface Teacher {
 }
 
 export default function StudentHome() {
-  const { user } = useAuth();
   const enrollments = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<Attempt[]>("/api/attempts");
   const teachers = useFetch<{ teachers: Teacher[] }>("/api/teacher/public");
@@ -60,12 +58,14 @@ export default function StudentHome() {
     <div className="page space-y-8">
       <PageHeader title="Ana səhifə" />
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Coin" value={user?.coinBalance ?? 0} icon="coin" tone="warn" href={`/u/${user?.id}?tab=coins`} />
-        <StatCard label="Qruplarım" value={groups.length} icon="users" tone="ok" href="/student/teacher" />
-        <StatCard label="Tamamlanan test" value={finished.length} icon="check" tone="info" href="/student/my-tests" />
-        <StatCard label="Orta nəticə" value={`${avg}%`} icon="chart" />
-      </section>
+      <StatStrip
+        loading={!enrollments.data || !attempts.data}
+        items={[
+          { label: "Qruplarım", value: groups.length, icon: "users", href: "/student/teacher" },
+          { label: "Tamamlanan test", value: finished.length, icon: "check", href: "/student/my-tests" },
+          { label: "Orta nəticə", value: avg, suffix: "%", icon: "chart", href: "/student/my-tests" },
+        ]}
+      />
 
       {taking && (
         <TestTaker
@@ -96,7 +96,7 @@ export default function StudentHome() {
       {/* Kompüterdə: solda paylaşımlar lenti, sağda qruplar və müəllimlər; telefonda lent yuxarıda */}
       <div className="grid gap-8 lg:grid-cols-3">
       <div className="min-w-0 lg:col-span-2">
-        <StudentFeed />
+        <Suspense fallback={<SkeletonList rows={2} />}><StudentFeed /></Suspense>
       </div>
       <div className="min-w-0 space-y-8">
       <section>
