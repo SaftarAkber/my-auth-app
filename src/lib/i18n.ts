@@ -12,6 +12,7 @@ export const LANGS: { code: Lang; label: string }[] = [
 // Naviqasiya və qabıq mətnləri. Səhifə daxili mətnlər mərhələ-mərhələ əlavə olunur.
 const DICT = {
   groups: { AZ: "Qruplar", RU: "Группы", EN: "Groups" },
+  topics: { AZ: "Mövzular", RU: "Темы", EN: "Topics" },
   tests: { AZ: "Testlər", RU: "Тесты", EN: "Tests" },
   videos: { AZ: "Videolar", RU: "Видео", EN: "Videos" },
   students: { AZ: "Tələbələr", RU: "Студенты", EN: "Students" },

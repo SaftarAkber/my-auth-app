@@ -67,7 +67,7 @@ export default function TeacherDashboard() {
         items={[
           { label: "Qrup", value: s?.groups ?? 0, icon: "users", href: "/teacher/groups" },
           { label: "Tələbə", value: s?.students ?? 0, icon: "grad", href: "/teacher/students" },
-          { label: "Mövzu", value: s?.topics ?? 0, icon: "book", href: "/teacher/groups" },
+          { label: "Mövzu", value: s?.topics ?? 0, icon: "book", href: "/teacher/topics" },
           { label: "Dərc olunmuş test", value: s?.packages ?? 0, icon: "file", href: "/teacher/tests" },
           { label: "Video", value: s?.videos ?? 0, icon: "video", href: "/teacher/lessons" },
           { label: "Tamamlanan cəhd", value: s?.attempts ?? 0, icon: "chart", href: "/teacher/attempts" },

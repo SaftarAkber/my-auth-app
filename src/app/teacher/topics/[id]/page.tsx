@@ -113,7 +113,8 @@ function LinkPicker<T extends { id: string }>({
 export default function TeacherTopicPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const g = useSearchParams().get("g");
+  const sp = useSearchParams();
+  const g = sp.get("g");
   const toast = useToast();
   const confirm = useConfirm();
   const { data, loading, error, reload } = useFetch<TopicData>(`/api/topics/${id}`);
@@ -139,10 +140,12 @@ export default function TeacherTopicPage() {
     setGroupIds(t.groups.map((x) => x.id));
   }, [t]);
 
+  const fromTopics = sp.get("from") === "topics";
   const back = useMemo(() => {
+    if (fromTopics) return { href: "/teacher/topics", name: "Mövzular" };
     const grp = (t?.groups ?? []).find((x) => x.id === g) ?? t?.groups[0];
     return grp ? { href: `/teacher/groups/${grp.id}`, name: grp.name } : { href: "/teacher/groups", name: "Qruplar" };
-  }, [t, g]);
+  }, [t, g, fromTopics]);
 
   async function patch(body: Record<string, unknown>, ok?: string) {
     await api(`/api/topics/${id}`, { method: "PATCH", body });

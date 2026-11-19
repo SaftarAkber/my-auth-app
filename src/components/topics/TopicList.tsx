@@ -18,10 +18,10 @@ interface TopicItem {
 }
 
 /** Qrupun “Mövzular” tabı: müəllim yaradır, sıralayır; tələbə dərc olunmuşları görür. */
-export default function TopicList({ groupId }: { groupId: string }) {
+export default function TopicList({ groupId }: { groupId?: string }) {
   const router = useRouter();
   const toast = useToast();
-  const { data, loading, error, reload } = useFetch<{ topics: TopicItem[]; owner: boolean; myGroups?: { id: string; name: string }[] }>(`/api/topics?groupId=${groupId}`);
+  const { data, loading, error, reload } = useFetch<{ topics: TopicItem[]; owner: boolean; myGroups?: { id: string; name: string }[] }>(groupId ? `/api/topics?groupId=${groupId}` : "/api/topics");
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,14 +29,14 @@ export default function TopicList({ groupId }: { groupId: string }) {
 
   const owner = !!data?.owner;
   const topics = data?.topics ?? [];
-  const href = (id: string) => `/${owner ? "teacher" : "student"}/topics/${id}?g=${groupId}`;
+  const href = (id: string) => `/${owner ? "teacher" : "student"}/topics/${id}${groupId ? `?g=${groupId}` : "?from=topics"}`;
 
   async function create() {
     if (!title.trim()) return;
     setBusy(true);
     try {
-      const r = await api<{ id: string }>("/api/topics", { body: { title: title.trim(), groupIds: [groupId] } });
-      router.push(`/teacher/topics/${r.id}?g=${groupId}`);
+      const r = await api<{ id: string }>("/api/topics", { body: { title: title.trim(), groupIds: groupId ? [groupId] : [] } });
+      router.push(href(r.id));
     } catch (e) {
       toast.error(errMsg(e));
       setBusy(false);

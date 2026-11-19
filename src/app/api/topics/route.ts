@@ -9,7 +9,24 @@ export async function GET(req: NextRequest) {
     const user = await optionalUser();
     if (!user) return unauthorized();
     const groupId = req.nextUrl.searchParams.get("groupId");
-    if (!groupId) return NextResponse.json({ error: "groupId lazımdır" }, { status: 400 });
+    // Müəllimin bütün mövzuları (müəllim panelindəki "Mövzular" səhifəsi)
+    if (!groupId) {
+      if (user.role !== "TEACHER") return NextResponse.json({ error: "groupId lazımdır" }, { status: 400 });
+      const [rows, myGroups] = await Promise.all([
+        prisma.topic.findMany({
+          where: { teacherId: user.id },
+          select: {
+            id: true, title: true, isPublished: true, visibility: true, order: true, updatedAt: true,
+            groups: { select: { groupId: true } },
+            _count: { select: { tests: { where: { package: { deletedAt: null } } }, videos: true } },
+          },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        }),
+        prisma.group.findMany({ where: { teacherId: user.id }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
+      ]);
+      const topics = rows.map(({ groups, ...t }) => ({ ...t, groupIds: groups.map((x) => x.groupId) }));
+      return NextResponse.json({ topics, owner: true, myGroups });
+    }
 
     const group = await prisma.group.findUnique({ where: { id: groupId }, select: { teacherId: true } });
     if (!group) return notFound("Qrup tapılmadı");
