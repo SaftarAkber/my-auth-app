@@ -103,7 +103,7 @@ function CommentLike({ c, likeUrl }: { c: Comment; likeUrl: string }) {
       title={st.liked ? "Bəyənməni geri al" : "Bəyən"}
       className={cx("inline-flex items-center gap-1 tabular-nums transition active:scale-90", st.liked ? "text-ok" : "hover:text-ok")}
     >
-      <Icon name="thumb" size={15} stroke={st.liked ? 2.4 : 2} />{st.n > 0 && <span>{st.n}</span>}
+      <Icon name="thumb" size={15} filled={st.liked} />{st.n > 0 && <span>{st.n}</span>}
     </button>
   );
 }

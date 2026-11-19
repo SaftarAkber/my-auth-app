@@ -359,7 +359,7 @@ function PostLikes({ postId, ownerId }: { postId: string; ownerId: string }) {
           st?.liked ? "text-ok" : "text-ink hover:text-ok",
         )}
       >
-        <Icon name="thumb" size={20} stroke={st?.liked ? 2.4 : 2} />
+        <Icon name="thumb" size={20} filled={!!st?.liked} />
       </button>
       <button
         type="button"

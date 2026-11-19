@@ -63,13 +63,13 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export function Icon({ name, className, size = 18, stroke = 2 }: { name: IconName; className?: string; size?: number; stroke?: number }) {
+export function Icon({ name, className, size = 18, stroke = 2, filled }: { name: IconName; className?: string; size?: number; stroke?: number; filled?: boolean }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth={stroke}
       strokeLinecap="round"
