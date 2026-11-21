@@ -410,6 +410,46 @@ export function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>
   );
 }
 
+/**
+ * Azərbaycan nömrəsi: "+994" sabit yazılıb, istifadəçi yalnız qalanını yazır (50 123 45 67).
+ * `value`/`onChange` yalnız yerli 9 rəqəmlə işləyir; tam nömrə üçün `fullPhone(value)`.
+ * Başqa ölkə nömrəsi lazım olsa, xanaya "+" ilə tam yazmaq da olur.
+ */
+export function PhoneInput({
+  value, onChange, className, ...rest
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & { value: string; onChange: (v: string) => void }) {
+  const intl = value.startsWith("+");
+  function change(raw: string) {
+    let v = raw.replace(/[^\d+]/g, "");
+    if (v.startsWith("+")) {
+      // Tam nömrə yapışdırılıbsa: +994… → yerli hissə
+      if (v.startsWith("+994")) v = v.slice(4);
+      else return onChange("+" + v.slice(1).replace(/\+/g, "").slice(0, 15));
+    }
+    v = v.replace(/\+/g, "");
+    if (v.startsWith("994") && v.length > 9) v = v.slice(3);
+    if (v.startsWith("0")) v = v.slice(1);
+    onChange(v.slice(0, 9));
+  }
+  const shown = intl ? value : value.replace(/^(\d{2})(\d{0,3})(\d{0,2})(\d{0,2}).*/, (_, a, b, c, d) => [a, b, c, d].filter(Boolean).join(" "));
+  return (
+    <div className={cx("input flex items-center gap-2 focus-within:[border-color:rgb(var(--brand))] focus-within:[box-shadow:0_0_0_3px_rgb(var(--iris)/0.25)]", className)}>
+      {!intl && <span className="select-none font-semibold text-muted">+994</span>}
+      <input
+        {...rest}
+        type="tel"
+        inputMode="tel"
+        value={shown}
+        onChange={(e) => change(e.target.value)}
+        placeholder={rest.placeholder ?? "50 123 45 67"}
+        className="w-full min-w-0 border-0 bg-transparent p-0 outline-none focus:ring-0"
+      />
+    </div>
+  );
+}
+/** PhoneInput dəyərindən bazadakı format: "501234567" → "+994501234567" */
+export const fullPhone = (local: string) => (!local ? "" : local.startsWith("+") ? local : `+994${local}`);
+
 export function ImageUpload({
   value, onChange, label, shape = "wide", className,
 }: {

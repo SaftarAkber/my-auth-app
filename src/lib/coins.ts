@@ -48,11 +48,12 @@ export async function transferCoins(opts: {
       data: { coinBalance: { decrement: amount } },
     });
     if (debited.count === 0) throw new InsufficientCoins();
-    await tx.user.update({ where: { id: toId }, data: { coinBalance: { increment: amount } } });
+    const to = await tx.user.update({ where: { id: toId }, data: { coinBalance: { increment: amount } }, select: { name: true } });
+    const from = await tx.user.findUnique({ where: { id: fromId }, select: { name: true } });
     await tx.coinTransaction.createMany({
       data: [
-        { userId: fromId, amount: -amount, type: "GIFT_SENT", reason },
-        { userId: toId, amount, type: receivedType, reason },
+        { userId: fromId, amount: -amount, type: "GIFT_SENT", reason, counterpartyId: toId, counterpartyName: to.name },
+        { userId: toId, amount, type: receivedType, reason, counterpartyId: fromId, counterpartyName: from?.name ?? null },
       ],
     });
   };

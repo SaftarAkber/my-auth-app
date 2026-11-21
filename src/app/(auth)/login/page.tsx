@@ -1,13 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { cx } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
-import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
+import { Field, Icon, PasswordInput, PhoneInput, Spinner, fullPhone } from "@/components/ui";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("");
+  const [method, setMethod] = useState<"phone" | "email">("phone");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
+  // Son seçilmiş üsul yadda qalır (email ilə girənlərə hər dəfə dəyişmək lazım olmasın)
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (localStorage.getItem("login-method") === "email") setMethod("email");
+    } catch { /* yaddaş bağlıdır */ }
+  }, []);
+  function pick(m: "phone" | "email") {
+    setMethod(m);
+    setError("");
+    try { localStorage.setItem("login-method", m); } catch { /* yaddaş bağlıdır */ }
+  }
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,7 +33,9 @@ export default function LoginPage() {
     setError("");
     setBusy(true);
     try {
-      await login(identifier.trim(), password);
+      const id = method === "phone" ? fullPhone(phone) : email.trim();
+      if (!id) throw new Error(method === "phone" ? "Telefon nömrəsini daxil edin" : "Email ünvanını daxil edin");
+      await login(id, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xəta baş verdi");
       setBusy(false);
@@ -36,17 +54,41 @@ export default function LoginPage() {
           </div>
         )}
 
-        <Field label="Telefon, email və ya istifadəçi adı" hint="Telefon beynəlxalq formatda: +994501234567">
-          <input
-            className="input"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="+994501234567 və ya ad@mail.com"
-            autoComplete="username"
-            required
-            autoFocus
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-1">
+          {([["phone", "Telefon", "phone"], ["email", "Email", "mail"]] as const).map(([id, label, icon]) => (
+            <button
+              type="button"
+              key={id}
+              onClick={() => pick(id)}
+              aria-pressed={method === id}
+              className={cx(
+                "flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition",
+                method === id ? "bg-surface text-brand shadow-soft" : "text-muted",
+              )}
+            >
+              <Icon name={icon} size={16} /> {label}
+            </button>
+          ))}
+        </div>
+
+        {method === "phone" ? (
+          <Field label="Telefon nömrəsi">
+            <PhoneInput value={phone} onChange={setPhone} autoComplete="tel-national" required autoFocus />
+          </Field>
+        ) : (
+          <Field label="Email ünvanı">
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ad@mail.com"
+              autoComplete="email"
+              required
+              autoFocus
+            />
+          </Field>
+        )}
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">

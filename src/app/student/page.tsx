@@ -5,7 +5,7 @@ import { Suspense, useState } from "react";
 import { useFetch } from "@/lib/api";
 import { fmtDate, percent } from "@/lib/format";
 import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTaker";
-import { Avatar, Empty, Icon, PageHeader, SkeletonList, StatStrip } from "@/components/ui";
+import { Avatar, Empty, Icon, SkeletonList, StatStrip } from "@/components/ui";
 import { SubjectBadges } from "@/components/Subjects";
 import StudentFeed from "@/components/StudentFeed";
 
@@ -56,8 +56,6 @@ export default function StudentHome() {
 
   return (
     <div className="page space-y-8">
-      <PageHeader title="Ana səhifə" />
-
       <StatStrip
         loading={!enrollments.data || !attempts.data}
         items={[

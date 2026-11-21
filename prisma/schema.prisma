@@ -508,6 +508,9 @@ model CoinTransaction {
   reason    String?
   createdAt DateTime            @default(now())
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Hədiyyədə qarşı tərəf (göndərəndə alıcı, alanda göndərən). Ad da saxlanır ki, hesab silinsə də tarixçədə qalsın
+  counterpartyId   String?
+  counterpartyName String?
 
   @@map("coin_transactions")
 }

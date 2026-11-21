@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, errMsg } from "@/lib/api";
 import { cx } from "@/lib/format";
-import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
+import { Field, Icon, PasswordInput, PhoneInput, Spinner, fullPhone } from "@/components/ui";
 
 type Method = "whatsapp" | "email";
 
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  const identifier = method === "email" ? value.trim().toLowerCase() : value.trim();
+  const identifier = method === "email" ? value.trim().toLowerCase() : fullPhone(value);
 
   async function sendCode(e?: React.FormEvent) {
     e?.preventDefault();
@@ -108,15 +108,19 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Field label={method === "whatsapp" ? "Telefon nömrəsi" : "Email ünvanı"}>
+            {method === "whatsapp" ? (
+              <PhoneInput value={value} onChange={setValue} autoComplete="tel-national" required autoFocus />
+            ) : (
             <input
               className="input"
-              type={method === "email" ? "email" : "tel"}
+              type="email"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={method === "whatsapp" ? "+994501234567 və ya 050 123 45 67" : "ad@mail.com"}
+              placeholder="ad@mail.com"
               required
               autoFocus
             />
+            )}
           </Field>
 
           <button className="btn-primary w-full py-3" disabled={busy}>

@@ -4,13 +4,23 @@ export function initials(name?: string | null) {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
-const dateFmt = new Intl.DateTimeFormat("az-AZ", { day: "2-digit", month: "short", year: "numeric" });
-const dateTimeFmt = new Intl.DateTimeFormat("az-AZ", {
-  day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-});
+// Bəzi brauzerlərdə az-AZ ay adları yoxdur ("2026 M10 26" çıxır) — ay adlarını özümüz yazırıq
+const AZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
+const pad = (n: number) => String(n).padStart(2, "0");
 
-export const fmtDate = (d?: string | Date | null) => (d ? dateFmt.format(new Date(d)) : "—");
-export const fmtDateTime = (d?: string | Date | null) => (d ? dateTimeFmt.format(new Date(d)) : "—");
+/** "26 okt 2026" */
+export const fmtDate = (d?: string | Date | null) => {
+  if (!d) return "—";
+  const x = new Date(d);
+  return `${x.getDate()} ${AZ_MONTHS[x.getMonth()]} ${x.getFullYear()}`;
+};
+/** "26 okt, 14:39" (başqa ildirsə il də yazılır) */
+export const fmtDateTime = (d?: string | Date | null) => {
+  if (!d) return "—";
+  const x = new Date(d);
+  const year = x.getFullYear() !== new Date().getFullYear() ? ` ${x.getFullYear()}` : "";
+  return `${x.getDate()} ${AZ_MONTHS[x.getMonth()]}${year}, ${pad(x.getHours())}:${pad(x.getMinutes())}`;
+};
 
 export function timeAgo(d: string | Date) {
   const diff = (Date.now() - new Date(d).getTime()) / 1000;

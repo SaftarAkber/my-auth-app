@@ -5,7 +5,7 @@ import { useFetch } from "@/lib/api";
 import { fmtDateTime, percent, timeAgo } from "@/lib/format";
 import { useState } from "react";
 import GiftModal from "@/components/GiftModal";
-import { Avatar, Empty, Icon, PageHeader, QuickActions, SkeletonList, StatStrip } from "@/components/ui";
+import { Avatar, Empty, Icon, QuickActions, SkeletonList, StatStrip } from "@/components/ui";
 
 interface Stats {
   students: number;
@@ -52,14 +52,11 @@ export default function TeacherDashboard() {
 
   return (
     <div className="page space-y-8">
-      <PageHeader
-        title="Ana səhifə"
-        actions={
-          <button className="btn-primary" onClick={() => setGift(true)}>
-            <Icon name="coin" size={16} /> Coin hədiyyə et
-          </button>
-        }
-      />
+      <div className="flex justify-end">
+        <button className="btn-primary" onClick={() => setGift(true)}>
+          <Icon name="coin" size={16} /> Coin hədiyyə et
+        </button>
+      </div>
       <GiftModal open={gift} onClose={() => setGift(false)} />
 
       <StatStrip

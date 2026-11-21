@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { cx } from "@/lib/format";
-import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
+import { Field, fullPhone, Icon, PasswordInput, PhoneInput, Spinner } from "@/components/ui";
 import { SubjectPicker } from "@/components/Subjects";
 
 export default function RegisterPage() {
@@ -38,7 +38,7 @@ export default function RegisterPage() {
     try {
       await register({
         name: form.name.trim(),
-        phone: form.phone.trim() || undefined,
+        phone: fullPhone(form.phone) || undefined,
         email: form.email.trim() || undefined,
         password: form.password,
         role,
@@ -103,7 +103,7 @@ export default function RegisterPage() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Telefon (WhatsApp)">
-            <input className="input" value={form.phone} onChange={set("phone")} placeholder="+994501234567" autoComplete="tel" inputMode="tel" />
+            <PhoneInput value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} autoComplete="tel-national" />
           </Field>
           <Field label="Email">
             <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="ad@mail.com" autoComplete="email" />

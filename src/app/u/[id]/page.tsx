@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg, uploadImage, useFetch } from "@/lib/api";
-import { cx, fmtDateTime, percent, timeAgo } from "@/lib/format";
+import { cx, fmtDateTime, percent } from "@/lib/format";
 import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings";
 import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
@@ -49,7 +49,7 @@ interface Profile {
   tests: TestCard[];
   videos: { id: string; name: string; description: string | null; isPublished: boolean; isPublic: boolean; videos: VideoLite[] }[];
 }
-interface Tx { id: string; amount: number; type: string; reason: string | null; createdAt: string }
+interface Tx { id: string; amount: number; type: string; reason: string | null; createdAt: string; counterpartyId: string | null; counterpartyName: string | null }
 interface Attempt { id: string; score: number | null; totalScore: number | null; finishedAt: string | null; package: { name: string } }
 
 const TX_LABEL: Record<string, string> = {
@@ -532,8 +532,21 @@ function CoinsTab() {
             <Icon name={t.amount > 0 ? "plus" : "coin"} size={16} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{TX_LABEL[t.type] ?? t.type}</p>
-            <p className="truncate text-xs text-muted">{t.reason ?? "—"} · {timeAgo(t.createdAt)}</p>
+            <p className="truncate text-sm font-semibold">
+              {TX_LABEL[t.type] ?? t.type}
+              {t.counterpartyName && (
+                <>
+                  <span className="font-normal text-muted">{t.type === "GIFT_SENT" ? " → " : " · "}</span>
+                  {t.counterpartyId ? (
+                    <Link href={`/u/${t.counterpartyId}`} className="hover:underline">{t.counterpartyName}</Link>
+                  ) : t.counterpartyName}
+                </>
+              )}
+              {!t.counterpartyName && t.type === "GIFT_SENT" && <span className="font-normal text-muted"> → silinmiş hesab</span>}
+            </p>
+            <p className="truncate text-xs text-muted" title={fmtDateTime(t.createdAt)}>
+              {t.reason && t.reason !== TX_LABEL[t.type] && t.reason !== "Müəllimdən hədiyyə" ? `${t.reason} · ` : ""}{fmtDateTime(t.createdAt)}
+            </p>
           </div>
           <span className={cx("font-extrabold tabular-nums", t.amount > 0 ? "text-ok" : "text-bad")}>{t.amount > 0 ? "+" : ""}{t.amount}</span>
         </div>
