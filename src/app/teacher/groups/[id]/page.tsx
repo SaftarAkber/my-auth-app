@@ -12,6 +12,7 @@ import {
 import GroupHeader from "@/components/GroupHeader";
 import GroupEditModal from "@/components/GroupEditModal";
 import TopicList from "@/components/topics/TopicList";
+import GroupAnalysis from "@/components/GroupAnalysis";
 import MonthlyTable from "@/components/MonthlyTable";
 import {
   Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
@@ -50,7 +51,7 @@ export default function TeacherGroupPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { data: g, loading, error, reload } = useFetch<GroupData>(`/api/groups/${id}`);
-  const [tab, setTab] = useState<"feed" | "topics" | "members" | "tests" | "monthly" | "videos" | "requests">("feed");
+  const [tab, setTab] = useState<"feed" | "topics" | "members" | "tests" | "monthly" | "analysis" | "videos" | "requests">("feed");
   const [editOpen, setEditOpen] = useState(false);
 
   // Post yazma
@@ -204,6 +205,7 @@ export default function TeacherGroupPage() {
               { id: "requests", label: "Müraciətlər", count: pending.length },
               { id: "tests", label: "Testlər", count: g.testPackages.length },
               ...(g.testPackages.some((p) => p.isMonthly) ? [{ id: "monthly" as const, label: "Aylıq sınaq" }] : []),
+              { id: "analysis", label: "Analiz" },
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
             ]}
           />
@@ -332,6 +334,8 @@ export default function TeacherGroupPage() {
             ))}
 
           {tab === "monthly" && <MonthlyTable groupId={g.id} attemptBase="/teacher/attempts" />}
+
+          {tab === "analysis" && <GroupAnalysis groupId={g.id} />}
 
           {tab === "videos" && (
             <div className="space-y-4">
