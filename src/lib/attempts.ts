@@ -30,6 +30,7 @@ export const drawTotal = (p: Pick<BankPkg, "drawEasy" | "drawMedium" | "drawHard
  * Bank testi üçün sualları seçir: hər səviyyədən istənilən say.
  * Əvvəlcə tələbənin hələ görmədiyi suallar götürülür, onlar bitəndə həmin səviyyədən təsadüfi.
  * Səviyyədə sual çatmasa, qalan say digər suallardan tamamlanır.
+ * Son sıra qarışdırılır: səviyyələr nömrələr üzrə dağınıq düşür (1-ci sual çətin də ola bilər).
  */
 export async function drawBankQuestions(pkg: BankPkg, studentId: string): Promise<string[]> {
   const [questions, past] = await Promise.all([
@@ -52,7 +53,7 @@ export async function drawBankQuestions(pkg: BankPkg, studentId: string): Promis
   for (const d of DIFFICULTIES) picked.push(...take(questions.filter((q) => q.difficulty === d).map((q) => q.id), want[d]));
   const total = drawTotal(pkg);
   if (picked.length < total) picked.push(...take(questions.map((q) => q.id), total - picked.length));
-  return picked;
+  return shuffle(picked);
 }
 
 type TimedPkg = { isTimed: boolean; duration: number | null };
