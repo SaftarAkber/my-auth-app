@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const formData = await req.formData();

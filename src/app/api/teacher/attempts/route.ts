@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const attempts = await prisma.studentAttempt.findMany({

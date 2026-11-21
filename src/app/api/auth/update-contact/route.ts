@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { type, value } = await req.json();
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     if (!type || !value) {
       return NextResponse.json(
-        { error: "Tür ve değer zorunludur" },
+        { error: "Növ və dəyər məcburidir" },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     if (existing && existing.id !== currentUser.id) {
       return NextResponse.json(
-        { error: "Bu bilgi zaten başka bir hesapta kullanılıyor" },
+        { error: "Bu məlumat artıq başqa hesabda istifadə olunur" },
         { status: 409 }
       );
     }
@@ -62,14 +62,14 @@ export async function POST(req: NextRequest) {
 
     if (!sent) {
       return NextResponse.json(
-        { error: "Kod gönderilemedi" },
+        { error: "Kod göndərilmədi. Bir az sonra yenidən yoxlayın." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ message: "Doğrulama kodu gönderildi" });
+    return NextResponse.json({ message: "Doğrulama kodu göndərildi" });
   } catch (error) {
     console.error("Update contact hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

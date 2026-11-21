@@ -6,14 +6,14 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { type, value, code } = await req.json();
 
     if (!type || !value || !code) {
       return NextResponse.json(
-        { error: "Tüm alanlar zorunludur" },
+        { error: "Bütün xanaları doldurun" },
         { status: 400 }
       );
     }
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     if (!otpRecord) {
       return NextResponse.json(
-        { error: "Kod yanlış veya süresi dolmuş" },
+        { error: "Kod yanlışdır və ya vaxtı bitib" },
         { status: 400 }
       );
     }
@@ -50,9 +50,9 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({ message: "Bilgi başarıyla güncellendi" });
+    return NextResponse.json({ message: "Məlumat yeniləndi" });
   } catch (error) {
     console.error("Verify contact hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

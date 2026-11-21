@@ -9,7 +9,7 @@ export async function GET(
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { id } = await params;

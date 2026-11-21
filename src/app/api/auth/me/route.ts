@@ -11,7 +11,7 @@ const SELECT = {
 export async function GET() {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
   }
   const user = await prisma.user.findUnique({ where: { id: currentUser.id }, select: SELECT });
   return NextResponse.json({ user });
@@ -21,7 +21,7 @@ export async function PATCH(req: Request) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { name, bio, photo, coverPhoto, subjects } = await req.json();

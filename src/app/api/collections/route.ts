@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser)
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
 
     const collections = await prisma.collection.findMany({
       where: { teacherId: currentUser.id },
@@ -23,7 +23,7 @@ export async function GET() {
     return NextResponse.json({ collections });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 
@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { name, description, groupIds } = await req.json();
     if (!name)
-      return NextResponse.json({ error: "İsim zorunludur" }, { status: 400 });
+      return NextResponse.json({ error: "Ad məcburidir" }, { status: 400 });
     const gids: string[] = Array.isArray(groupIds) ? groupIds.filter((g) => typeof g === "string") : [];
     if (!(await teacherOwnsGroups(currentUser.id, gids))) return forbidden();
 
@@ -52,6 +52,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ collection }, { status: 201 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ import { prisma } from "./prisma";
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 export const unauthorized = () =>
-  NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
 export const forbidden = () =>
   NextResponse.json({ error: "İcazə yoxdur" }, { status: 403 });
 export const notFound = (msg = "Tapılmadı") =>

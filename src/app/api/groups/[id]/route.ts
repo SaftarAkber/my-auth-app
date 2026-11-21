@@ -189,7 +189,7 @@ export async function PATCH(
     const { id } = await params;
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const group = await prisma.group.findUnique({ where: { id } });
@@ -227,7 +227,7 @@ export async function DELETE(
     const { id } = await params;
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const group = await prisma.group.findUnique({ where: { id } });

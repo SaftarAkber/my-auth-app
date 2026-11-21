@@ -11,7 +11,7 @@ export async function GET(
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -50,7 +50,7 @@ export async function GET(
     return NextResponse.json({ collection });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 
@@ -61,7 +61,7 @@ export async function PATCH(
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -88,7 +88,7 @@ export async function PATCH(
     return NextResponse.json({ collection });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
 
@@ -100,7 +100,7 @@ export async function DELETE(
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.role !== "TEACHER") {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+      return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -122,6 +122,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Silindi" });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }
