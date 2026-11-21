@@ -17,7 +17,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     if (!(await canSeePost(user, rows))) return forbidden();
 
     const likes = await prisma.postLike.findMany({
-      where: { postId: { in: rows.map((r) => r.id) } },
+      where: { postId: { in: rows.map((r) => r.id) }, user: { deletedAt: null } },
       orderBy: { createdAt: "desc" },
       select: { user: { select: { id: true, name: true, photo: true } } },
     });

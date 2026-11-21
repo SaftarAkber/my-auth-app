@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
-import { rateLimit } from "@/lib/rateLimit";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { AUTH_COOKIE, AUTH_COOKIE_OPTIONS, normalizePhone } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Brute-force qorunması: IP + identifier üzrə 10 cəhd / 15 dəq
-    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-    const limit = rateLimit(`login:${ip}:${String(identifier).toLowerCase()}`, {
+    const ip = clientIp(req);
+    const limit = await rateLimit(`login:${ip}:${String(identifier).toLowerCase()}`, {
       windowMs: 15 * 60 * 1000,
       maxRequests: 10,
     });
@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
 
     const valid = user ? await bcrypt.compare(password, user.password) : false;
     // Admin yalnız /admin (və ya /dashboard) giriş formu ilə daxil ola bilər
-    if (!user || !valid || user.role === "ADMIN") {
+    if (!user || !valid || user.role === "ADMIN" || user.deletedAt) {
       return NextResponse.json(
         { error: "İstifadəçi tapılmadı və ya şifrə yanlışdır" },
         { status: 401 },
       );
     }
 
-    const token = signToken({ userId: user.id, phone: user.phone || user.email || "" });
+    const token = signToken({ userId: user.id, phone: user.phone || user.email || "", tv: user.tokenVersion });
     const cookieStore = await cookies();
     cookieStore.set(AUTH_COOKIE, token, AUTH_COOKIE_OPTIONS);
 

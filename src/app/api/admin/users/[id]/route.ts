@@ -39,6 +39,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       if (pw.length < 6) return NextResponse.json({ error: "Parol ən azı 6 simvol olmalıdır" }, { status: 400 });
       if (pw.length > 100) return NextResponse.json({ error: "Parol çox uzundur" }, { status: 400 });
       data.password = await bcrypt.hash(pw, 12);
+      // İstifadəçinin bütün cihazlardakı girişləri bağlanır
+      data.tokenVersion = { increment: 1 };
     }
     if (b.bio !== undefined) data.bio = String(b.bio).slice(0, 1000);
     if (b.role !== undefined) {
@@ -86,7 +88,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: Ctx) {
+/**
+ * DELETE /api/admin/users/:id            — yumşaq silmə: hesab bağlanır, tələbələrə heç yerdə görünmür,
+ *   telefon/email boşaldılır (eyni nömrə ilə yenidən qeydiyyat mümkündür), qrup üzvlükləri çıxarılır;
+ *   hamısı deletedContact-da saxlanır ki, "Silinənlər"dən bərpa olunsun. Coin, nəticə və şərhlər qalır.
+ * DELETE /api/admin/users/:id?permanent=1 — artıq silinmiş hesabı birdəfəlik silir (bütün tarixçəsi ilə).
+ */
+export async function DELETE(req: NextRequest, { params }: Ctx) {
   try {
     const auth = await requireAdmin();
     if ("response" in auth) return auth.response;
@@ -94,10 +102,33 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
     if (id === auth.user.id) {
       return NextResponse.json({ error: "Öz hesabınızı silə bilməzsiniz" }, { status: 400 });
     }
-    const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } });
-    if (!exists) return notFound("İstifadəçi tapılmadı");
-    await prisma.user.delete({ where: { id } });
-    return NextResponse.json({ message: "Hesab silindi" });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, phone: true, email: true, deletedAt: true, groupMembers: { select: { groupId: true } } },
+    });
+    if (!user) return notFound("İstifadəçi tapılmadı");
+
+    if (new URL(req.url).searchParams.get("permanent") === "1") {
+      if (!user.deletedAt) return NextResponse.json({ error: "Əvvəlcə hesabı silin, sonra “Silinənlər”dən birdəfəlik silmək olar" }, { status: 400 });
+      await prisma.user.delete({ where: { id } });
+      return NextResponse.json({ message: "Hesab birdəfəlik silindi" });
+    }
+    if (user.deletedAt) return NextResponse.json({ message: "Hesab artıq silinib" });
+
+    await prisma.$transaction([
+      prisma.groupMember.deleteMany({ where: { studentId: id } }),
+      prisma.user.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedContact: JSON.stringify({ phone: user.phone, email: user.email, groups: user.groupMembers.map((m) => m.groupId) }),
+          phone: null,
+          email: null,
+          tokenVersion: { increment: 1 },
+        },
+      }),
+    ]);
+    return NextResponse.json({ message: "Hesab silindi. “Silinənlər” bölməsindən bərpa etmək olar." });
   } catch (error) {
     return serverError(error);
   }

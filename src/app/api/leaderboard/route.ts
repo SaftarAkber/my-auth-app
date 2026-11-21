@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     if (packageId) {
       const attempts = await prisma.studentAttempt.findMany({
-        where: { packageId, finishedAt: { not: null } },
+        where: { packageId, finishedAt: { not: null }, student: { deletedAt: null } },
         select: {
           id: true, score: true, totalScore: true, startedAt: true, finishedAt: true,
           student: { select: { id: true, name: true, photo: true } },
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     }
 
     const users = await prisma.user.findMany({
-      where: { role: "STUDENT" },
+      where: { role: "STUDENT", deletedAt: null },
       select: { id: true, name: true, photo: true, coinBalance: true },
       orderBy: { coinBalance: "desc" },
       take: 20,

@@ -17,7 +17,7 @@ interface Results {
   canOpenAll: boolean;
   rows: {
     attemptId: string;
-    student: { id: string; name: string; photo: string | null };
+    student: { id: string; name: string; photo: string | null; deleted?: boolean };
     cells: Cell[];
     correct: number;
     mine: boolean;
@@ -87,7 +87,7 @@ export default function ResultsMatrix({ packageId, back, attemptBase }: { packag
                   const name = (
                     <span className="flex w-[94px] items-center gap-2.5 sm:w-auto">
                       <Avatar src={r.student.photo} name={r.student.name} size={28} className="hidden sm:inline-flex" />
-                      <span className="min-w-0 truncate text-sm font-bold">{r.student.name}{r.mine && " (siz)"}</span>
+                      <span className={cx("min-w-0 truncate text-sm font-bold", r.student.deleted && "text-muted")}>{r.student.name}{r.mine && " (siz)"}{r.student.deleted && " (silinib)"}</span>
                     </span>
                   );
                   return (
@@ -139,7 +139,7 @@ function CellMark({ c }: { c: Cell }) {
 
 type Pick = {
   attemptId: string | null;
-  student: { id: string; name: string; photo: string | null } | null;
+  student: { id: string; name: string; photo: string | null; deleted?: boolean } | null;
   mine: boolean;
   answer: string | null;
   state: "ok" | "bad" | "pending" | "blank";
@@ -166,7 +166,7 @@ function QuestionPicks({ packageId, questionId, attemptBase, onClose }: { packag
           {p.student && p.attemptId ? (
             <Link href={`${attemptBase}/${p.attemptId}?q=${questionId}`} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-tint">
               <Avatar src={p.student.photo} name={p.student.name} size={22} />
-              <span className="truncate text-sm">{p.student.name}{p.mine && " (siz)"}</span>
+              <span className={cx("truncate text-sm", p.student.deleted && "text-muted")}>{p.student.name}{p.mine && " (siz)"}{p.student.deleted && " (silinib)"}</span>
             </Link>
           ) : (
             <span className="block px-1.5 py-1 text-sm text-muted">Gizli iştirakçı</span>

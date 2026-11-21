@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { countsForRanking, drawTotal } from "@/lib/attempts";
 import { forbidden, notFound, serverError, teacherOwnsTestPackage, unauthorized } from "@/lib/guards";
-import { pct1, rankRows } from "@/lib/ranking";
+import { pct1, rankLive } from "@/lib/ranking";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -41,17 +41,19 @@ export async function GET(_: NextRequest, { params }: Ctx) {
 
     const [members, attempts] = await Promise.all([
       pkg.visibility === "GROUP_ONLY" && groupIds.length
-        ? prisma.groupMember.findMany({ where: { groupId: { in: groupIds } }, select: { student: { select: { id: true, name: true, photo: true } } } })
+        ? prisma.groupMember.findMany({ where: { groupId: { in: groupIds }, ...(isStaff ? {} : { student: { deletedAt: null } }) }, select: { student: { select: { id: true, name: true, photo: true, deletedAt: true } } } })
         : Promise.resolve([]),
       prisma.studentAttempt.findMany({
-        where: { packageId: id, finishedAt: { not: null } },
-        select: { studentId: true, score: true, totalScore: true, _count: { select: { answers: true } }, student: { select: { id: true, name: true, photo: true } } },
+        // Silinmiş hesablar tələbələrə heç göstərilmir; müəllim onları "silinib" kimi, yersiz görür
+        where: { packageId: id, finishedAt: { not: null }, ...(isStaff ? {} : { student: { deletedAt: null } }) },
+        select: { studentId: true, score: true, totalScore: true, _count: { select: { answers: true } }, student: { select: { id: true, name: true, photo: true, deletedAt: true } } },
       }),
     ]);
 
-    type Row = { student: { id: string; name: string; photo: string | null }; attempts: number; totalCorrect: number; sumPct: number; perfect: number };
+    type Row = { student: { id: string; name: string; photo: string | null; deleted: boolean }; attempts: number; totalCorrect: number; sumPct: number; perfect: number };
     const rows = new Map<string, Row>();
-    const ensure = (s: Row["student"]) => {
+    const ensure = (raw: { id: string; name: string; photo: string | null; deletedAt: Date | null }) => {
+      const s = { id: raw.id, name: raw.name, photo: raw.photo, deleted: !!raw.deletedAt };
       if (!rows.has(s.id)) rows.set(s.id, { student: s, attempts: 0, totalCorrect: 0, sumPct: 0, perfect: 0 });
       return rows.get(s.id)!;
     };
@@ -75,7 +77,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       avg: r.attempts ? pct1(r.sumPct / r.attempts) : 0,
       mine: r.student.id === me.id,
     }));
-    const ranked = rankRows(list, (r) => r.attempts > 0, [(r) => r.totalCorrect, (r) => r.avg, (r) => r.perfect], (r) => r.student.name);
+    const ranked = rankLive(list, (r) => r.attempts > 0, [(r) => r.totalCorrect, (r) => r.avg, (r) => r.perfect], (r) => r.student.name);
 
     return NextResponse.json({
       package: {

@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     const teachers = await prisma.user.findMany({
-      where: { role: "TEACHER" },
+      where: { role: "TEACHER", deletedAt: null },
       select: {
         id: true,
         name: true,

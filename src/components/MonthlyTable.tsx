@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useFetch } from "@/lib/api";
 import { cx } from "@/lib/format";
-import { rankRows } from "@/lib/ranking";
+import { rankLive } from "@/lib/ranking";
 import { Empty, ErrorBox, SkeletonList } from "@/components/ui";
 import { AVG_CLASS, NameCell, RankBadge } from "@/components/Leaderboard";
 
 interface Cell { score: number; total: number; attemptId: string | null; practice: number }
 interface Row {
-  student: { id: string; name: string; photo: string | null };
+  student: { id: string; name: string; photo: string | null; deleted?: boolean };
   groupIds: string[];
   cells: Record<string, Cell | null>;
   total: number;
@@ -28,7 +28,7 @@ interface Data {
 
 const VIEW_KEY = "monthly-view";
 const rank = (rows: Row[]) =>
-  rankRows(rows, (r) => r.taken > 0, [(r) => r.total, (r) => r.firsts, (r) => r.avg], (r) => r.student.name);
+  rankLive(rows, (r) => r.taken > 0, [(r) => r.total, (r) => r.firsts, (r) => r.avg], (r) => r.student.name);
 
 /**
  * Aylıq sınaq yarış cədvəli. "Ümumi": bütün qrupların tələbələri bir siyahıda;

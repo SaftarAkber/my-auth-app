@@ -9,7 +9,7 @@ export async function GET() {
     if ("response" in auth) return auth.response;
 
     const gone = { not: null } as const;
-    const [cols, pkgs] = await Promise.all([
+    const [cols, pkgs, delUsers] = await Promise.all([
       prisma.collection.findMany({
         where: { deletedAt: gone },
         include: {
@@ -26,6 +26,12 @@ export async function GET() {
           group: { select: { teacher: { select: { name: true } } } },
           _count: { select: { questions: true, attempts: true } },
         },
+        orderBy: { deletedAt: "desc" },
+        take: 300,
+      }),
+      prisma.user.findMany({
+        where: { deletedAt: gone },
+        select: { id: true, name: true, role: true, deletedAt: true, deletedContact: true, coinBalance: true, _count: { select: { attempts: true } } },
         orderBy: { deletedAt: "desc" },
         take: 300,
       }),
@@ -60,6 +66,20 @@ export async function GET() {
             ? p.collection.name
             : null,
       })),
+      ...delUsers.map((u) => {
+        let c: { phone?: string | null; email?: string | null } = {};
+        try { c = JSON.parse(u.deletedContact ?? "{}"); } catch { /* köhnə format */ }
+        return {
+          kind: "user" as const,
+          id: u.id,
+          name: u.name,
+          owner: c.phone || c.email || "—",
+          deletedAt: u.deletedAt!.toISOString(),
+          deletedBy: "Admin",
+          info: `${u.role === "TEACHER" ? "Müəllim" : u.role === "ADMIN" ? "Admin" : "Tələbə"} · ${u.coinBalance} coin · ${u._count.attempts} cəhd`,
+          parent: null as string | null,
+        };
+      }),
     ].sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 
     return NextResponse.json({ items });

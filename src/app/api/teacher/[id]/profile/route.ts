@@ -19,7 +19,7 @@ export async function GET(
     const { id: teacherId } = await params;
 
     const teacher = await prisma.user.findUnique({
-      where: { id: teacherId, role: "TEACHER" },
+      where: { id: teacherId, role: "TEACHER", deletedAt: null },
       select: {
         id: true, name: true, bio: true, photo: true, coverPhoto: true,
       },

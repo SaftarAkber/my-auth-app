@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const [people, groups, tests, videos, posts] = await Promise.all([
       prisma.user.findMany({
-        where: { name: contains, ...(admin ? {} : { role: { in: ["TEACHER", "STUDENT"] } }) },
+        where: { name: contains, deletedAt: null, ...(admin ? {} : { role: { in: ["TEACHER", "STUDENT"] } }) },
         select: { id: true, name: true, role: true, photo: true, subjects: true },
         take: 6,
       }),

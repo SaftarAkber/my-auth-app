@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
   async function remove(u: Row) {
     const ok = await confirm({
       title: `${u.name} silinsin?`,
-      message: "Hesab və ona aid qruplar, testlər, videolar, nəticələr və paylaşımlar da silinəcək. Bunu geri qaytarmaq olmur.",
+      message: "Hesab bağlanacaq və tələbələrə heç yerdə görünməyəcək (cədvəllər onsuz yenidən sıralanır). Coin tarixçəsi və nəticələri saxlanılır — “Silinənlər” bölməsindən bərpa etmək olar.",
       confirmText: "Sil",
       danger: true,
     });

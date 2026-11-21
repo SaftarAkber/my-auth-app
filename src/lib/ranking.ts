@@ -39,3 +39,18 @@ export function rankRows<T>(
   for (const r of off) out.push({ ...r, rank: null });
   return out;
 }
+
+/**
+ * rankRows, amma silinmiş hesablar sıralamada yer tutmur: onlar olmadan sıralanır
+ * (məs. 1-ci silinibsə, 2-ci 1-ci olur), özləri sonda yersiz qalır. Tələbələrə serverdən heç göndərilmir.
+ */
+export function rankLive<T extends { student: { deleted?: boolean } }>(
+  rows: T[],
+  played: (r: T) => boolean,
+  keys: ((r: T) => number)[],
+  name: (r: T) => string,
+): (T & Ranked)[] {
+  const live = rows.filter((r) => !r.student.deleted);
+  const gone = rows.filter((r) => r.student.deleted).map((r) => ({ ...r, rank: null }));
+  return [...rankRows(live, played, keys, name), ...gone];
+}

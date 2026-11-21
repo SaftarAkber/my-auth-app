@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
-import { rateLimit } from "@/lib/rateLimit";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { AUTH_COOKIE, AUTH_COOKIE_OPTIONS } from "@/lib/config";
 
 // Admin yalnız bu endpoint ilə daxil ola bilir (/admin və ya /dashboard səhifəsindəki forma).
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "İstifadəçi adı və parol məcburidir" }, { status: 400 });
     }
 
-    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-    const limit = rateLimit(`admin-login:${ip}:${id.toLowerCase()}`, { windowMs: 15 * 60 * 1000, maxRequests: 6 });
+    const ip = clientIp(req);
+    const limit = await rateLimit(`admin-login:${ip}:${id.toLowerCase()}`, { windowMs: 15 * 60 * 1000, maxRequests: 6 });
     if (!limit.allowed) {
       const mins = Math.ceil(limit.retryAfterMs / 60000);
       return NextResponse.json({ error: `Çox cəhd edildi. ${mins} dəqiqə sonra yenidən yoxlayın.` }, { status: 429 });
@@ -31,11 +31,11 @@ export async function POST(req: NextRequest) {
       },
     });
     const valid = user ? await bcrypt.compare(String(password), user.password) : false;
-    if (!user || !valid) {
+    if (!user || !valid || user.deletedAt) {
       return NextResponse.json({ error: "İstifadəçi adı və ya parol yanlışdır" }, { status: 401 });
     }
 
-    const token = signToken({ userId: user.id, phone: user.phone ?? "" });
+    const token = signToken({ userId: user.id, phone: user.phone ?? "", tv: user.tokenVersion });
     (await cookies()).set(AUTH_COOKIE, token, AUTH_COOKIE_OPTIONS);
 
     return NextResponse.json({

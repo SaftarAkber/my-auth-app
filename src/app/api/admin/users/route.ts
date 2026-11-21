@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
 
     const users = await prisma.user.findMany({
       where: {
+        deletedAt: null,
         ...(role === "STUDENT" || role === "TEACHER" || role === "ADMIN" ? { role } : {}),
         ...(q
           ? {
@@ -35,9 +36,9 @@ export async function GET(req: NextRequest) {
     });
 
     const [teachers, students, admins] = await Promise.all([
-      prisma.user.count({ where: { role: "TEACHER" } }),
-      prisma.user.count({ where: { role: "STUDENT" } }),
-      prisma.user.count({ where: { role: "ADMIN" } }),
+      prisma.user.count({ where: { role: "TEACHER", deletedAt: null } }),
+      prisma.user.count({ where: { role: "STUDENT", deletedAt: null } }),
+      prisma.user.count({ where: { role: "ADMIN", deletedAt: null } }),
     ]);
 
     return NextResponse.json({ users, totals: { all: teachers + students + admins, teachers, students, admins } });

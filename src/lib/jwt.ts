@@ -5,6 +5,8 @@ const SECRET = process.env.JWT_SECRET!;
 export interface JwtPayload {
   userId: string;
   phone: string;
+  /** İstifadəçinin tokenVersion-u; şifrə dəyişəndə artır və köhnə tokenlər işləmir (köhnə tokenlərdə yoxdur = 0) */
+  tv?: number;
 }
 
 export function signToken(payload: JwtPayload): string {

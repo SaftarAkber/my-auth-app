@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppOtp, generateOtpCode } from "@/lib/whatsapp";
 import { sendEmailOtp } from "@/lib/email";
-import { rateLimit } from "@/lib/rateLimit";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/config";
 
 // Şifrə bərpası: WhatsApp (telefon) və ya email ilə 6 rəqəmli kod göndərilir, 10 dəqiqə etibarlıdır
@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     if (method === "whatsapp" && !phone) return NextResponse.json({ error: "Telefon nömrəsini daxil edin" }, { status: 400 });
     if (method === "email" && !email) return NextResponse.json({ error: "Email ünvanını daxil edin" }, { status: 400 });
 
-    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-    const limitResult = rateLimit(`otp:${ip}`, { windowMs: 15 * 60 * 1000, maxRequests: 5 });
+    const ip = clientIp(req);
+    const limitResult = await rateLimit(`otp:${ip}`, { windowMs: 15 * 60 * 1000, maxRequests: 5 });
     if (!limitResult.allowed) {
       const mins = Math.ceil(limitResult.retryAfterMs / 60000);
       return NextResponse.json({ error: `Çox cəhd edildi. ${mins} dəqiqə sonra yenidən yoxlayın.` }, { status: 429 });

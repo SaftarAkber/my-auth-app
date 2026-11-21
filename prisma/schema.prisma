@@ -19,6 +19,12 @@ model User {
   photo     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // Şifrə dəyişəndə artır: köhnə tokenlər (başqa cihazlardakı girişlər) etibarsız olur
+  tokenVersion Int   @default(0)
+  // Yumşaq silmə: hesab bağlanır, tələbələrə heç yerdə görünmür, müəllim və admin görür; admin bərpa edə bilər
+  deletedAt     DateTime?
+  // Silinəndə boşaldılan telefon/email (bərpa üçün), JSON: {"phone":..,"email":..}
+  deletedContact String?
   videoPackages VideoPackage[]
   otpCodes         OtpCode[]
   groups           Group[]
@@ -628,4 +634,14 @@ model TopicVideo {
 
   @@unique([topicId, videoId])
   @@map("topic_videos")
+}
+
+// Giriş və kod cəhdlərinin sayğacı (Vercel bir neçə server açır — yaddaşdakı sayğac kifayət etmir)
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limits")
 }

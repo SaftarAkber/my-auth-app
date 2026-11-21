@@ -5,7 +5,12 @@ import { canWatchVideo } from "@/lib/videoAccess";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const USER_SELECT = { id: true, name: true, photo: true, role: true } as const;
+const USER_SELECT = { id: true, name: true, photo: true, role: true, deletedAt: true } as const;
+
+/** Silinmiş hesabın şərhi yalnız video sahibi və adminə görünür, adının yanında "(silinib)" */
+const showUser = (u: { id: string; name: string; photo: string | null; role: string; deletedAt: Date | null }) => ({
+  id: u.id, name: u.deletedAt ? `${u.name} (silinib)` : u.name, photo: u.photo, role: u.role,
+});
 const PAGE = 5;
 
 // Şərhlər: əsas şərhlər yeni → köhnə, cavablar köhnə → yeni. 5-5 səhifələnir ("Daha çox").
@@ -28,7 +33,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
 
     // Qrup-məxfi şərhləri yalnız qrup üzvləri, video sahibi və admin görür
     const seeAll = access.groupAccess || user.role === "ADMIN";
-    const vis = seeAll ? {} : { visibility: "PUBLIC" as const };
+    const owner = user.role === "ADMIN" || (await prisma.video.count({ where: { id: videoId, teacherId: user.id } })) > 0;
+    const vis = { ...(seeAll ? {} : { visibility: "PUBLIC" as const }), ...(owner ? {} : { user: { deletedAt: null } }) };
 
     const rows = await prisma.videoComment.findMany({
       where: { videoId, parentId: parentId ?? null, ...vis },
@@ -52,7 +58,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         createdAt: c.createdAt,
         visibility: c.visibility,
         parentId: c.parentId,
-        user: c.user,
+        user: showUser(c.user),
         replyCount: c._count.replies,
       })),
       nextCursor: hasMore ? page[page.length - 1].id : null,
@@ -104,7 +110,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     });
 
     return NextResponse.json(
-      { comment: { id: comment.id, content: comment.content, createdAt: comment.createdAt, visibility: comment.visibility, parentId: comment.parentId, user: comment.user, replyCount: 0 } },
+      { comment: { id: comment.id, content: comment.content, createdAt: comment.createdAt, visibility: comment.visibility, parentId: comment.parentId, user: showUser(comment.user), replyCount: 0 } },
       { status: 201 },
     );
   } catch (error) {

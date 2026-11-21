@@ -21,7 +21,7 @@ export async function POST(_: NextRequest, { params }: Ctx) {
     if (existing) await prisma.postCommentLike.deleteMany({ where: { id: existing.id } });
     else await prisma.postCommentLike.create({ data: { commentId, userId: user.id } }).catch(() => null);
 
-    const likes = await prisma.postCommentLike.count({ where: { commentId } });
+    const likes = await prisma.postCommentLike.count({ where: { commentId, user: { deletedAt: null } } });
     return NextResponse.json({ liked: !existing, likes });
   } catch (error) {
     return serverError(error);

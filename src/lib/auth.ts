@@ -22,8 +22,14 @@ export async function getCurrentUser() {
       bio: true,
       photo: true,
       coinBalance: true,
+      tokenVersion: true,
+      deletedAt: true,
     },
   });
 
-  return user;
+  // Silinmiş hesab və ya şifrə dəyişəndən əvvəlki token (başqa cihazdakı köhnə giriş) qəbul olunmur
+  if (!user || user.deletedAt || (payload.tv ?? 0) !== user.tokenVersion) return null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { tokenVersion, deletedAt, ...rest } = user;
+  return rest;
 }

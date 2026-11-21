@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6 rəqəmli kodun brute-force edilməsinin qarşısı
-    const limit = rateLimit(`reset:${phone}`, { windowMs: 15 * 60 * 1000, maxRequests: 8 });
+    const limit = await rateLimit(`reset:${phone}`, { windowMs: 15 * 60 * 1000, maxRequests: 8 });
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "Çox cəhd edildi. Bir az sonra yenidən yoxlayın." },
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: otpRecord.userId! },
-        data: { password: hashedPassword },select: { id: true, name: true, phone: true, email: true, role: true },
+        data: { password: hashedPassword, tokenVersion: { increment: 1 } },select: { id: true, name: true, phone: true, email: true, role: true, tokenVersion: true },
       }),
       prisma.otpCode.update({
         where: { id: otpRecord.id },
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
     const token = signToken({
       userId: updatedUser.id,
       phone: updatedUser.phone ?? "",
+      tv: updatedUser.tokenVersion,
     });
 
     const cookieStore = await cookies();

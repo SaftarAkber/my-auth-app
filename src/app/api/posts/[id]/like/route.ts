@@ -21,7 +21,7 @@ export async function POST(_: NextRequest, { params }: Ctx) {
     if (existing.length) await prisma.postLike.deleteMany({ where: { id: { in: existing.map((e) => e.id) } } });
     else await prisma.postLike.create({ data: { postId: id, userId: user.id } });
 
-    const likers = await prisma.postLike.findMany({ where: { postId: { in: ids } }, select: { userId: true }, distinct: ["userId"] });
+    const likers = await prisma.postLike.findMany({ where: { postId: { in: ids }, user: { deletedAt: null } }, select: { userId: true }, distinct: ["userId"] });
     return NextResponse.json({ liked: existing.length === 0, likes: likers.length });
   } catch (error) {
     return serverError(error);

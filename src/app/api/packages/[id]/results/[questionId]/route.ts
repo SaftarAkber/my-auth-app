@@ -42,11 +42,11 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     if (!question) return notFound();
 
     const attempts = await prisma.studentAttempt.findMany({
-      where: { packageId: id, finishedAt: { not: null } },
+      where: { packageId: id, finishedAt: { not: null }, ...(isTeacher || isAdmin ? {} : { student: { deletedAt: null } }) },
       orderBy: { finishedAt: "desc" },
       select: {
         id: true, studentId: true,
-        student: { select: { id: true, name: true, photo: true } },
+        student: { select: { id: true, name: true, photo: true, deletedAt: true } },
         answers: { select: { questionId: true, isCorrect: true, status: true, answer: true } },
       },
     });
@@ -62,7 +62,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       const x = a.answers.find((r) => r.questionId === questionId);
       return {
         attemptId: a.id,
-        student: a.student,
+        student: { id: a.student.id, name: a.student.name, photo: a.student.photo, deleted: !!a.student.deletedAt },
         mine: a.studentId === me.id,
         answer: x?.answer ?? null,
         state: !x ? "blank" : x.status === "PENDING" ? "pending" : x.isCorrect ? "ok" : "bad",

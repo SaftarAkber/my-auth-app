@@ -145,7 +145,7 @@ export async function GET() {
       }
     } else {
       const users = await prisma.user.findMany({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * DAY) } },
+        where: { createdAt: { gte: new Date(Date.now() - 7 * DAY) }, deletedAt: null },
         select: { id: true, name: true, role: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 6,

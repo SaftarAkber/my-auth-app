@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
     const sib = await siblingMap(ids);
     const allIds = [...new Set([...sib.values()].flat().map((r) => r.id))];
     const likes = allIds.length
-      ? await prisma.postLike.findMany({ where: { postId: { in: allIds } }, select: { postId: true, userId: true } })
+      ? await prisma.postLike.findMany({ where: { postId: { in: allIds }, user: { deletedAt: null } }, select: { postId: true, userId: true } })
       : [];
     const comments = allIds.length
-      ? await prisma.postComment.groupBy({ by: ["postId"], where: { postId: { in: allIds } }, _count: { _all: true } })
+      ? await prisma.postComment.groupBy({ by: ["postId"], where: { postId: { in: allIds }, user: { deletedAt: null } }, _count: { _all: true } })
       : [];
 
     const out: Record<string, { n: number; liked: boolean; c: number }> = {};

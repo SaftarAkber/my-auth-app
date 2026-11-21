@@ -100,7 +100,15 @@ export function RankBadge({ rank }: { rank: number | null }) {
 }
 
 /** Ad: qısaldılmış ("Aysel M."), profilə keçid */
-export function NameCell({ student, mine }: { student: { id: string; name: string }; mine?: boolean }) {
+export function NameCell({ student, mine }: { student: { id: string; name: string; deleted?: boolean }; mine?: boolean }) {
+  // Silinmiş hesab yalnız müəllimə görünür (tələbələrə server göndərmir)
+  if (student.deleted) {
+    return (
+      <span className="block min-w-0 truncate font-semibold text-muted line-through decoration-1" title={`${student.name} — hesab silinib`}>
+        {shortName(student.name)} <span className="no-underline">(silinib)</span>
+      </span>
+    );
+  }
   return (
     <Link href={`/u/${student.id}`} className="block min-w-0 truncate font-bold hover:underline" title={student.name}>
       {shortName(student.name)}
@@ -116,7 +124,7 @@ interface Data {
     topics: { id: string; title: string }[];
   };
   rows: {
-    student: { id: string; name: string; photo: string | null };
+    student: { id: string; name: string; photo: string | null; deleted?: boolean };
     attempts: number; totalCorrect: number; perfect: number; avg: number; mine: boolean; rank: number | null;
   }[];
   staff: boolean;

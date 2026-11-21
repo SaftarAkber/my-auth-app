@@ -35,11 +35,12 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     }
 
     const attempts = await prisma.studentAttempt.findMany({
-      where: { packageId: id, finishedAt: { not: null } },
+      // Silinmiş hesablar tələbələrə görünmür; müəllim/admin onları sonda "silinib" kimi görür
+      where: { packageId: id, finishedAt: { not: null }, ...(isTeacher || isAdmin ? {} : { student: { deletedAt: null } }) },
       orderBy: { finishedAt: "desc" },
       select: {
         id: true, score: true, studentId: true,
-        student: { select: { id: true, name: true, photo: true } },
+        student: { select: { id: true, name: true, photo: true, deletedAt: true } },
         answers: { select: { questionId: true, isCorrect: true, status: true } },
       },
     });
@@ -64,13 +65,13 @@ export async function GET(_: NextRequest, { params }: Ctx) {
         });
         return {
           attemptId: a.id,
-          student: a.student,
+          student: { id: a.student.id, name: a.student.name, photo: a.student.photo, deleted: !!a.student.deletedAt },
           cells,
           correct: cells.filter((c) => c === true).length,
           mine: a.studentId === me.id,
         };
       })
-      .sort((x, y) => y.correct - x.correct || x.student.name.localeCompare(y.student.name));
+      .sort((x, y) => Number(x.student.deleted) - Number(y.student.deleted) || y.correct - x.correct || x.student.name.localeCompare(y.student.name));
 
     return NextResponse.json({
       package: { id: pkg.id, name: pkg.name },

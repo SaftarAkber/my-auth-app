@@ -5,7 +5,12 @@ import { canSeePost, siblingMap } from "@/lib/posts";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const USER_SELECT = { id: true, name: true, photo: true, role: true } as const;
+const USER_SELECT = { id: true, name: true, photo: true, role: true, deletedAt: true } as const;
+
+/** Silinmiş hesabın şərhi yalnız paylaşımın müəllimi və adminə görünür, adının yanında "(silinib)" */
+const showUser = (u: { id: string; name: string; photo: string | null; role: string; deletedAt: Date | null }) => ({
+  id: u.id, name: u.deletedAt ? `${u.name} (silinib)` : u.name, photo: u.photo, role: u.role,
+});
 const PAGE = 5;
 
 /** Paylaşımın bütün qardaş sətirləri və baxanın girişi */
@@ -33,11 +38,13 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const cursor = url.searchParams.get("cursor");
     const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? String(PAGE), 10) || PAGE));
 
+    const staff = user.role === "ADMIN" || a.teacherId === user.id;
+    const live = staff ? {} : { user: { deletedAt: null } };
     const rows = await prisma.postComment.findMany({
-      where: { postId: { in: a.ids }, parentId: parentId ?? null },
+      where: { postId: { in: a.ids }, parentId: parentId ?? null, ...live },
       include: {
         user: { select: USER_SELECT },
-        _count: { select: { replies: true, likes: true } },
+        _count: { select: { replies: { where: live }, likes: { where: { user: { deletedAt: null } } } } },
         likes: { where: { userId: user.id }, select: { id: true } },
       },
       orderBy: [{ createdAt: parentId ? "asc" : "desc" }, { id: "asc" }],
@@ -46,7 +53,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
-    const total = await prisma.postComment.count({ where: { postId: { in: a.ids } } });
+    const total = await prisma.postComment.count({ where: { postId: { in: a.ids }, ...live } });
 
     return NextResponse.json({
       comments: page.map((c) => ({
@@ -55,7 +62,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         createdAt: c.createdAt,
         visibility: "PUBLIC",
         parentId: c.parentId,
-        user: c.user,
+        user: showUser(c.user),
         replyCount: c._count.replies,
         likes: c._count.likes,
         liked: c.likes.length > 0,
@@ -102,7 +109,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       include: { user: { select: USER_SELECT } },
     });
     return NextResponse.json(
-      { comment: { id: c.id, content: c.content, createdAt: c.createdAt, visibility: "PUBLIC", parentId: c.parentId, user: c.user, replyCount: 0, likes: 0, liked: false } },
+      { comment: { id: c.id, content: c.content, createdAt: c.createdAt, visibility: "PUBLIC", parentId: c.parentId, user: showUser(c.user), replyCount: 0, likes: 0, liked: false } },
       { status: 201 },
     );
   } catch (error) {
