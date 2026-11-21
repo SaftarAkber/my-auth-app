@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { later, notifyPost } from "@/lib/push";
 import { forbidden, requireTeacher, serverError, teacherOwnsGroups } from "@/lib/guards";
 
 /**
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
       ),
     );
 
+    later(() => notifyPost(auth.user.id, ids, vis, text, createdAt));
     return NextResponse.json({ count: ids.length }, { status: 201 });
   } catch (error) {
     return serverError(error);

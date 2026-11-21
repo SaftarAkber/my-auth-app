@@ -6,6 +6,7 @@ import { fmtDateTime, percent, timeAgo } from "@/lib/format";
 import { useState } from "react";
 import GiftModal from "@/components/GiftModal";
 import { Avatar, Empty, Icon, QuickActions, SkeletonList, StatStrip } from "@/components/ui";
+import { PushPrompt } from "@/components/PushNotifications";
 
 interface Stats {
   students: number;
@@ -52,6 +53,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="page space-y-8">
+      <PushPrompt />
       <div className="flex justify-end">
         <button className="btn-primary" onClick={() => setGift(true)}>
           <Icon name="coin" size={16} /> Coin hədiyyə et

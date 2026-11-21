@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { later, sendPush } from "@/lib/push";
 import { notFound, requireTeacher, serverError } from "@/lib/guards";
 
 export async function POST(req: NextRequest) {
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
       return result;
     });
 
+    if (action === "ACCEPTED") {
+      later(async () => {
+        const g = await prisma.group.findUnique({ where: { id: request.groupId }, select: { name: true } });
+        await sendPush([request.studentId], { title: "Qrupa qəbul olundun", body: g?.name ?? "", url: `/student/groups/${request.groupId}`, tag: `enroll-${request.groupId}` });
+      });
+    }
     return NextResponse.json({ request: updated });
   } catch (error) {
     return serverError(error);

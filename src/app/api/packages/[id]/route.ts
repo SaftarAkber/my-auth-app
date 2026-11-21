@@ -194,7 +194,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           ...(open !== undefined && { isPublic: open }),
           ...(isTimed !== undefined && { isTimed, ...(isTimed ? {} : { duration: null }) }),
           ...(duration !== undefined && isTimed !== false && { duration }),
-          ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
+          // Vaxt dəyişəndə xatırlatmalar yenidən göndərilsin
+          ...(startsAt !== undefined && {
+            startsAt: startsAt ? new Date(startsAt) : null,
+            ...((startsAt ? new Date(startsAt).getTime() : null) !== (existing.startsAt?.getTime() ?? null) && { remind3hAt: null, remind80At: null }),
+          }),
           ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
           ...(vis !== undefined && { visibility: vis }),
           ...(allowRetry !== undefined && { allowRetry }),

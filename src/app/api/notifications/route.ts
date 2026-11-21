@@ -44,16 +44,29 @@ export async function GET() {
               ],
             },
           },
-          include: { attempt: { select: { student: { select: { name: true } }, package: { select: { name: true } } } } },
+          select: { createdAt: true, attempt: { select: { studentId: true, packageId: true, package: { select: { name: true } } } } },
           orderBy: { createdAt: "desc" },
-          take: 6,
+          take: 300,
         }),
       ]);
       for (const r of requests) {
         items.push({ id: `r${r.id}`, text: `${r.student.name} “${r.group.name}” qrupuna qoşulmaq istəyir`, href: "/teacher/requests", at: iso(r.createdAt) });
       }
+      // Test üzrə bir sətir: "X nəfər testi bitirdi, açıq suallar yoxlanılmağı gözləyir"
+      const byPkg = new Map<string, { name: string; students: Set<string>; at: Date }>();
       for (const a of pendingAnswers) {
-        items.push({ id: `a${a.id}`, text: `${a.attempt.student.name}: “${a.attempt.package.name}” açıq cavabı yoxlanmağı gözləyir`, href: "/teacher/attempts", at: iso(a.createdAt) });
+        const g = byPkg.get(a.attempt.packageId) ?? { name: a.attempt.package.name, students: new Set<string>(), at: a.createdAt };
+        g.students.add(a.attempt.studentId);
+        if (a.createdAt > g.at) g.at = a.createdAt;
+        byPkg.set(a.attempt.packageId, g);
+      }
+      for (const [pid, g] of [...byPkg.entries()].slice(0, 6)) {
+        items.push({
+          id: `a${pid}-${g.students.size}-${g.at.getTime()}`,
+          text: `${g.students.size} nəfər “${g.name}” testini bitirdi, açıq suallar yoxlanılmağı gözləyir`,
+          href: "/teacher/attempts",
+          at: iso(g.at),
+        });
       }
     } else if (user.role === "STUDENT") {
       const since = new Date(Date.now() - 14 * DAY);

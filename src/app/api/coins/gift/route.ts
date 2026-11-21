@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { later, sendPush } from "@/lib/push";
 import { InsufficientCoins, transferCoins } from "@/lib/coins";
 import { ownerTeacherId } from "@/lib/rewards";
 import { forbidden, notFound, requireTeacher, serverError } from "@/lib/guards";
@@ -70,6 +71,11 @@ export async function POST(req: NextRequest) {
       throw e;
     }
 
+    later(() => sendPush([studentId], {
+      title: attemptId ? "Test mükafatı" : "Coin hədiyyəsi",
+      body: `${teacher.name}: +${amount} coin${reason ? ` — ${reason}` : ""}`,
+      url: `/u/${studentId}?tab=coins`,
+    }));
     const me = await prisma.user.findUnique({ where: { id: teacher.id }, select: { coinBalance: true } });
     return NextResponse.json({ balance: me?.coinBalance ?? 0 });
   } catch (error) {

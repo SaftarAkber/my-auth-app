@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api, errMsg, uploadImage, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings";
+import { PushCard } from "@/components/PushNotifications";
 import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
 import { SubjectBadges } from "@/components/Subjects";
@@ -252,6 +253,7 @@ function ProfileInner() {
       {tab === "settings" && (
         <div className="grid max-w-3xl gap-5">
           <ContactCard />
+          <PushCard />
           <PasswordCard />
           <section className="card flex items-center justify-between gap-4 p-5 sm:p-6">
             <div>

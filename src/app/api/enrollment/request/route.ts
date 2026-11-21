@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { later, sendPush } from "@/lib/push";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
         where: { id: existing.id },
         data: { status: "PENDING", message: message || null, teacherReply: null },
       });
+    later(async () => {
+      const g = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      await sendPush([group.teacherId], { title: "Yeni qoşulma müraciəti", body: `${currentUser.name} — ${g?.name ?? "qrup"}`, url: "/teacher/requests", tag: "requests" });
+    });
       return NextResponse.json({ request: reopened }, { status: 201 });
     }
 
@@ -68,6 +73,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    later(async () => {
+      const g = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+      await sendPush([group.teacherId], { title: "Yeni qoşulma müraciəti", body: `${currentUser.name} — ${g?.name ?? "qrup"}`, url: "/teacher/requests", tag: "requests" });
+    });
     return NextResponse.json({ request }, { status: 201 });
   } catch (error) {
     console.error(error);

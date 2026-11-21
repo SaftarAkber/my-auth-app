@@ -41,6 +41,7 @@ model User {
   postLikes        PostLike[]
   postComments     PostComment[]
   postCommentLikes PostCommentLike[]
+  pushSubscriptions PushSubscription[]
   coinBalance Int    @default(0) 
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
@@ -365,6 +366,9 @@ model TestPackage {
   isTimed      Boolean   @default(false)
   duration     Int?
   startsAt     DateTime?
+  // Aylıq sınaq xatırlatmaları göndərilib (3 saat və 1 saat 20 dəqiqə qalmış)
+  remind3hAt  DateTime?
+  remind80At  DateTime?
   endsAt       DateTime?
   visibility   ContentVisibility @default(PUBLIC)
   createdAt    DateTime  @default(now())
@@ -644,4 +648,18 @@ model RateLimit {
 
   @@index([resetAt])
   @@map("rate_limits")
+}
+
+// Telefon (PWA) bildirişləri üçün brauzerin abunəliyi; bir istifadəçinin bir neçə cihazı ola bilər
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

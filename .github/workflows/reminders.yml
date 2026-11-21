@@ -1,0 +1,21 @@
+# Aylıq sınaq xatırlatmaları (3 saat və 1 saat 20 dəqiqə qalmış telefon bildirişi).
+# Vercel-in pulsuz planı cron-u gündə 1 dəfə icazə verir, ona görə hər 10 dəqiqədən bir GitHub çağırır.
+# Lazımdır: repo → Settings → Secrets and variables → Actions → CRON_SECRET (Vercel-dəki ilə eyni dəyər).
+name: Aylıq sınaq xatırlatmaları
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Xatırlatmaları göndər
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET təyin olunmayıb"; exit 0; fi
+          curl -fsS --max-time 60 -H "Authorization: Bearer $CRON_SECRET" "https://my-auth-app-ivory.vercel.app/api/cron/reminders"

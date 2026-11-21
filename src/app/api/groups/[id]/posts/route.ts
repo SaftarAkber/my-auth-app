@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { later, notifyPost } from "@/lib/push";
 import { forbidden, requireTeacher, serverError, teacherOwnsGroup } from "@/lib/guards";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       include: { images: true },
     });
 
+    later(() => notifyPost(auth.user.id, [groupId], post.visibility, post.content, post.createdAt));
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
     return serverError(error);
