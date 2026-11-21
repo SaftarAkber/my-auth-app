@@ -32,6 +32,8 @@ export default function ForgotPasswordPage() {
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // Serverin tapdığı hesabın dəqiq yazılışı (məs. 050… → +99450…); kod onunla yoxlanılır
+  const [sentTo, setSentTo] = useState("");
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -47,12 +49,13 @@ export default function ForgotPasswordPage() {
     setInfo("");
     setBusy(true);
     try {
-      await api("/api/auth/forgot-password", {
+      const r = await api<{ message: string; identifier: string }>("/api/auth/forgot-password", {
         body: method === "whatsapp" ? { method, phone: identifier } : { method, email: identifier },
       });
+      setSentTo(r.identifier ?? identifier);
       setStep("reset");
       setCooldown(60);
-      setInfo(method === "whatsapp" ? "Kod WhatsApp-a göndərildi (hesab mövcuddursa)." : "Kod emailə göndərildi (hesab mövcuddursa).");
+      setInfo(method === "whatsapp" ? `Kod WhatsApp-a göndərildi: ${r.identifier ?? identifier}` : `Kod emailə göndərildi: ${r.identifier ?? identifier}. Gəlməyibsə «Spam» qovluğuna baxın.`);
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -66,7 +69,7 @@ export default function ForgotPasswordPage() {
     if (password.length < 6) return setError("Şifrə ən azı 6 simvol olmalıdır");
     setBusy(true);
     try {
-      await api("/api/auth/reset-password", { body: { phone: identifier, code: code.trim(), newPassword: password } });
+      await api("/api/auth/reset-password", { body: { phone: sentTo || identifier, code: code.trim(), newPassword: password } });
       window.location.replace("/");
     } catch (err) {
       setError(errMsg(err));
@@ -110,7 +113,7 @@ export default function ForgotPasswordPage() {
               type={method === "email" ? "email" : "tel"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={method === "whatsapp" ? "+994501234567" : "ad@mail.com"}
+              placeholder={method === "whatsapp" ? "+994501234567 və ya 050 123 45 67" : "ad@mail.com"}
               required
               autoFocus
             />

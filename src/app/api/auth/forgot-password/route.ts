@@ -3,130 +3,73 @@ import { prisma } from "@/lib/prisma";
 import { sendWhatsAppOtp, generateOtpCode } from "@/lib/whatsapp";
 import { sendEmailOtp } from "@/lib/email";
 import { rateLimit } from "@/lib/rateLimit";
+import { normalizePhone } from "@/lib/config";
 
+// Şifrə bərpası: WhatsApp (telefon) və ya email ilə 6 rəqəmli kod göndərilir, 10 dəqiqə etibarlıdır
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const method = body.method;
-    const phone = body.phone ? String(body.phone).trim() : body.phone;
-    // register email-i kiçik hərflə saxlayır; burada da eyni normallaşdırma lazımdır
-    const email = body.email ? String(body.email).trim().toLowerCase() : body.email;
+    const method = body.method === "email" ? "email" : body.method === "whatsapp" ? "whatsapp" : null;
+    // Bazada telefon +994XXXXXXXXX, email kiçik hərflə saxlanır — istifadəçinin yazdığını eyni formata gətiririk
+    const phone = body.phone ? normalizePhone(String(body.phone)) : "";
+    const email = body.email ? String(body.email).trim().toLowerCase() : "";
 
-    // method: "whatsapp" veya "email"
-    if (!method) {
-      return NextResponse.json(
-        { error: "Doğrulama yöntemi seçin" },
-        { status: 400 }
-      );
-    }
+    if (!method) return NextResponse.json({ error: "Kodu necə almaq istədiyinizi seçin" }, { status: 400 });
+    if (method === "whatsapp" && !phone) return NextResponse.json({ error: "Telefon nömrəsini daxil edin" }, { status: 400 });
+    if (method === "email" && !email) return NextResponse.json({ error: "Email ünvanını daxil edin" }, { status: 400 });
 
-    if (method === "whatsapp" && !phone) {
-      return NextResponse.json(
-        { error: "Telefon numarası zorunludur" },
-        { status: 400 }
-      );
-    }
-
-    if (method === "email" && !email) {
-      return NextResponse.json(
-        { error: "Email zorunludur" },
-        { status: 400 }
-      );
-    }
-
-    // Rate limit
     const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-    const limitResult = rateLimit(`otp:${ip}`, {
-      windowMs: 15 * 60 * 1000,
-      maxRequests: 5,
-    });
-
+    const limitResult = rateLimit(`otp:${ip}`, { windowMs: 15 * 60 * 1000, maxRequests: 5 });
     if (!limitResult.allowed) {
-      const secs = Math.ceil(limitResult.retryAfterMs / 1000);
-      return NextResponse.json(
-        { error: `Çok fazla deneme. ${secs} saniye sonra tekrar deneyin.` },
-        { status: 429 }
-      );
+      const mins = Math.ceil(limitResult.retryAfterMs / 60000);
+      return NextResponse.json({ error: `Çox cəhd edildi. ${mins} dəqiqə sonra yenidən yoxlayın.` }, { status: 429 });
     }
 
-    // Kullanıcıyı bul
     const user = await prisma.user.findFirst({
       where: method === "whatsapp" ? { phone } : { email },
+      select: { id: true, email: true, phone: true },
     });
-
-    // Güvenlik: bulunamasa da aynı cevabı ver
     if (!user) {
-      return NextResponse.json({
-        message: "Kayıtlıysa kod gönderilecek",
-      });
-    }
-
-    // Email metodu seçildiyse email olmalı
-    if (method === "email" && !user.email) {
       return NextResponse.json(
-        { error: "Bu hesapta kayıtlı email yok" },
-        { status: 400 }
+        {
+          error: method === "whatsapp"
+            ? "Bu nömrə ilə hesab tapılmadı. Nömrəni +994501234567 formatında yoxlayın və ya Email ilə cəhd edin."
+            : "Bu email ilə hesab tapılmadı. Qeydiyyatda telefon yazmısınızsa, WhatsApp ilə cəhd edin.",
+        },
+        { status: 404 },
       );
     }
 
-    // Son 60 saniyede kod gönderildi mi?
     const identifier = method === "whatsapp" ? phone : email;
+
     const recentOtp = await prisma.otpCode.findFirst({
-      where: {
-        phone: identifier,
-        createdAt: { gte: new Date(Date.now() - 60 * 1000) },
-        used: false,
-      },
+      where: { phone: identifier, used: false, createdAt: { gte: new Date(Date.now() - 60 * 1000) } },
     });
+    if (recentOtp) return NextResponse.json({ error: "Kod artıq göndərilib. 1 dəqiqə sonra yenidən göndərə bilərsiniz." }, { status: 429 });
 
-    if (recentOtp) {
-      return NextResponse.json(
-        { error: "Lütfen 1 dakika bekleyin" },
-        { status: 429 }
-      );
-    }
+    await prisma.otpCode.deleteMany({ where: { phone: identifier, used: false } });
 
-    // Eski kodları sil
-    await prisma.otpCode.deleteMany({
-      where: { phone: identifier, used: false },
-    });
-
-    // Yeni OTP oluştur
     const code = generateOtpCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-    await prisma.otpCode.create({
-      data: {
-        code,
-        phone: identifier,
-        type: "RESET_PASSWORD",
-        expiresAt,
-        userId: user.id,
-      },
+    const otp = await prisma.otpCode.create({
+      data: { code, phone: identifier, type: "RESET_PASSWORD", expiresAt: new Date(Date.now() + 10 * 60 * 1000), userId: user.id },
     });
 
-    // Gönder
-    let sent = false;
-    if (method === "whatsapp") {
-      sent = await sendWhatsAppOtp(phone, code);
-    } else {
-      sent = await sendEmailOtp(user.email!, code);
-    }
-
+    const sent = method === "whatsapp" ? await sendWhatsAppOtp(phone, code) : await sendEmailOtp(email, code);
     if (!sent) {
+      // Göndərilməyən kod 1 dəqiqəlik gözləməyə səbəb olmasın
+      await prisma.otpCode.delete({ where: { id: otp.id } }).catch(() => null);
       return NextResponse.json(
-        { error: "Kod gönderilemedi. Lütfen tekrar deneyin." },
-        { status: 500 }
+        { error: method === "whatsapp" ? "WhatsApp mesajı göndərilmədi. Bir az sonra yenidən yoxlayın və ya Email seçin." : "Email göndərilmədi. Bir az sonra yenidən yoxlayın." },
+        { status: 502 },
       );
     }
 
     return NextResponse.json({
-      message: method === "whatsapp"
-        ? "WhatsApp mesajı gönderildi"
-        : "Email gönderildi",
+      message: method === "whatsapp" ? "Kod WhatsApp-a göndərildi" : "Kod emailə göndərildi",
+      identifier,
     });
   } catch (error) {
-    console.error("Forgot password hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    console.error("Forgot password xətası:", error);
+    return NextResponse.json({ error: "Server xətası" }, { status: 500 });
   }
 }

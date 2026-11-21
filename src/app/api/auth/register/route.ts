@@ -9,6 +9,7 @@ import {
   AUTH_COOKIE_OPTIONS,
   EMAIL_REGEX,
   PHONE_REGEX,
+  normalizePhone,
   TEACHER_START_COINS,
 } from "@/lib/config";
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const name = String(body.name ?? "").trim();
-    const phone = body.phone ? String(body.phone).trim() : "";
+    const phone = body.phone ? normalizePhone(String(body.phone)) : "";
     const email = body.email ? String(body.email).trim().toLowerCase() : "";
     const password = String(body.password ?? "");
     const role = body.role === "TEACHER" ? "TEACHER" : "STUDENT";

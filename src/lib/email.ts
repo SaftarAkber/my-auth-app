@@ -21,16 +21,16 @@ export async function sendEmailOtp(
     await getTransporter().sendMail({
       from: `"EduFlow" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: "Şifre Sıfırlama Kodu",
+      subject: "EduFlow — şifrə bərpa kodu",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #f9f9f9; border-radius: 12px;">
-          <h2 style="color: #1a1a1a; margin-bottom: 8px;">🔐 Şifre Sıfırlama</h2>
-          <p style="color: #555; margin-bottom: 24px;">Aşağıdaki kodu kullanarak şifrenizi sıfırlayabilirsiniz.</p>
+          <h2 style="color: #1a1a1a; margin-bottom: 8px;">🔐 Şifrənin bərpası</h2>
+          <p style="color: #555; margin-bottom: 24px;">Aşağıdakı kodu daxil edib yeni şifrə təyin edin.</p>
           <div style="background: #fff; border: 2px solid #10b981; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
             <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #10b981;">${code}</span>
           </div>
-          <p style="color: #888; font-size: 14px;">Bu kod <strong>10 dakika</strong> geçerlidir.</p>
-          <p style="color: #888; font-size: 14px;">Kodu kimseyle paylaşmayın.</p>
+          <p style="color: #888; font-size: 14px;">Kod <strong>10 dəqiqə</strong> etibarlıdır.</p>
+          <p style="color: #888; font-size: 14px;">Kodu heç kimlə paylaşmayın.</p>
         </div>
       `,
     });

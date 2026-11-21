@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { rateLimit } from "@/lib/rateLimit";
-import { AUTH_COOKIE, AUTH_COOKIE_OPTIONS } from "@/lib/config";
+import { AUTH_COOKIE, AUTH_COOKIE_OPTIONS, normalizePhone } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const id = String(identifier).trim();
+    const id = normalizePhone(String(identifier));
     const isEmail = id.includes("@");
 
     const user = await prisma.user.findFirst({

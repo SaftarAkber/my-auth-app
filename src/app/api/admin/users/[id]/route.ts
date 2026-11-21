@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { EMAIL_REGEX, PHONE_REGEX } from "@/lib/config";
+import { EMAIL_REGEX, PHONE_REGEX, normalizePhone } from "@/lib/config";
 import { notFound, requireAdmin, serverError } from "@/lib/guards";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -21,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       data.name = name.slice(0, 120);
     }
     if (b.phone !== undefined) {
-      const phone = String(b.phone).trim();
+      const phone = normalizePhone(String(b.phone));
       if (phone && !PHONE_REGEX.test(phone)) {
         return NextResponse.json({ error: "Telefon beynəlxalq formatda olmalıdır (+994XXXXXXXXX)" }, { status: 400 });
       }
@@ -31,6 +32,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       const email = String(b.email).trim().toLowerCase();
       if (email && !EMAIL_REGEX.test(email)) return NextResponse.json({ error: "Email formatı yanlışdır" }, { status: 400 });
       data.email = email || null;
+    }
+    // Admin istifadəçiyə yeni parol təyin edə bilər (köhnəsi görünmür: bazada yalnız geri çevrilməyən izi saxlanır)
+    if (b.password !== undefined && b.password !== "") {
+      const pw = String(b.password);
+      if (pw.length < 6) return NextResponse.json({ error: "Parol ən azı 6 simvol olmalıdır" }, { status: 400 });
+      if (pw.length > 100) return NextResponse.json({ error: "Parol çox uzundur" }, { status: 400 });
+      data.password = await bcrypt.hash(pw, 12);
     }
     if (b.bio !== undefined) data.bio = String(b.bio).slice(0, 1000);
     if (b.role !== undefined) {

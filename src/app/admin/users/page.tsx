@@ -155,6 +155,16 @@ function EditUser({ user, self, onClose, onSaved }: { user: Row; self: boolean; 
     role: user.role as string, coinBalance: String(user.coinBalance),
   });
   const [busy, setBusy] = useState(false);
+  const [pw, setPw] = useState("");
+  // Yeni parol saxlanandan sonra bir dəfə göstərilir ki, admin istifadəçiyə ötürə bilsin
+  const [done, setDone] = useState<{ login: string; password: string } | null>(null);
+
+  function genPassword() {
+    const abc = "abcdefghjkmnpqrstuvwxyz23456789";
+    const a = new Uint32Array(8);
+    crypto.getRandomValues(a);
+    setPw(Array.from(a, (n) => abc[n % abc.length]).join(""));
+  }
 
   async function save() {
     setBusy(true);
@@ -164,15 +174,44 @@ function EditUser({ user, self, onClose, onSaved }: { user: Row; self: boolean; 
         body: {
           name: f.name, phone: f.phone, email: f.email, bio: f.bio, role: f.role,
           ...(user.role !== "ADMIN" ? { coinBalance: Number(f.coinBalance) } : {}),
+          ...(pw ? { password: pw } : {}),
         },
       });
-      toast.success("Yeniləndi");
-      onSaved();
+      toast.success(pw ? "Yeniləndi, yeni parol təyin olundu" : "Yeniləndi");
+      if (pw) setDone({ login: f.phone.trim() || f.email.trim(), password: pw });
+      else onSaved();
     } catch (e) {
       toast.error(errMsg(e));
     } finally {
       setBusy(false);
     }
+  }
+
+  if (done) {
+    const text = `Giriş: ${done.login}
+Parol: ${done.password}`;
+    return (
+      <Modal
+        open
+        onClose={onSaved}
+        title="Yeni parol təyin olundu"
+        size="sm"
+        footer={<button className="btn-primary" onClick={onSaved}>Bağla</button>}
+      >
+        <p className="text-sm text-muted">Bu məlumatı {user.name} ilə paylaşın. Pəncərə bağlananda parol bir daha göstərilməyəcək.</p>
+        <div className="mt-4 space-y-2 rounded-lg border border-line bg-surface-2 p-3 text-sm">
+          <p><span className="text-muted">Giriş:</span> <span className="font-semibold">{done.login || "—"}</span></p>
+          <p><span className="text-muted">Parol:</span> <span className="select-all font-mono text-base font-bold tracking-wide">{done.password}</span></p>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary mt-3 w-full"
+          onClick={() => navigator.clipboard?.writeText(text).then(() => toast.success("Kopyalandı"), () => toast.error("Kopyalanmadı"))}
+        >
+          <Icon name="file" size={16} /> Kopyala
+        </button>
+      </Modal>
+    );
   }
 
   return (
@@ -208,6 +247,19 @@ function EditUser({ user, self, onClose, onSaved }: { user: Row; self: boolean; 
             </Field>
           )}
         </div>
+        <Field label="Yeni parol" hint="Boş qalsa parol dəyişmir. Hazırkı parol görünmür — saytda yalnız şifrələnmiş izi saxlanır.">
+          <div className="flex gap-2">
+            <input
+              className="input font-mono"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder="Ən azı 6 simvol"
+              autoComplete="new-password"
+              spellCheck={false}
+            />
+            <button type="button" className="btn-secondary shrink-0" onClick={genPassword}>Yarat</button>
+          </div>
+        </Field>
       </div>
     </Modal>
   );
