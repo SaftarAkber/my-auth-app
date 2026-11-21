@@ -12,20 +12,44 @@ export type PushMessage = { title: string; body: string; url: string; tag?: stri
 /** Env dəyəri tırnaq və boşluqla kopyalanıbsa təmizlənir ("abc" → abc) */
 export const envClean = (v?: string) => (v ?? "").trim().replace(/^["']|["']$/g, "").trim();
 
-let ready: boolean | null = null;
-function configure() {
-  if (ready !== null) return ready;
-  const pub = envClean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
-  const priv = envClean(process.env.VAPID_PRIVATE_KEY);
-  if (!pub || !priv) return (ready = false);
-  webpush.setVapidDetails(envClean(process.env.VAPID_SUBJECT) || "mailto:admin@eduflow.az", pub, priv);
-  return (ready = true);
+/**
+ * VAPID açarları: Vercel env-də düzgün açar varsa o, yoxdursa sayt özü bir dəfə yaradıb bazada saxlayır
+ * (site_content "push-vapid" — heç bir API bu sətri qaytarmır, yalnız açıq hissə /api/push/key ilə verilir).
+ * Belə olanda Vercel-ə açar yazmaq lazım deyil.
+ */
+type Vapid = { publicKey: string; privateKey: string };
+let cached: Vapid | null = null;
+const SUBJECT = () => envClean(process.env.VAPID_SUBJECT) || "mailto:admin@eduflow.az";
+
+export async function getVapid(): Promise<Vapid> {
+  if (cached) return cached;
+  const envPub = envClean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const envPriv = envClean(process.env.VAPID_PRIVATE_KEY);
+  if (envPub && envPriv) {
+    try {
+      webpush.setVapidDetails(SUBJECT(), envPub, envPriv);
+      return (cached = { publicKey: envPub, privateKey: envPriv });
+    } catch {
+      /* env-dəki açar yanlışdır — bazadakına keçirik */
+    }
+  }
+  const row = await prisma.siteContent.findUnique({ where: { key: "push-vapid" } });
+  let keys = row?.data as Vapid | undefined;
+  if (!keys?.publicKey || !keys?.privateKey) {
+    const fresh = webpush.generateVAPIDKeys();
+    // Eyni anda iki server yaratmağa çalışsa, birincisi qalır
+    await prisma.siteContent.create({ data: { key: "push-vapid", data: { publicKey: fresh.publicKey, privateKey: fresh.privateKey } } }).catch(() => null);
+    keys = (await prisma.siteContent.findUnique({ where: { key: "push-vapid" } }))?.data as Vapid;
+  }
+  webpush.setVapidDetails(SUBJECT(), keys.publicKey, keys.privateKey);
+  return (cached = keys);
 }
 
 /** Verilən istifadəçilərin bütün cihazlarına göndərir; köhnəlmiş abunəlikləri silir */
 export async function sendPush(userIds: string[], msg: PushMessage) {
   const ids = [...new Set(userIds)].filter(Boolean);
-  if (!ids.length || !configure()) return 0;
+  if (!ids.length) return 0;
+  await getVapid();
   const subs = await prisma.pushSubscription.findMany({
     where: { userId: { in: ids }, user: { deletedAt: null } },
     select: { id: true, endpoint: true, p256dh: true, auth: true },

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serverError } from "@/lib/guards";
-import { envClean, fmtAz, sendPush } from "@/lib/push";
+import { fmtAz, sendPush } from "@/lib/push";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 /**
  * Aylıq sınaq xatırlatmaları: başlamağa 3 saat və 1 saat 20 dəqiqə qalmış telefon bildirişi.
- * Hər 10 dəqiqədən bir GitHub Actions çağırır (.github/workflows/reminders.yml), başlıqda CRON_SECRET.
+ * Hər 10 dəqiqədən bir GitHub Actions çağırır (.github/workflows/reminders.yml). Gizli açar lazım deyil:
+ * çağırış yalnız vaxtı çatmış xatırlatmaları (hər birini bir dəfə) göndərir, ona görə kənar çağırış zərərsizdir.
  * Gecikmə ola bilər deyə pəncərə geniş götürülür; göndərilib-göndərilmədiyi paketdə qeyd olunur (təkrar getmir).
  */
 const STEPS = [
@@ -15,9 +17,9 @@ const STEPS = [
 
 export async function GET(req: NextRequest) {
   try {
-    const secret = envClean(process.env.CRON_SECRET);
-    const got = envClean(req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? req.nextUrl.searchParams.get("key") ?? "");
-    if (!secret || got !== secret) return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
+    // Hər IP-dən dəqiqədə ən çox 3 çağırış
+    const limit = await rateLimit(`cron:${clientIp(req)}`, { windowMs: 60_000, maxRequests: 3 });
+    if (!limit.allowed) return NextResponse.json({ error: "Çox tez-tez" }, { status: 429 });
 
     const now = Date.now();
     const report: { pkg: string; step: string; sent: number }[] = [];

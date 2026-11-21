@@ -12,7 +12,10 @@ import { Icon, Spinner, useToast } from "@/components/ui";
 
 type State = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
-const KEY = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim().replace(/^["']|["']$/g, "").trim();
+/** Açıq açar serverdən gəlir (sayt özü yaradır, Vercel ayarı lazım deyil) */
+let keyPromise: Promise<string> | null = null;
+const publicKey = () =>
+  (keyPromise ??= fetch("/api/push/key").then((r) => (r.ok ? r.json() : { publicKey: "" })).then((j) => j.publicKey || "").catch(() => ""));
 
 function b64ToBytes(b64: string) {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);
@@ -34,7 +37,7 @@ export function usePush() {
 
   const check = useCallback(async () => {
     try {
-      const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!KEY;
+      const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!(await publicKey());
       if (!supported) return setState(isIOS() && !isStandalone() ? "ios-install" : "unsupported");
       if (Notification.permission === "denied") return setState("denied");
       const reg = await navigator.serviceWorker.getRegistration("/");
@@ -65,7 +68,7 @@ export function usePush() {
       }
       const reg = await registration();
       await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(KEY) }));
+      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(await publicKey()) }));
       await api("/api/push/subscribe", { body: sub.toJSON() });
       setState("on");
       toast.success("Bildirişlər aktivdir");
