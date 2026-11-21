@@ -12,7 +12,7 @@ import { Icon, Spinner, useToast } from "@/components/ui";
 
 type State = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
-const KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+const KEY = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim().replace(/^["']|["']$/g, "").trim();
 
 function b64ToBytes(b64: string) {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);

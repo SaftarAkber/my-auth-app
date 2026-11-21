@@ -9,13 +9,16 @@ import { prisma } from "@/lib/prisma";
  */
 export type PushMessage = { title: string; body: string; url: string; tag?: string };
 
+/** Env dəyəri tırnaq və boşluqla kopyalanıbsa təmizlənir ("abc" → abc) */
+export const envClean = (v?: string) => (v ?? "").trim().replace(/^["']|["']$/g, "").trim();
+
 let ready: boolean | null = null;
 function configure() {
   if (ready !== null) return ready;
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
+  const pub = envClean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const priv = envClean(process.env.VAPID_PRIVATE_KEY);
   if (!pub || !priv) return (ready = false);
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@eduflow.az", pub, priv);
+  webpush.setVapidDetails(envClean(process.env.VAPID_SUBJECT) || "mailto:admin@eduflow.az", pub, priv);
   return (ready = true);
 }
 

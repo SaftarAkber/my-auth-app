@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serverError } from "@/lib/guards";
-import { fmtAz, sendPush } from "@/lib/push";
+import { envClean, fmtAz, sendPush } from "@/lib/push";
 
 /**
  * Aylıq sınaq xatırlatmaları: başlamağa 3 saat və 1 saat 20 dəqiqə qalmış telefon bildirişi.
@@ -15,8 +15,8 @@ const STEPS = [
 
 export async function GET(req: NextRequest) {
   try {
-    const secret = process.env.CRON_SECRET;
-    const got = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? req.nextUrl.searchParams.get("key");
+    const secret = envClean(process.env.CRON_SECRET);
+    const got = envClean(req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? req.nextUrl.searchParams.get("key") ?? "");
     if (!secret || got !== secret) return NextResponse.json({ error: "Giriş tələb olunur" }, { status: 401 });
 
     const now = Date.now();
