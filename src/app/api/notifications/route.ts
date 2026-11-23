@@ -156,6 +156,22 @@ export async function GET() {
           at: iso(r.updatedAt),
         });
       }
+      // Müəllim kitabçaya şərh yazıb göndəribsə: test üzrə bir sətir
+      const reviewed = await prisma.reviewComment.findMany({
+        where: { sentAt: { gte: since }, attempt: { studentId: user.id } },
+        select: { attemptId: true, questionId: true, sentAt: true, attempt: { select: { package: { select: { name: true } } } } },
+        orderBy: { sentAt: "desc" },
+        take: 200,
+      });
+      const byAttempt = new Map<string, { name: string; qs: Set<string>; at: Date }>();
+      for (const c of reviewed) {
+        const g = byAttempt.get(c.attemptId) ?? { name: c.attempt.package.name, qs: new Set<string>(), at: c.sentAt! };
+        g.qs.add(c.questionId);
+        byAttempt.set(c.attemptId, g);
+      }
+      for (const [aid, g] of [...byAttempt.entries()].slice(0, 6)) {
+        items.push({ id: `rv${aid}-${g.at.getTime()}`, text: `Müəllim “${g.name}” testində ${g.qs.size} suala şərh yazdı`, href: `/student/attempts/${aid}`, at: iso(g.at) });
+      }
     } else {
       const users = await prisma.user.findMany({
         where: { createdAt: { gte: new Date(Date.now() - 7 * DAY) }, deletedAt: null },

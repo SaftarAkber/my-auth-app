@@ -163,6 +163,8 @@ export function PageHeader({
     <div className="mb-6 animate-fade-up">
       {back && (
         <button
+          // data-nav: səhifədən çıxmazdan əvvəl soruşan yerlər (məs. göndərilməmiş şərhlər) bu keçidi tuta bilsin
+          data-nav={back === true ? "back" : back}
           onClick={() => (back === true ? router.back() : router.push(back))}
           className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-ink"
         >

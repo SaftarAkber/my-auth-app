@@ -49,6 +49,7 @@ model User {
   topics           Topic[]
 
   @@map("users")
+  reviewComments   ReviewComment[]
 }
 
 model OtpCode {
@@ -299,6 +300,7 @@ model Video {
   topicVideos  TopicVideo[]
 
   @@map("videos")
+  reviewComments ReviewComment[]
 }
 
 model VideoGroup {
@@ -418,6 +420,7 @@ model Question {
   answers       StudentAnswer[]
 
   @@map("questions")
+  reviewComments ReviewComment[]
 }
 
 model StudentAttempt {
@@ -441,6 +444,7 @@ model StudentAttempt {
 
   @@index([packageId, studentId])
   @@map("student_attempts")
+  reviewComments ReviewComment[]
 }
 
 model StudentAnswer {
@@ -662,4 +666,35 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+// Müəllimin tələbə cavab kitabçasındakı şərhi (sual üzrə): mətn (linklər kliklənir), ≤10 şəkil, sayt videosu və ya YouTube.
+// ATTEMPT – yalnız bu cəhdə; WRONG_ALL – bu sualı səhv edən (və ya cavabsız qoyan) hər tələbə görür, düz cavab verən görmür.
+// sentAt boşdursa qaralamadır: tələbə görmür; müəllim "Qeydləri göndər" deyəndə göndərilir və tələbəyə bildiriş gedir.
+model ReviewComment {
+  id         String      @id @default(cuid())
+  attemptId  String
+  questionId String
+  teacherId  String
+  scope      ReviewScope @default(ATTEMPT)
+  text       String      @default("")
+  images     String[]    @default([])
+  videoId    String?
+  youtubeUrl String?
+  sentAt     DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  attempt    StudentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question   Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  teacher    User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  video      Video?         @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([attemptId])
+  @@index([questionId, scope])
+  @@map("review_comments")
+}
+
+enum ReviewScope {
+  ATTEMPT
+  WRONG_ALL
 }

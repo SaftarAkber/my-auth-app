@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFetch } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { api, errMsg, useFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtDateTime, percent } from "@/lib/format";
-import { Avatar, ErrorBox, Icon, PageHeader, ProgressBar, SkeletonList } from "@/components/ui";
+import { Avatar, ErrorBox, Icon, Modal, PageHeader, ProgressBar, SkeletonList, Spinner, useToast } from "@/components/ui";
 import QuestionImage from "@/components/QuestionImage";
+import QuestionComments, { type ReviewComment } from "@/components/ReviewComments";
 
 interface ReviewAttempt {
   id: string;
@@ -32,6 +34,65 @@ interface ReviewAttempt {
 export default function AttemptReview({ id, back, viewer = "student" }: { id: string; back: string; viewer?: "student" | "teacher" }) {
   const { user } = useAuth();
   const { data: a, loading, error, reload } = useFetch<ReviewAttempt>(`/api/attempts/${id}`);
+  const cm = useFetch<{ comments: ReviewComment[]; canEdit: boolean; drafts: number; wrong: string[] }>(`/api/attempts/${id}/comments`);
+  const router = useRouter();
+  const toast = useToast();
+  const canEdit = !!cm.data?.canEdit;
+  const drafts = cm.data?.drafts ?? 0;
+  const [sending, setSending] = useState(false);
+  // Göndərilməmiş şərh varsa səhifədən çıxanda soruşulur: göndər / saxla / sil
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canEdit || drafts === 0) return;
+    const onBefore = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const navBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-nav]");
+      if (navBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLeaveTo(navBtn.dataset.nav === "back" ? "__back" : navBtn.dataset.nav!);
+        return;
+      }
+      const link = (e.target as HTMLElement).closest("a");
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      const url = new URL(link.href, location.href);
+      if (url.origin !== location.origin || url.pathname === location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveTo(url.pathname + url.search);
+    };
+    window.addEventListener("beforeunload", onBefore);
+    document.addEventListener("click", onClick, true);
+    return () => { window.removeEventListener("beforeunload", onBefore); document.removeEventListener("click", onClick, true); };
+  }, [canEdit, drafts]);
+
+  const go = (to: string) => (to === "__back" ? router.back() : router.push(to));
+
+  async function sendAll(then?: string) {
+    setSending(true);
+    try {
+      const r = await api<{ sent: number }>(`/api/attempts/${id}/comments/send`, { method: "POST" });
+      toast.success(`${r.sent} şərh tələbəyə göndərildi`);
+      if (then) go(then);
+      else cm.reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setSending(false);
+    }
+  }
+  async function discard(then: string) {
+    setSending(true);
+    try {
+      await api(`/api/attempts/${id}/comments`, { method: "DELETE" });
+      go(then);
+    } catch (e) {
+      toast.error(errMsg(e));
+      setSending(false);
+    }
+  }
 
   // Nəticə cədvəlindən gələndə (?q=<sual ID>) kitabça həmin sualda açılır və sual qısa müddət vurğulanır
   const [lit, setLit] = useState<string | null>(null);
@@ -63,11 +124,15 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
     })),
   ].sort((x, y) => x.question.order - y.question.order);
 
+  const comments = cm.data?.comments ?? [];
+  // Şərh sütunu: müəllimə həmişə, tələbəyə şərh varsa
+  const side = canEdit || comments.length > 0;
+
   return (
-    <div className="page-narrow">
+    <div className={cx(side ? "page" : "page-narrow", canEdit && drafts > 0 && "pb-24")}>
       <PageHeader title={a.package.name} subtitle={a.finishedAt ? `Tamamlandı: ${fmtDateTime(a.finishedAt)}` : "Davam edir"} back={back} />
 
-      <section className="card mb-6 p-5">
+      <section className={cx("card mb-6 p-5", side && "lg:mr-[316px]")}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Avatar src={a.student.photo} name={a.student.name} size={44} />
@@ -94,9 +159,10 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
         {rows.map((r, i) => {
           const q = r.question;
           const state = r.blank ? "blank" : r.status === "PENDING" ? "pending" : r.isCorrect ? "ok" : "bad";
+          const qComments = comments.filter((c) => c.questionId === q.id);
           return (
+            <div key={r.id} className={cx(side && "lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4")}>
             <article
-              key={r.id}
               id={`q-${q.id}`}
               className={cx(
                 "card scroll-mt-24 border-l-4 p-5 transition-shadow duration-700",
@@ -157,10 +223,54 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
                 </div>
               )}
             </article>
+            {side && (
+              <div className="mt-2 lg:sticky lg:top-24 lg:mt-0">
+                <QuestionComments
+                  attemptId={a.id}
+                  questionId={q.id}
+                  comments={qComments}
+                  canEdit={canEdit}
+                  wrong={state === "bad" || state === "blank"}
+                  onChanged={cm.reload}
+                />
+              </div>
+            )}
+            </div>
           );
         })}
         {rows.length === 0 && <p className="text-center text-muted">Cavab qeyd olunmayıb.</p>}
       </div>
+
+      {canEdit && drafts > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:bottom-0">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+            <p className="text-sm"><b>{drafts}</b> şərh hələ göndərilməyib. İşiniz bitəndə tələbəyə bir bildirişlə göndərin.</p>
+            <button type="button" className="btn-primary" onClick={() => sendAll()} disabled={sending}>
+              {sending ? <Spinner /> : <Icon name="send" size={16} />} Qeydləri göndər
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Modal
+        open={!!leaveTo}
+        onClose={() => setLeaveTo(null)}
+        title="Göndərilməmiş şərhlər var"
+        size="sm"
+        footer={
+          <div className="flex w-full flex-col gap-2">
+            <button className="btn-primary w-full" disabled={sending} onClick={() => leaveTo && sendAll(leaveTo)}>
+              {sending ? <Spinner /> : <Icon name="send" size={16} />} Təsdiqlə və göndər
+            </button>
+            <button className="btn-secondary w-full" disabled={sending} onClick={() => leaveTo && go(leaveTo)}>Yadda saxla, göndərmə</button>
+            <button className="btn-ghost w-full text-bad" disabled={sending} onClick={() => leaveTo && discard(leaveTo)}>Qeyd etmə (şərhləri sil)</button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted">
+          Bu kitabçada {drafts} şərh yazmısınız, amma tələbəyə göndərməmisiniz. “Yadda saxla” seçsəniz, sonra qayıdıb qaldığınız yerdən davam edə bilərsiniz.
+        </p>
+      </Modal>
     </div>
   );
 }
