@@ -22,7 +22,7 @@ export async function GET(
         packages: {
           where: { deletedAt: null },
           include: {
-            _count: { select: { questions: true, attempts: true } },
+            _count: { select: { questions: { where: { archivedAt: null } }, attempts: true } },
             group: { select: { id: true, name: true } },
             // qrup bağlantıları və isPublic üçün lazımdır
             testPackageGroups: {

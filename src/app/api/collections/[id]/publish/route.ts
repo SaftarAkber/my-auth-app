@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const pkgs = await prisma.testPackage.findMany({
       where: { collectionId: id },
-      select: { id: true, _count: { select: { questions: true } } },
+      select: { id: true, _count: { select: { questions: { where: { archivedAt: null } } } } },
     });
     const usable = state === "draft" ? pkgs : pkgs.filter((p) => p._count.questions > 0);
     const ids = usable.map((p) => p.id);

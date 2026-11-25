@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent } from "@/lib/format";
-import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useToast } from "@/components/ui";
+import { Avatar, Empty, ErrorBox, Icon, Modal, PageHeader, SkeletonList, Spinner, Tabs, useConfirm, useToast } from "@/components/ui";
 import { SubNav, TESTS_NAV } from "@/components/SubNav";
 import GiftModal from "@/components/GiftModal";
 import QuestionImage from "@/components/QuestionImage";
@@ -320,6 +320,29 @@ function PackageView({ id, onBack }: { id: string; onBack: () => void }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [giftFor, setGiftFor] = useState<{ attempt: StudentAttemptLite; student: { id: string; name: string } } | null>(null);
+  const confirmDlg = useConfirm();
+  const toastP = useToast();
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  async function removeAttempt(a: StudentAttemptLite, name: string) {
+    const ok = await confirmDlg({
+      title: "Cəhd silinsin?",
+      message: `${name} – ${a.score}/${a.totalScore} (${fmtDateTime(a.finishedAt)}). Cəhd və cavabları birdəfəlik silinəcək, cədvəl onsuz yenidən hesablanacaq. Verilmiş coin geri alınmır.`,
+      confirmText: "Sil",
+      danger: true,
+    });
+    if (!ok) return;
+    setRemoving(a.id);
+    try {
+      await api(`/api/attempts/${a.id}`, { method: "DELETE" });
+      toastP.success("Cəhd silindi");
+      reload();
+    } catch (e) {
+      toastP.error(errMsg(e));
+    } finally {
+      setRemoving(null);
+    }
+  }
 
   if (loading && !data) return <SkeletonList />;
   if (error || !data) return <ErrorBox message={error ?? "Tapılmadı"} onRetry={reload} />;
@@ -399,6 +422,16 @@ function PackageView({ id, onBack }: { id: string; onBack: () => void }) {
                         </span>
                       </Link>
                       <span className={cx("badge shrink-0", pctTone(p))}>{p}%</span>
+                      <button
+                        type="button"
+                        className="btn-icon shrink-0 text-muted hover:text-bad"
+                        onClick={() => removeAttempt(a, cur.student.name)}
+                        disabled={removing === a.id}
+                        aria-label="Cəhdi sil"
+                        title="Cəhdi sil"
+                      >
+                        {removing === a.id ? <Spinner /> : <Icon name="trash" size={16} />}
+                      </button>
                     </div>
                     {(pkg.isMonthly || a.pending > 0 || a.rewardGranted || eligible(a)) && (
                       <div className="ml-10 mt-1 flex flex-wrap gap-1.5">

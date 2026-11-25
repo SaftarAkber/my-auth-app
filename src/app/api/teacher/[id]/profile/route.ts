@@ -58,7 +58,7 @@ export async function GET(
           select: {
             id: true, name: true, isTimed: true, duration: true,
             isPublic: true,
-            _count: { select: { questions: true } },
+            _count: { select: { questions: { where: { archivedAt: null } } } },
             testPackageGroups: { select: { groupId: true } },
           },
         },
@@ -111,7 +111,7 @@ export async function GET(
       },
       select: {
         id: true, name: true, isTimed: true, duration: true,
-        _count: { select: { questions: true } },
+        _count: { select: { questions: { where: { archivedAt: null } } } },
         testPackageGroups: { include: { group: { select: { id: true, name: true } } } },
       },
     });

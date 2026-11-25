@@ -17,7 +17,7 @@ export async function GET() {
         ],
       },
       include: {
-        _count: { select: { questions: true, attempts: true } },
+        _count: { select: { questions: { where: { archivedAt: null } }, attempts: true } },
         testPackageGroups: { include: { group: { select: { id: true, name: true } } } },
       },
       orderBy: { createdAt: "desc" },

@@ -5,14 +5,16 @@ import { forbidden, requireTeacher, serverError, teacherOwnsTestPackage } from "
 
 type Ctx = { params: Promise<{ id: string }> };
 
+// Böyük bankda (1000+ sual) yeniləmə və təmizləmə bir neçə saniyə çəkə bilər
+export const maxDuration = 60;
+
 const MAX_BYTES = 4 * 1024 * 1024;
 /** Mətnin "skeleti": boşluqlar və sətir keçidləri atılır – yalnız düzülüşü fərqli olan mətnlər eyni sayılır */
 const skeleton = (s: string) => s.replace(/\s+/g, "");
 
 /**
  * "Mətnləri fayldan yenilə": paketin mövcud suallarının mətni fayldakı düzülüşlə (sətir keçidləri) yenilənir.
- * Yeni sual yaranmır, heç nə silinmir, cəhdlər və nəticələr qalır. Sual yalnız mətni fayldakı sualla
- * hərf-hərf eyni olanda (boşluq/sətir fərqi istisna) dəyişdirilir. Şəkillər yenidən yüklənmir.
+ * Yeni sual yaranmır, cəhdlər və nəticələr qalır, şəkillər yenidən yüklənmir.
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
   try {
@@ -35,15 +37,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       const k = skeleton(q.text);
       if (k && !byKey.has(k)) byKey.set(k, q.text);
     }
-    const existing = await prisma.question.findMany({ where: { packageId: id }, select: { id: true, text: true } });
+    const existing = await prisma.question.findMany({
+      where: { packageId: id, archivedAt: null },
+      select: { id: true, text: true },
+    });
     const changes = existing
       .map((q) => ({ id: q.id, old: q.text, next: byKey.get(skeleton(q.text)) }))
       .filter((c): c is { id: string; old: string; next: string } => !!c.next && c.next !== c.old);
     const matched = existing.filter((q) => byKey.has(skeleton(q.text))).length;
 
-    for (let i = 0; i < changes.length; i += 50) {
-      await prisma.$transaction(changes.slice(i, i + 50).map((c) => prisma.question.update({ where: { id: c.id }, data: { text: c.next } })));
+    for (let i = 0; i < changes.length; i += 100) {
+      await prisma.$transaction(changes.slice(i, i + 100).map((c) => prisma.question.update({ where: { id: c.id }, data: { text: c.next } })));
     }
+
     return NextResponse.json({ total: existing.length, matched, updated: changes.length, unmatched: existing.length - matched });
   } catch (error) {
     return serverError(error);

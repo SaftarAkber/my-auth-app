@@ -64,6 +64,28 @@ export default function PackageQuestionsPage() {
     return () => clearTimeout(t);
   }, [flash, data]);
 
+  // "Sualları sıfırla": cəhdlərdə olan suallar arxivə keçir (tarixçə qalır), qalanları silinir
+  async function resetAll() {
+    const ok = await confirm({
+      title: "Bütün suallar sıfırlansın?",
+      message:
+        "Paketdəki bütün suallar redaktordan və yeni testlərdən çıxacaq. Tələbələrin cəhdləri, cavab kitabçaları və reytinq cədvəli olduğu kimi qalır (onlarda istifadə olunan suallar silinmir, arxivə keçir). Paketin ayarları dəyişmir – sonra yeni sualları yükləyə bilərsiniz.",
+      confirmText: "Sıfırla",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const r = await api<{ deleted: number; archived: number }>(`/api/packages/${packageId}/questions/reset`, { method: "POST" });
+      toast.success(`Sıfırlandı: ${r.deleted} sual silindi${r.archived ? `, ${r.archived} sual arxivə keçdi (tarixçə üçün)` : ""}`);
+      reload();
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function open(q: Question | "new") {
     setEditing(q);
     if (q === "new") return setForm({ ...BLANK, difficulty: filter !== "ALL" && filter !== "NONE" ? filter : null });
@@ -178,7 +200,7 @@ export default function PackageQuestionsPage() {
         title={pkg.name}
         subtitle={`${qs.filter((q) => q.isActive).length} aktiv sual${pkg.isBank ? ` · Sual bankı: hər testə ${pkg.drawEasy + pkg.drawMedium + pkg.drawHard} sual` : ""} · ${pkg.isPublished ? "Dərc olunub" : "Qaralama"}`}
         back={`/teacher/tests/${id}`}
-        actions={<div className="flex flex-wrap gap-2">{qs.length > 0 && <RefreshTexts packageId={packageId} onDone={reload} />}<ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
+        actions={<div className="flex flex-wrap gap-2">{qs.length > 0 && <button className="btn-ghost text-bad" onClick={resetAll} disabled={busy}><Icon name="trash" size={16} /> Sualları sıfırla</button>}{qs.length > 0 && <RefreshTexts packageId={packageId} onDone={reload} />}<ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
       />
 
       {qs.length === 0 ? (

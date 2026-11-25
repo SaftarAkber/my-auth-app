@@ -103,7 +103,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
       select: {
         id: true, name: true, description: true, isPublished: true, isPublic: true, isTimed: true, duration: true,
         rewardEnabled: true, rewardMinCorrect: true, rewardCoins: true,
-        _count: { select: { questions: true } },
+        _count: { select: { questions: { where: { archivedAt: null } } } },
         testPackageGroups: { select: { groupId: true } },
         groupId: true,
       },

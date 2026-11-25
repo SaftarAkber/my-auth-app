@@ -23,7 +23,8 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const pkg = await prisma.testPackage.findUnique({
       where: { id },
       include: {
-        questions: { orderBy: { order: "asc" } },
+        // Arxivə keçmiş suallar ("Sualları sıfırla") redaktorda və testdə görünmür
+        questions: { where: { archivedAt: null }, orderBy: { order: "asc" } },
         collection: { select: { name: true, teacherId: true } },
         group: { select: { teacherId: true } },
         testPackageGroups: { include: { group: { select: { id: true, name: true, teacherId: true } } } },

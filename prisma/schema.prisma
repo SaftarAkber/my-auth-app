@@ -412,6 +412,9 @@ model Question {
   imageUrl      String?
   difficulty    Difficulty?
   isActive      Boolean      @default(true)
+  // "Sualları sıfırla": cəhdlərdə istifadə olunmuş sual silinmir, arxivə keçir – redaktorda və yeni testlərdə
+  // görünmür, tələbələrin tarixçəsində (cavab kitabçası, reytinq) qalır
+  archivedAt    DateTime?
   order         Int          @default(0)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt

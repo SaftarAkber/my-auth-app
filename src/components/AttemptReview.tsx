@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { cx, fmtDateTime, percent } from "@/lib/format";
-import { Avatar, ErrorBox, Icon, Modal, PageHeader, ProgressBar, SkeletonList, Spinner, useToast } from "@/components/ui";
+import { Avatar, ErrorBox, Icon, Modal, PageHeader, ProgressBar, SkeletonList, Spinner, useConfirm, useToast } from "@/components/ui";
 import QuestionImage from "@/components/QuestionImage";
 import QuestionComments, { type ReviewComment } from "@/components/ReviewComments";
 
@@ -69,6 +69,25 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
   }, [canEdit, drafts]);
 
   const go = (to: string) => (to === "__back" ? router.back() : router.push(to));
+  const confirm = useConfirm();
+
+  // Müəllim: bu cəhdi birdəfəlik sil (cədvəllər onsuz yenidən hesablanır)
+  async function removeAttempt() {
+    const ok = await confirm({
+      title: "Cəhd silinsin?",
+      message: "Cəhd, cavabları və şərhləri birdəfəlik silinəcək; reytinq və aylıq cədvəl onsuz yenidən hesablanacaq. Verilmiş coin geri alınmır.",
+      confirmText: "Sil",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/api/attempts/${id}`, { method: "DELETE" });
+      toast.success("Cəhd silindi");
+      router.push(back);
+    } catch (e) {
+      toast.error(errMsg(e));
+    }
+  }
 
   async function sendAll(then?: string) {
     setSending(true);
@@ -144,6 +163,11 @@ export default function AttemptReview({ id, back, viewer = "student" }: { id: st
           <div className="text-right">
             <p className={cx("text-3xl font-extrabold", pct >= 70 ? "text-ok" : pct >= 40 ? "text-warn" : "text-bad")}>{pct}%</p>
             <p className="text-sm text-muted">{a.score} / {a.totalScore} düzgün</p>
+            {canEdit && (
+              <button type="button" onClick={removeAttempt} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-bad">
+                <Icon name="trash" size={12} /> Cəhdi sil
+              </button>
+            )}
           </div>
         </div>
         <div className="mt-4"><ProgressBar value={pct} tone={pct >= 70 ? "ok" : pct >= 40 ? "warn" : "bad"} /></div>

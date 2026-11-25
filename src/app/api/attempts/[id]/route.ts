@@ -172,3 +172,28 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     return serverError(error);
   }
 }
+
+/**
+ * Cəhdi sil (yalnız paketin müəllimi və ya admin): cəhd, cavabları və şərhləri birdəfəlik silinir;
+ * reytinq və aylıq cədvəl onsuz yenidən hesablanır. Verilmiş coin geri alınmır.
+ */
+export async function DELETE(_: NextRequest, { params }: Ctx) {
+  try {
+    const { id } = await params;
+    const user = await getCurrentUser();
+    if (!user) return unauthorized();
+    const attempt = await prisma.studentAttempt.findUnique({
+      where: { id },
+      select: { id: true, packageId: true, package: { select: { group: { select: { teacherId: true } } } } },
+    });
+    if (!attempt) return notFound();
+    const allowed =
+      user.role === "ADMIN" ||
+      (user.role === "TEACHER" && (attempt.package.group?.teacherId === user.id || (await teacherOwnsTestPackage(user.id, attempt.packageId))));
+    if (!allowed) return forbidden();
+    await prisma.studentAttempt.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return serverError(error);
+  }
+}
