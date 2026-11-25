@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Fayl oxunmadı" }, { status: 400 });
     }
-    const questions = parseQuiz(text);
+    const questions = parseQuiz(text, { keepLines: !/\.pdf$/i.test(file.name) });
     if (questions.length === 0) {
       return NextResponse.json(
         { error: "Fayldan sual tapılmadı. Suallar \"1.\" kimi nömrələnməli, variantlar \"A)\" ilə başlamalıdır. Skan edilmiş şəkil PDF-ləri oxunmur." },

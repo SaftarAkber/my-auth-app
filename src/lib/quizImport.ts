@@ -64,7 +64,12 @@ function splitInlineOptions(line: string): string[] {
   return parts.length > 1 ? parts : [line];
 }
 
-export function parseQuiz(raw: string): ParsedQuestion[] {
+/**
+ * `keepLines`: DOCX/TXT-də sual mətninin hər sətri (abzası) öz sətrində qalır – alqoritm addımları
+ * (a = ?, b = b + 3 …), parçalı funksiyanın hissələri alt-alta görünür. PDF-də sətirlər səhifə enindən
+ * qırıldığı üçün birləşdirilir (yalnız "1 – …" siyahı bəndləri ayrıca qalır).
+ */
+export function parseQuiz(raw: string, { keepLines = false }: { keepLines?: boolean } = {}): ParsedQuestion[] {
   const lines = raw
     .replace(/\r/g, "")
     // Hər "○ A)" / "● C)" yeni sətirdən başlasın (bütün sual bir sətirdə olsa belə)
@@ -160,7 +165,7 @@ export function parseQuiz(raw: string): ParsedQuestion[] {
         cur.loose[k] = clean(`${cur.loose[k]} ${line}`);
         cur.sep[k] = clean(`${cur.sep[k]} ${line}`);
       }
-      else cur.text = LIST_ITEM_RE.test(line) ? `${cur.text}\n${line}` : `${cur.text} ${line}`.trim();
+      else cur.text = keepLines || LIST_ITEM_RE.test(line) ? `${cur.text}\n${line}` : `${cur.text} ${line}`.trim();
     }
   }
   // Sonuncu sualdan sonra qalan şəkil həmin suala aiddir

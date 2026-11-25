@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, errMsg, useFetch } from "@/lib/api";
 import { cx } from "@/lib/format";
+import RefreshTexts from "@/components/RefreshTexts";
 import ImportQuestions from "@/components/ImportQuestions";
 import QuestionImage from "@/components/QuestionImage";
 import { shrinkImage } from "@/lib/imageShrink";
@@ -177,7 +178,7 @@ export default function PackageQuestionsPage() {
         title={pkg.name}
         subtitle={`${qs.filter((q) => q.isActive).length} aktiv sual${pkg.isBank ? ` · Sual bankı: hər testə ${pkg.drawEasy + pkg.drawMedium + pkg.drawHard} sual` : ""} · ${pkg.isPublished ? "Dərc olunub" : "Qaralama"}`}
         back={`/teacher/tests/${id}`}
-        actions={<div className="flex flex-wrap gap-2"><ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
+        actions={<div className="flex flex-wrap gap-2">{qs.length > 0 && <RefreshTexts packageId={packageId} onDone={reload} />}<ImportQuestions packageId={packageId} onDone={reload} /><button className="btn-primary" onClick={() => open("new")}><Icon name="plus" size={16} /> Sual əlavə et</button></div>}
       />
 
       {qs.length === 0 ? (
