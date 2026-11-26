@@ -13,7 +13,11 @@ import { Icon } from "@/components/ui";
  */
 export type MediaItem = { type: "image"; src: string } | { type: "video"; url: string; title?: string };
 
-export default function MediaViewer({ items, start = 0, onClose }: { items: MediaItem[]; start?: number; onClose: () => void }) {
+/**
+ * `light`: sual şəkilləri (qara xətli blok-sxem, qraf) – ağ vərəq üzərində, ekrana sığacaq qədər BÖYÜDÜLÜR
+ * (kiçik şəkil də ekranı doldurur), scroll olmur.
+ */
+export default function MediaViewer({ items, start = 0, onClose, light = false }: { items: MediaItem[]; start?: number; onClose: () => void; light?: boolean }) {
   const [i, setI] = useState(start);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -91,7 +95,11 @@ export default function MediaViewer({ items, start = 0, onClose }: { items: Medi
             src={item.src}
             alt=""
             draggable={false}
-            className={cx("max-h-full max-w-full select-none object-contain transition-transform duration-150", zoom > 1 ? "cursor-grab" : "cursor-zoom-in")}
+            className={cx(
+              "select-none object-contain transition-transform duration-150",
+              light ? "h-full w-full rounded-lg bg-white p-2 sm:p-4" : "max-h-full max-w-full",
+              zoom > 1 ? "cursor-grab" : "cursor-zoom-in",
+            )}
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
             onDoubleClick={() => setZ(zoom > 1 ? 1 : 2.5)}
             onWheel={(e) => setZ(zoom + (e.deltaY < 0 ? 0.25 : -0.25))}
