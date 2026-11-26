@@ -8,6 +8,7 @@ import { api, errMsg, uploadImage, useFetch } from "@/lib/api";
 import { cx, fmtDateTime, percent } from "@/lib/format";
 import { ContactCard, PasswordCard, ProfileEditor } from "@/components/settings";
 import { PushCard } from "@/components/PushNotifications";
+import StudentAssignments from "@/components/StudentAssignments";
 import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
 import { SubjectBadges } from "@/components/Subjects";
@@ -101,6 +102,7 @@ function ProfileInner() {
       ? [{ id: "groups", label: "Qruplar", count: data.groups.length }]
       : [];
   if (isOwn && me?.role === "STUDENT") tabs.push({ id: "results", label: "Nəticələr", own: true });
+  if (isOwn && me?.role === "STUDENT") tabs.push({ id: "tasks", label: "Tapşırıqlar", own: true });
   // Müəllim tələbənin öz testlərindəki keçmişini görür (hər cəhddə hansı sual səhvdir)
   if (!isOwn && me?.role === "TEACHER" && user.role === "STUDENT") tabs.push({ id: "history", label: "Test keçmişi" });
   if (isOwn && me?.role !== "ADMIN") tabs.push({ id: "coins", label: "Coin tarixçəsi", own: true });
@@ -248,6 +250,7 @@ function ProfileInner() {
       )}
 
       {tab === "results" && <ResultsTab />}
+      {tab === "tasks" && <div className="max-w-3xl"><StudentAssignments /></div>}
       {tab === "history" && <HistoryTab studentId={user.id} />}
       {tab === "coins" && <CoinsTab />}
       {tab === "settings" && (

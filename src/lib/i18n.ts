@@ -14,6 +14,7 @@ const DICT = {
   groups: { AZ: "Qruplar", RU: "Группы", EN: "Groups" },
   topics: { AZ: "Mövzular", RU: "Темы", EN: "Topics" },
   tests: { AZ: "Testlər", RU: "Тесты", EN: "Tests" },
+  tasks: { AZ: "Tapşırıqlar", RU: "Задания", EN: "Tasks" },
   videos: { AZ: "Videolar", RU: "Видео", EN: "Videos" },
   students: { AZ: "Tələbələr", RU: "Студенты", EN: "Students" },
   shop: { AZ: "Mağaza", RU: "Магазин", EN: "Shop" },

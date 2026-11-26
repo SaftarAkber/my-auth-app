@@ -149,6 +149,10 @@ export async function finishAttempt(attemptId: string, incoming: Record<string, 
       console.error("Mükafat xətası:", e);
     }
   }
+  // Ev tapşırığı indi tamamlandısa – coin (cavabdan sonra, arxa fonda)
+  void import("./push")
+    .then(({ later }) => later(() => import("./assignments").then((m) => m.settleAssignments(attempt.studentId, attempt.package.id))))
+    .catch(() => null);
   return { attempt: updated, coinsEarned, rewardPending };
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serverError } from "@/lib/guards";
 import { fmtAz, sendPush } from "@/lib/push";
+import { ASSIGNMENT_SELECT, assignmentStudents, countedAttempts } from "@/lib/assignments";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 /**
@@ -49,6 +50,37 @@ export async function GET(req: NextRequest) {
         report.push({ pkg: p.name, step: s.field, sent });
       }
     }
+    // Ev tapşırıqları: son tarixə 1 gün və 3 saat qalmış – yalnız hələ bitirməyənlərə
+    const ASTEPS = [
+      { field: "remind1dAt", minutes: 1440, text: "1 gün qalıb" },
+      { field: "remind3hAt", minutes: 180, text: "3 saat qalıb" },
+    ] as const;
+    for (const s of ASTEPS) {
+      const nextStep = ASTEPS.find((x) => x.minutes < s.minutes);
+      const list = await prisma.assignment.findMany({
+        where: {
+          deadline: { gt: new Date(now + (nextStep ? nextStep.minutes : 0) * 60_000), lte: new Date(now + s.minutes * 60_000) },
+          [s.field]: null,
+          package: { deletedAt: null },
+        },
+        select: ASSIGNMENT_SELECT,
+      });
+      for (const a of list) {
+        const claimed = await prisma.assignment.updateMany({ where: { id: a.id, [s.field]: null }, data: { [s.field]: new Date() } });
+        if (!claimed.count) continue;
+        const students = await assignmentStudents(a);
+        const counted = await countedAttempts(a, students.map((x) => x.id));
+        const todo = students.filter((x) => (counted.get(x.id)?.length ?? 0) < a.minAttempts).map((x) => x.id);
+        const sent = await sendPush(todo, {
+          title: `Tapşırıq: ${s.text}`,
+          body: `${a.package.name}${a.minAttempts > 1 ? ` – ən azı ${a.minAttempts} dəfə` : ""} · ${fmtAz(a.deadline)}`,
+          url: "/student/assignments",
+          tag: `assignment-${a.id}`,
+        });
+        report.push({ pkg: `Tapşırıq: ${a.package.name}`, step: s.field, sent });
+      }
+    }
+
     return NextResponse.json({ ok: true, report });
   } catch (error) {
     return serverError(error);

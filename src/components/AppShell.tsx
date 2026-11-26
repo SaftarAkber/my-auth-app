@@ -24,6 +24,7 @@ const NAV: Record<"STUDENT" | "TEACHER" | "ADMIN", NavItem[]> = {
   STUDENT: [
     { href: "/student/teacher", key: "groups", icon: "users", match: ["/student/teacher", "/student/groups"] },
     { href: "/student/my-tests", key: "tests", icon: "file", match: ["/student/my-tests", "/student/attempts"] },
+    { href: "/student/assignments", key: "tasks", icon: "check", match: ["/student/assignments"] },
     { href: "/student/videos", key: "videos", icon: "video", match: ["/student/videos"] },
     { href: "/student/market", key: "shop", icon: "bag", match: ["/student/market"] },
   ],
