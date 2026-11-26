@@ -104,7 +104,7 @@ export default function TeacherDashboard() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-bold">Son nəticələr</h2>
-            <Link href="/teacher/attempts" className="text-sm font-semibold text-brand hover:underline">Hamısı →</Link>
+            <Link href="/teacher/results" className="text-sm font-semibold text-brand hover:underline">Hamısı →</Link>
           </div>
           {attempts.loading ? (
             <SkeletonList rows={2} className="h-16" />

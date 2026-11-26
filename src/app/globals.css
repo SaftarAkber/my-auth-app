@@ -428,3 +428,9 @@ main > * {
 .qa:hover .qa-line::after, .qa:focus-visible .qa-line::after { transform: scaleX(1); }
 .qa:focus-visible { outline: 2px solid rgb(var(--ok)); outline-offset: 3px; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { .qa *, .qa *::after { transition: none !important; } }
+
+/* İki tutacaqlı faiz sürüşdürməsi (nəticələr səhifəsi): yalnız tutacaqlar kliklənir */
+.range-thumb::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 9999px; background: rgb(var(--surface)); border: 2px solid rgb(var(--brand)); cursor: pointer; }
+.range-thumb::-moz-range-thumb { pointer-events: auto; width: 16px; height: 16px; border-radius: 9999px; background: rgb(var(--surface)); border: 2px solid rgb(var(--brand)); cursor: pointer; }
+.range-thumb::-webkit-slider-runnable-track { background: transparent; }
+.range-thumb::-moz-range-track { background: transparent; }
