@@ -585,7 +585,7 @@ main > * {
 .hero-card { position: relative; aspect-ratio: 16 / 9; max-height: 72vh; width: 100%; overflow: hidden; border-radius: 22px; background: #111; container-type: inline-size; color: #fff; }
 @media (max-width: 639px) { .hero-card { aspect-ratio: 4 / 3; border-radius: 18px; } }
 .hero-poster { font-family: var(--font-poster), Impact, sans-serif; }
-.hero-zoom { transition: transform 6.5s ease-out; transform: scale(1); }
+.hero-zoom { transition: transform 3.6s ease-out; transform: scale(1); }
 .hero-slide.on .hero-zoom { transform: scale(1.08); }
 .hero-spin { animation: hero-spin 50s linear infinite; }
 @keyframes hero-spin { to { transform: rotate(360deg); } }

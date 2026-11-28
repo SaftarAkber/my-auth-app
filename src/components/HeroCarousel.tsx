@@ -225,7 +225,7 @@ export function HeroSlideView({ s }: { s: HeroSlideData }) {
 }
 
 /* ───── Karusel: sonsuz dövr, qonşu slaydların kənarı görünür, barmaqla/siçanla sürüşür ───── */
-export default function HeroCarousel({ slides, interval = 6000 }: { slides: HeroSlideData[]; interval?: number }) {
+export default function HeroCarousel({ slides, interval = 3000 }: { slides: HeroSlideData[]; interval?: number }) {
   const n = slides.length;
   const loop = n > 1;
   const list = loop ? [slides[n - 1], ...slides, slides[0]] : slides;
@@ -237,30 +237,70 @@ export default function HeroCarousel({ slides, interval = 6000 }: { slides: Hero
   const moved = useRef(false);
   const [tick, setTick] = useState(0);
 
-  const go = useCallback((p: number) => { setAnim(true); setPos(p); }, []);
+  const W = 88; // aktiv slaydın eni (%), qalan 12% qonşulara
+  const baseOf = (p: number) => `calc(${-p * W}% + ${(100 - W) / 2}%)`;
+  const base = baseOf(pos);
+  const posRef = useRef(pos);
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  /** Klon üzərindədirsə (0 və ya n+1) hiss olunmadan əsl slayda keçir və həmin mövqeyi qaytarır */
+  const normalize = useCallback(() => {
+    let cur = posRef.current;
+    if (!loop) return cur;
+    if (cur <= 0) cur += n;
+    else if (cur >= n + 1) cur -= n;
+    if (cur !== posRef.current) {
+      posRef.current = cur;
+      if (track.current) {
+        track.current.style.transition = "none";
+        track.current.style.transform = `translateX(${baseOf(cur)})`;
+        void track.current.offsetWidth; // brauzer yeni mövqeyi animasiyasız qəbul etsin
+        track.current.style.transition = "";
+      }
+    }
+    return cur;
+  }, [loop, n]);
+
+  /** Bir addım irəli (1) və ya geri (-1): 4-cüdən sonra 1-ci, 1-cidən əvvəl 4-cü gəlir */
+  const step = useCallback((d: number) => {
+    const cur = normalize();
+    const next = Math.max(0, Math.min(n + 1, cur + d));
+    posRef.current = next;
+    setAnim(true);
+    setPos(next);
+  }, [normalize, n]);
+
+  const goTo = useCallback((p: number) => {
+    normalize();
+    posRef.current = p;
+    setAnim(true);
+    setPos(p);
+  }, [normalize]);
 
   // Avtomatik keçid (siçan üstündə və ya sürüşdürərkən dayanır; səhifə gizlidirsə də)
   useEffect(() => {
     if (!loop) return;
     const id = setTimeout(() => {
-      if (!hover.current && !drag.current && document.visibilityState === "visible") go(pos + 1);
-      else setTick((t) => t + 1); // dayanıbsa taymeri yenidən qur
+      if (!hover.current && !drag.current && document.visibilityState === "visible") step(1);
+      else setTick((t) => t + 1);
     }, interval);
     return () => clearTimeout(id);
-  }, [pos, tick, loop, interval, go]);
+  }, [pos, tick, loop, interval, step]);
 
   // Kənardakı klona çatanda hiss olunmadan əsl slayda tullanır
   function onEnd(e: React.TransitionEvent) {
     if (e.target !== track.current || !loop) return;
-    if (pos === n + 1) { setAnim(false); setPos(1); }
-    else if (pos === 0) { setAnim(false); setPos(n); }
+    if (pos === n + 1 || pos === 0) {
+      const real = pos === 0 ? n : 1;
+      posRef.current = real;
+      setAnim(false);
+      setPos(real);
+    }
   }
-
-  const W = 88; // aktiv slaydın eni (%), qalan 12% qonşulara
-  const base = `calc(${-pos * W}% + ${(100 - W) / 2}%)`;
 
   function down(e: React.PointerEvent) {
     if (!loop) return;
+    normalize();
     drag.current = { x: e.clientX, dx: 0, moved: false };
     moved.current = false;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -270,21 +310,24 @@ export default function HeroCarousel({ slides, interval = 6000 }: { slides: Hero
     drag.current.dx = e.clientX - drag.current.x;
     if (Math.abs(drag.current.dx) > 6) { drag.current.moved = true; moved.current = true; }
     track.current.style.transition = "none";
-    track.current.style.transform = `translateX(calc(${base} + ${drag.current.dx}px))`;
+    track.current.style.transform = `translateX(calc(${baseOf(posRef.current)} + ${drag.current.dx}px))`;
   }
   function up() {
     if (!drag.current || !track.current) return;
     const { dx } = drag.current;
     drag.current = null;
-    track.current.style.transition = "";
-    track.current.style.transform = "";
     const w = track.current.parentElement?.clientWidth ?? 600;
-    if (Math.abs(dx) > Math.min(80, w * 0.12)) go(pos + (dx < 0 ? 1 : -1));
-    else go(pos);
+    const d = Math.abs(dx) > Math.min(80, w * 0.12) ? (dx < 0 ? 1 : -1) : 0;
+    const next = Math.max(0, Math.min(n + 1, posRef.current + d));
+    // Mövqeyi birbaşa yazırıq: eyni slayda qayıdanda React yenidən çəkmir, köhnə sürüşmə izi qalmasın
+    track.current.style.transition = "";
+    track.current.style.transform = `translateX(${baseOf(next)})`;
+    posRef.current = next;
+    setAnim(true);
+    setPos(next);
   }
 
   if (!n) return null;
-  const active = loop ? (pos - 1 + n) % n : 0;
 
   return (
     <section aria-roledescription="karusel" aria-label="Elanlar" className="select-none">
@@ -309,27 +352,13 @@ export default function HeroCarousel({ slides, interval = 6000 }: { slides: Hero
               className={cx("hero-slide", i === pos && "on", !anim && "no-anim")}
               style={{ flex: `0 0 ${W}%` }}
               aria-hidden={i !== pos}
-              onClick={() => { if (i !== pos && !moved.current) go(i); }}
+              onClick={() => { if (i !== pos && !moved.current) goTo(i); }}
             >
               <HeroSlideView s={s} />
             </div>
           ))}
         </div>
       </div>
-      {loop && (
-        <div className="mt-3 flex justify-center gap-1.5">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-label={`Slayd ${i + 1}`}
-              aria-current={i === active}
-              onClick={() => go(i + 1)}
-              className={cx("h-2 rounded-full transition-all duration-300", i === active ? "w-6 bg-brand" : "w-2 bg-line-strong hover:bg-muted")}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }
