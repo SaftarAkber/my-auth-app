@@ -29,7 +29,7 @@ interface Attempt {
 export default function StudentHome() {
   const enrollments = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<Attempt[]>("/api/attempts");
-  const teachers = useFetch<{ teachers: TeacherCardData[] }>("/api/teacher/public?mine=1");
+  const teachers = useFetch<{ teachers: TeacherCardData[] }>("/api/teacher/public");
   const hero = useFetch<{ slides: HeroSlideData[] }>("/api/hero");
 
   const { start, starting } = useStartTest();
@@ -136,13 +136,13 @@ export default function StudentHome() {
         )}
       </section>
 
-      {/* Müəllimlərim: profil kartları alt-alta, ilk 5; qalanı "Daha çox bax" ilə ayrı səhifədə (filtrlərlə) */}
+      {/* Müəllimlər: saytdakı bütün müəllimlər, profil kartları alt-alta, ilk 5; qalanı "Daha çox bax" ilə ayrı səhifədə (filtrlərlə) */}
       <section>
-        <h2 className="mb-3 text-lg font-bold">Müəllimlərim</h2>
+        <h2 className="mb-3 text-lg font-bold">Müəllimlər</h2>
         {teachers.loading && !teachers.data ? (
           <div className="space-y-3">{[0, 1].map((i) => <CardSkeleton key={i} compact />)}</div>
         ) : (teachers.data?.teachers ?? []).length === 0 ? (
-          <p className="text-sm text-muted">Qrupa qoşulanda müəllimləriniz burada görünəcək.</p>
+          <p className="text-sm text-muted">Hələ müəllim yoxdur.</p>
         ) : (
           <div className="space-y-3">
             {teachers.data!.teachers.slice(0, 5).map((t) => <TeacherCard key={t.id} t={t} compact />)}

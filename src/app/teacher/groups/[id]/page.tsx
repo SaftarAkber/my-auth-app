@@ -265,13 +265,14 @@ export default function TeacherGroupPage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {g.members.map((m) => (
-                  <div key={m.id} className="card-flat flex items-center gap-3 px-3.5 py-3">
+                  <div key={m.id} className="card-flat relative flex items-center gap-3 px-3.5 py-3 transition hover:border-line-strong hover:bg-surface-2">
+                    <Link href={`/u/${m.student.id}`} className="absolute inset-0 rounded-[inherit]" aria-label={m.student.name} />
                     <Avatar src={m.student.photo} name={m.student.name} size={40} />
                     <div className="min-w-0 flex-1">
                       <Link href={`/u/${m.student.id}`} className="block truncate font-semibold hover:text-brand">{m.student.name}</Link>
                       <p className="truncate text-xs text-muted">{m.student.phone ?? m.student.email ?? "—"} · {fmtDate(m.createdAt)}</p>
                     </div>
-                    <button className="btn-icon hover:!text-bad" title="Qrupdan çıxar" onClick={() => removeMember(m)}><Icon name="logout" size={17} /></button>
+                    <button className="btn-icon relative hover:!text-bad" title="Qrupdan çıxar" onClick={() => removeMember(m)}><Icon name="logout" size={17} /></button>
                   </div>
                 ))}
               </div>
@@ -284,9 +285,9 @@ export default function TeacherGroupPage() {
               <div className="card divide-y divide-line">
                 {g.enrollmentReqs.map((r) => (
                   <div key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <Avatar src={r.student.photo} name={r.student.name} size={40} />
+                    <Link href={`/u/${r.student.id}`} className="shrink-0"><Avatar src={r.student.photo} name={r.student.name} size={40} /></Link>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{r.student.name}</p>
+                      <Link href={`/u/${r.student.id}`} className="block truncate font-semibold hover:underline">{r.student.name}</Link>
                       <p className="truncate text-xs text-muted">{r.message || "Mesaj yoxdur"} · {timeAgo(r.createdAt)}</p>
                     </div>
                     {r.status === "PENDING" ? (

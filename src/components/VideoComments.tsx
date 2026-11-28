@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg } from "@/lib/api";
@@ -177,10 +178,10 @@ function CommentItem({
 
   const renderRow = (x: Comment, reply?: boolean) => (
     <div key={x.id} className="flex gap-3">
-      <Avatar src={x.user.photo} name={x.user.name} size={reply ? 28 : 36} />
+      <Link href={`/u/${x.user.id}`} className="shrink-0"><Avatar src={x.user.photo} name={x.user.name} size={reply ? 28 : 36} /></Link>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-sm font-bold">
-          {x.user.name}
+          <Link href={`/u/${x.user.id}`} className="hover:underline">{x.user.name}</Link>
           {x.user.id === ownerId && <span className="badge-brand !py-0">Müəllim</span>}
           {x.visibility === "GROUP_ONLY" && <span className="badge-muted !py-0"><Icon name="lock" size={11} /> Qrup</span>}
           <span className="text-xs font-normal text-muted">{timeAgo(x.createdAt)}</span>
@@ -334,10 +335,11 @@ export function CommentThread({
                 likeBase={likeBase}
                 ownerId={ownerId}
                 groupAccess={groupAccess}
-                onReplyAdded={() => setTotal((t) => t + 1)}
-                onDeleted={(id, removed) => {
+                // Sayğac yalnız əsas şərhləri sayır: cavab əlavə olunanda dəyişmir, əsas şərh silinəndə 1 azalır
+                onReplyAdded={() => {}}
+                onDeleted={(id) => {
                   setItems((x) => x.filter((y) => y.id !== id));
-                  setTotal((t) => Math.max(0, t - removed));
+                  setTotal((t) => Math.max(0, t - 1));
                 }}
               />
             ))}

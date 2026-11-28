@@ -184,10 +184,10 @@ export default function StudentGroupPage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {g.members.map((m) => (
-                  <div key={m.id} className="card-flat flex items-center gap-3 p-3.5">
+                  <Link key={m.id} href={`/u/${m.student.id}`} className="card-flat flex items-center gap-3 p-3.5 transition hover:border-line-strong hover:bg-surface-2">
                     <Avatar src={m.student.photo} name={m.student.name} size={40} />
                     <span className="truncate font-semibold">{m.student.name}</span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ))}

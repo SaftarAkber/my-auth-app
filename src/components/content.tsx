@@ -6,6 +6,7 @@ import { api, errMsg } from "@/lib/api";
 import { cx, fmtDate, minutes, percent, timeAgo, videoThumb } from "@/lib/format";
 import { Avatar, Icon, Img, Modal, Spinner, useToast } from "@/components/ui";
 import { CommentThread } from "@/components/VideoComments";
+import { useAuth } from "@/context/AuthContext";
 
 /* ───────── Tiplər (API cavablarının ortaq hissəsi) ───────── */
 export interface VideoLite {
@@ -439,21 +440,35 @@ function PostLikes({ postId, ownerId }: { postId: string; ownerId: string }) {
 export function PostCard({
   post, onDelete, showGroup, highlight,
 }: { post: PostLite; onDelete?: (p: PostLite) => void; showGroup?: boolean; highlight?: boolean }) {
+  const { user } = useAuth();
+  // Görünmə nişanı (Açıq / Qrup) yalnız müəllim və admin üçündür; tələbə görmür
+  const showVisibility = !!user && user.role !== "STUDENT";
+  const author = post.teacher?.id ? `/u/${post.teacher.id}` : null;
   return (
     <article id={`post-${post.id}`} data-post-ids={(post.ids ?? [post.id]).join(",")} className={cx("card relative scroll-mt-24 p-5 transition-shadow duration-700 [&:has([aria-expanded=true])]:z-30", highlight && "ring-2 ring-ok ring-offset-2")}>
       <header className="flex items-center gap-3">
-        <Avatar src={post.teacher?.photo} name={post.teacher?.name ?? "Müəllim"} size={40} />
+        {author ? (
+          <Link href={author} className="shrink-0" aria-label={post.teacher?.name ?? "Müəllim"}><Avatar src={post.teacher?.photo} name={post.teacher?.name ?? "Müəllim"} size={40} /></Link>
+        ) : (
+          <Avatar src={post.teacher?.photo} name={post.teacher?.name ?? "Müəllim"} size={40} />
+        )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{post.teacher?.name ?? "Müəllim"}</p>
+          {author ? (
+            <Link href={author} className="block truncate text-sm font-bold hover:underline">{post.teacher?.name ?? "Müəllim"}</Link>
+          ) : (
+            <p className="truncate text-sm font-bold">{post.teacher?.name ?? "Müəllim"}</p>
+          )}
           <p className="break-words text-xs text-muted [overflow-wrap:anywhere]">
             {timeAgo(post.createdAt)}
             {showGroup && (post.groups?.length || post.group) ? ` · ${post.groups?.length ? post.groups.map((g) => g.name).join(", ") : post.group!.name}` : ""}
           </p>
         </div>
-        <span className={post.visibility === "PUBLIC" ? "badge-info" : "badge-muted"}>
-          <Icon name={post.visibility === "PUBLIC" ? "globe" : "lock"} size={12} />
-          {post.visibility === "PUBLIC" ? "Açıq" : "Qrup"}
-        </span>
+        {showVisibility && (
+          <span className={post.visibility === "PUBLIC" ? "badge-info" : "badge-muted"}>
+            <Icon name={post.visibility === "PUBLIC" ? "globe" : "lock"} size={12} />
+            {post.visibility === "PUBLIC" ? "Açıq" : "Qrup"}
+          </span>
+        )}
         {onDelete && (
           <button className="btn-icon text-bad" onClick={() => onDelete(post)} aria-label="Sil">
             <Icon name="trash" size={17} />

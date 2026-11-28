@@ -13,7 +13,7 @@ import { CoverArt, COVER_BOX } from "@/components/covers";
 import { PostCard, VideoPackageBlock, type PostLite, type VideoLite } from "@/components/content";
 import { SubjectBadges } from "@/components/Subjects";
 import {
-  Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
+  Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, FolderTabs, useConfirm, useToast,
 } from "@/components/ui";
 
 interface GroupCard {
@@ -90,6 +90,8 @@ function ProfileInner() {
   const { user, isOwn } = data;
   const isTeacher = user.role === "TEACHER";
   const viewerStudent = me?.role === "STUDENT";
+  const groupHref = (g: { id: string; state?: string }) =>
+    g.state === "owner" && me?.role === "TEACHER" ? `/teacher/groups/${g.id}` : viewerStudent ? `/student/groups/${g.id}` : null;
 
   const tabs: { id: string; label: string; count?: number; own?: boolean }[] = isTeacher
     ? [
@@ -145,6 +147,7 @@ function ProfileInner() {
             </span>
             {isTeacher && <SubjectBadges subjects={user.subjects} />}
             {isTeacher && user.experienceYears != null && user.experienceYears > 0 && <span className="badge-muted"><Icon name="briefcase" size={12} /> {user.experienceYears} il təcrübə</span>}
+            {isTeacher && data.stats.students != null && data.stats.students !== "0" && <span className="badge-muted"><Icon name="grad" size={12} /> {data.stats.students} tələbə</span>}
             {isTeacher && user.liveOnline && <span className="badge-info"><Icon name="live" size={12} /> Canlı onlayn dərs</span>}
           </div>
           {user.bio ? (
@@ -153,27 +156,11 @@ function ProfileInner() {
             <p className="mt-2 text-muted">Haqqında bir şey yaz: qələmə bas.</p>
           ) : null}
         </div>
-        <div className="flex divide-x divide-line overflow-x-auto border-t border-line">
-          {isTeacher && (
-            <>
-              {data.stats.students != null && <Stat n={data.stats.students} l="tələbə" />}
-              <Stat n={data.stats.groups ?? 0} l="qrup" />
-              <Stat n={data.tests.length} l="açıq test" />
-              <Stat n={data.videos.length} l="video" />
-            </>
-          )}
-          {user.role === "STUDENT" && (
-            <>
-              <Stat n={data.stats.groups ?? 0} l="qrup" />
-              <Stat n={data.stats.attempts ?? 0} l="həll edilən test" />
-            </>
-          )}
-          {isOwn && me?.role !== "ADMIN" && <Stat n={me?.coinBalance ?? 0} l="coin" />}
-        </div>
       </section>
       {edit && <ProfileEditor open withCover onClose={() => { setEdit(false); reload(); }} />}
 
-      {tabs.length > 0 && <Tabs tabs={tabs} value={tab} onChange={setTab} />}
+      {tabs.length > 0 && (
+      <FolderTabs tabs={tabs} value={tab} onChange={setTab}>
 
       {tab === "posts" && <PostsTab data={data} isOwn={isOwn && me?.role === "TEACHER"} reload={reload} />}
 
@@ -183,7 +170,9 @@ function ProfileInner() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {data.groups.map((g) => (
-              <article key={g.id} className="card flex flex-col gap-3 p-5">
+              <article key={g.id} className={cx("card relative flex flex-col gap-3 p-5 transition", groupHref(g) && "hover:-translate-y-0.5 hover:border-line-strong")}>
+                {/* Kartın hər yeri qrup səhifəsinə aparır (düymələr üstdə qalır) */}
+                {groupHref(g) && <Link href={groupHref(g)!} className="absolute inset-0 rounded-[inherit]" aria-label={g.name} />}
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="min-w-0 break-words text-lg font-bold [overflow-wrap:anywhere]">{g.name}</h3>
                   {g.state === "member" && <span className="badge-ok">Qrupdasan</span>}
@@ -196,7 +185,7 @@ function ProfileInner() {
                   {g.members !== undefined && <span className="badge-muted"><Icon name="users" size={12} /> {g.members} üzv</span>}
                   {g.teacher && <span className="badge-muted">{g.teacher.name}</span>}
                 </div>
-                <div className="mt-auto flex justify-end pt-1">
+                <div className="relative mt-auto flex justify-end pt-1">
                   {g.state === "owner" && me?.role === "TEACHER" && <Link href={`/teacher/groups/${g.id}`} className="btn-secondary btn-sm">İdarə et</Link>}
                   {g.state === "member" && <Link href={`/student/groups/${g.id}`} className="btn-primary btn-sm">Qrupa keç</Link>}
                   {g.state === "none" && viewerStudent && <button className="btn-primary btn-sm" onClick={() => setJoin(g)}>Müraciət et</button>}
@@ -226,7 +215,7 @@ function ProfileInner() {
                     <span className="badge-warn"><Icon name="coin" size={12} /> {t.rewardMinCorrect}+ düz = {t.rewardCoins} coin</span>
                   )}
                 </div>
-                <div className="mt-auto flex justify-end pt-1">
+                <div className="relative mt-auto flex justify-end pt-1">
                   {isOwn && me?.role === "TEACHER" ? (
                     <Link href="/teacher/tests" className="btn-secondary btn-sm">İdarə et</Link>
                   ) : t.member ? (
@@ -270,19 +259,14 @@ function ProfileInner() {
         </div>
       )}
 
+      </FolderTabs>
+      )}
+
       <JoinModal group={join} onClose={() => setJoin(null)} onDone={() => { setJoin(null); toast.success("Müraciət göndərildi"); reload(); }} />
     </div>
   );
 }
 
-function Stat({ n, l }: { n: number | string; l: string }) {
-  return (
-    <span className="min-w-[110px] flex-1 px-4 py-3 sm:px-6">
-      <b className="block text-xl font-extrabold tabular-nums tracking-tight">{typeof n === "number" ? n.toLocaleString("az-AZ") : n}</b>
-      <span className="text-xs font-semibold text-muted">{l}</span>
-    </span>
-  );
-}
 
 function JoinModal({ group, onClose, onDone }: { group: GroupCard | null; onClose: () => void; onDone: () => void }) {
   const toast = useToast();

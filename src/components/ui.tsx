@@ -340,71 +340,58 @@ const TAB_ICON: Record<string, IconName> = {
   bank: "folder", leaderboard: "trophy", comments: "message", likes: "thumb", orders: "bag", products: "bag", shop: "bag",
 };
 
-/** İkonlu tablar: üstdə ikon, altda kiçik ad; ağ zolaq, aktiv tab açıq yaşıl fonda; çox tab olanda barmaqla sürüşür */
-export function Tabs<T extends string>({
-  tabs, value, onChange,
-}: { tabs: { id: T; label: string; count?: number; own?: boolean; icon?: IconName }[]; value: T; onChange: (v: T) => void }) {
-  const bar = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = bar.current?.querySelector<HTMLElement>('[aria-selected="true"]');
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [value]);
+/** Aktiv tabın yanındakı əyri: panelin üst xətti buradan tabın kənarına hamar qalxır (tək, kəsilməz xətt) */
+function Flare({ side }: { side: "l" | "r" }) {
   return (
-    <div ref={bar} className="tabs-ic mb-5" role="tablist">
-      {tabs.map((t, i) => {
-        const icon = t.icon ?? TAB_ICON[t.id];
-        const on = value === t.id;
-        return (
-          <Fragment key={t.id}>
-            {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-1 my-2 w-px shrink-0 bg-line" aria-hidden />}
-            <button role="tab" type="button" onClick={() => onChange(t.id)} aria-selected={on} className={cx("tab-ic", on && "on")}>
-              {icon && <Icon name={icon} size={20} />}
-              <span className="flex items-center gap-1">
-                {t.label}
-                {t.count !== undefined && <span className={cx("rounded-full px-1.5 text-[10px] leading-4", on ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>}
-              </span>
-            </button>
-          </Fragment>
-        );
-      })}
-    </div>
+    <svg className={cx("ftab-flare", side === "l" ? "l" : "r")} width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M0 16A16 16 0 0 0 16 0V16Z" fill="rgb(var(--surface))" />
+      <path d="M0 15.5A15.5 15.5 0 0 0 15.5 0" fill="none" stroke="rgb(var(--line))" strokeWidth="1" />
+    </svg>
   );
 }
 
-/** Qovluq tabları: tablar bütün eni bərabər tutur, aktiv tab altındakı səhifə ilə bir parça olur.
- *  Kənar tab aktivdirsə, o tərəfdə əyri çıxıntı olmur (panel küncü düz qalır). */
-export function FolderTabs<T extends string>({
-  tabs, value, onChange, children,
-}: { tabs: { id: T; label: string; count?: number; icon?: IconName }[]; value: T; onChange: (v: T) => void; children: React.ReactNode }) {
+type TabDef<T extends string> = { id: T; label: string; count?: number; own?: boolean; icon?: IconName };
+
+function FolderStrip<T extends string>({ tabs, value, onChange, solo }: { tabs: TabDef<T>[]; value: T; onChange: (v: T) => void; solo?: boolean }) {
   const bar = useRef<HTMLDivElement>(null);
   const idx = Math.max(0, tabs.findIndex((t) => t.id === value));
   useEffect(() => {
     bar.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [value]);
   return (
+    <div ref={bar} className={cx("ftabs", solo && "ftabs-solo", idx === 0 && "at-first", idx === tabs.length - 1 && "at-last")} role="tablist">
+      {tabs.map((t, i) => {
+        const icon = t.icon ?? TAB_ICON[t.id];
+        const on = i === idx;
+        return (
+          <button key={t.id} role="tab" type="button" aria-selected={on} onClick={() => onChange(t.id)} className={cx("ftab", on && "on")}>
+            {on && i > 0 && <Flare side="l" />}
+            {on && i < tabs.length - 1 && <Flare side="r" />}
+            {icon && <Icon name={icon} size={20} />}
+            <span className="flex items-center gap-1">
+              {t.label}
+              {t.count !== undefined && <span className={cx("rounded-full px-1.5 text-[10px] leading-4", on ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Tablar (qovluq üslubu): tabdan sonra gələn ilk element avtomatik olaraq ağ panel olur və aktiv tabla birləşir */
+export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: TabDef<T>[]; value: T; onChange: (v: T) => void }) {
+  return <FolderStrip tabs={tabs} value={value} onChange={onChange} solo />;
+}
+
+/** Qovluq tabları + panel (məzmun panelin içində) */
+export function FolderTabs<T extends string>({
+  tabs, value, onChange, children,
+}: { tabs: TabDef<T>[]; value: T; onChange: (v: T) => void; children: React.ReactNode }) {
+  const idx = Math.max(0, tabs.findIndex((t) => t.id === value));
+  return (
     <div className="ftabs-wrap">
-      <div ref={bar} className="ftabs" role="tablist">
-        {tabs.map((t, i) => {
-          const icon = t.icon ?? TAB_ICON[t.id];
-          const on = i === idx;
-          return (
-            <button
-              key={t.id}
-              role="tab"
-              type="button"
-              aria-selected={on}
-              onClick={() => onChange(t.id)}
-              className={cx("ftab", on && "on", i === 0 && "first", i === tabs.length - 1 && "last")}
-            >
-              {icon && <Icon name={icon} size={20} />}
-              <span className="flex items-center gap-1">
-                {t.label}
-                {t.count !== undefined && <span className={cx("rounded-full px-1.5 text-[10px] leading-4", on ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <FolderStrip tabs={tabs} value={value} onChange={onChange} />
       <div className={cx("fpanel", idx === 0 && "first", idx === tabs.length - 1 && "last")} role="tabpanel">
         {children}
       </div>

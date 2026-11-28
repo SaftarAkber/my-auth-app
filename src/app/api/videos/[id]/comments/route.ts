@@ -49,7 +49,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
 
-    const total = await prisma.videoComment.count({ where: { videoId, ...vis } });
+    const total = await prisma.videoComment.count({ where: { videoId, parentId: null, ...vis } });
 
     return NextResponse.json({
       comments: page.map((c) => ({

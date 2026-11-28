@@ -54,7 +54,7 @@ const HOME: Record<User["role"], string> = { STUDENT: "/student", TEACHER: "/tea
 function Logo() {
   return (
     <span className="flex items-center gap-2.5">
-      <LogoMark size={36} />
+      <LogoMark size={40} />
       <span className="hidden text-lg font-extrabold tracking-tight text-brand min-[420px]:inline lg:hidden xl:inline">{BRAND}</span>
     </span>
   );
@@ -89,7 +89,6 @@ export const HIT_ICON: Record<string, IconName> = { groups: "users", tests: "fil
 function Wing({ side }: { side: "l" | "r" }) {
   return (
     <svg className={cx("search-wing", side === "r" && "-scale-x-100")} viewBox="0 0 64 42" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,0 C32,0 32,42 64,42 L64,0 Z" fill="rgb(var(--surface) / 0.86)" />
       <path d="M0,0.5 C32,0.5 32,41.5 64,41.5" fill="none" stroke="rgb(var(--line))" strokeWidth="1" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -180,6 +179,8 @@ function Search({ t }: { t: (k: DictKey) => string }) {
 
   return (
     <div ref={box} className="search-tab" role="search">
+      {/* Bir parça şüşə: forması maska ilə kəsilir, ona görə ortadakı hissə ilə kənarlar arasında fərq görünmür */}
+      <div className="search-glass" aria-hidden="true" />
       <Wing side="l" />
       <div className="search-body">
         <div className="search-pill">
@@ -210,9 +211,7 @@ function Search({ t }: { t: (k: DictKey) => string }) {
             >
               <Icon name="x" size={14} stroke={2.4} />
             </button>
-          ) : (
-            <kbd className="pointer-events-none hidden shrink-0 rounded-md border border-line-strong bg-surface px-1.5 text-[10px] font-bold text-muted lg:block">Ctrl K</kbd>
-          )}
+          ) : null}
         </div>
       </div>
       <Wing side="r" />
@@ -353,7 +352,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-50">
+      <header className="sticky top-0 z-50 px-3 pt-2.5 max-sm:px-2 max-sm:pt-2">
         <div className="topbar" ref={bar}><div className="topbar-in">
           <div className="flex min-w-0 flex-1 basis-0 items-center">
             <Link href={HOME[user.role]} aria-label="Tworing" className="shrink-0">
@@ -365,7 +364,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
           <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Əsas menyu">
             {items.map((i) => (
               <Link key={i.href} href={i.href} className="tl" title={t(i.key)} aria-current={isActive(i) ? "page" : undefined}>
-                <Icon name={i.icon} size={19} />
+                <Icon name={i.icon} size={20} />
                 {/* Admin menyusu (7 bölmə) orta enlikdə yalnız ikon; tələbə və müəllimdə ad həmişə görünür */}
                 <span className={user.role === "ADMIN" ? "max-xl:sr-only" : undefined}>{t(i.key)}</span>
                 {i.dot === "requests" && pending > 0 && (

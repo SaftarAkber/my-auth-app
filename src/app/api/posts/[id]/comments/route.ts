@@ -53,7 +53,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
-    const total = await prisma.postComment.count({ where: { postId: { in: a.ids }, ...live } });
+    // Sayğac yalnız əsas şərhləri sayır (cavablar daxil deyil)
+    const total = await prisma.postComment.count({ where: { postId: { in: a.ids }, parentId: null, ...live } });
 
     return NextResponse.json({
       comments: page.map((c) => ({
