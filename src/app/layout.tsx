@@ -1,14 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito } from "next/font/google";
+import { Anton, Nunito } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { UiProvider } from "@/components/ui";
 import AutoTranslate from "@/components/AutoTranslate";
 
 const nunito = Nunito({ subsets: ["latin", "latin-ext", "cyrillic"], display: "swap" });
+// Karusel afişalarının iri başlıq şrifti
+const anton = Anton({ weight: "400", subsets: ["latin", "latin-ext"], display: "swap", variable: "--font-poster" });
 
 export const metadata: Metadata = {
-  title: { default: "EduFlow", template: "%s · EduFlow" },
+  title: { default: "Tworing", template: "%s · Tworing" },
   description: "Müəllim və tələbələr üçün təhsil platforması — testlər, videodərslər, qruplar və coin sistemi.",
 };
 
@@ -16,7 +18,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f9f5" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f7fa" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0c14" },
   ],
 };
@@ -32,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={nunito.className}>
+      <body className={`${nunito.className} ${anton.variable}`}>
         <AuthProvider>
           <UiProvider>{children}</UiProvider>
         </AuthProvider>

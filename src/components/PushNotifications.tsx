@@ -7,7 +7,7 @@ import { Icon, Spinner, useToast } from "@/components/ui";
 /*
  * Telefon (PWA) bildirişləri — brauzer tərəfi.
  * Android/kompüter: birbaşa icazə istənir. iPhone (iOS 16.4+): əvvəl Safari-də "Ana ekrana əlavə et",
- * sonra ana ekrandakı EduFlow ikonundan açıb bildirişi aktiv etmək lazımdır.
+ * sonra ana ekrandakı Tworing ikonundan açıb bildirişi aktiv etmək lazımdır.
  */
 
 type State = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
@@ -104,7 +104,7 @@ function IosSteps() {
       <li>Saytı <b className="text-ink">Safari</b>-də açın.</li>
       <li>Aşağıdakı <b className="text-ink">Paylaş</b> düyməsinə (kvadrat və yuxarı ox) toxunun.</li>
       <li><b className="text-ink">“Ana ekrana əlavə et”</b> seçin.</li>
-      <li>Ana ekrandakı <b className="text-ink">EduFlow</b> ikonundan açın və burada bildirişi aktiv edin.</li>
+      <li>Ana ekrandakı <b className="text-ink">Tworing</b> ikonundan açın və burada bildirişi aktiv edin.</li>
     </ol>
   );
 }

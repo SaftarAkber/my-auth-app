@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui";
 import LangSwitch from "@/components/LangSwitch";
+import { LogoMark } from "@/components/Logo";
 
 const FEATURES = [
   { icon: "file", title: "Onlayn testlər", text: "Vaxtlı və ya sərbəst testlər, avtomatik yoxlama və detallı nəticələr." },
@@ -11,10 +12,8 @@ const FEATURES = [
 function Logo({ light }: { light?: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className={`grid h-10 w-10 place-items-center rounded-full ${light ? "bg-white" : "bg-brand"}`}>
-        <span className={`h-4 w-4 rounded-full ${light ? "bg-brand" : "bg-white"}`} />
-      </span>
-      <span className={`text-2xl font-bold tracking-tight ${light ? "text-white" : "text-brand"}`}>EduFlow</span>
+      <LogoMark size={42} tone={light ? "light" : "dark"} />
+      <span className={`text-2xl font-extrabold tracking-tight ${light ? "text-white" : "text-brand"}`}>Tworing</span>
     </span>
   );
 }
@@ -43,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </ul>
         </div>
 
-        <p className="relative text-sm text-white/70">© {new Date().getFullYear()} EduFlow</p>
+        <p className="relative text-sm text-white/70">© {new Date().getFullYear()} Tworing</p>
       </aside>
 
       <main className="relative flex items-center justify-center px-4 py-10 sm:px-8">

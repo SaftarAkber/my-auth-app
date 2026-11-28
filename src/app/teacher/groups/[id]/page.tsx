@@ -16,7 +16,7 @@ import GroupAssignments from "@/components/GroupAssignments";
 import GroupAnalysis from "@/components/GroupAnalysis";
 import MonthlyTable from "@/components/MonthlyTable";
 import {
-  Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, Tabs, useConfirm, useToast,
+  Avatar, Empty, ErrorBox, Field, Icon, Img, Modal, SkeletonList, Spinner, FolderTabs, useConfirm, useToast,
 } from "@/components/ui";
 
 interface Member {
@@ -196,7 +196,7 @@ export default function TeacherGroupPage() {
       <div className="page !pt-0">
 
         <div className="mt-8">
-          <Tabs
+          <FolderTabs
             value={tab}
             onChange={setTab}
             tabs={[
@@ -210,7 +210,7 @@ export default function TeacherGroupPage() {
               { id: "analysis", label: "Analiz" },
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
             ]}
-          />
+          >
 
           {tab === "feed" && (
             <div className="mx-auto max-w-2xl space-y-4">
@@ -358,6 +358,7 @@ export default function TeacherGroupPage() {
               )}
             </div>
           )}
+          </FolderTabs>
         </div>
       </div>
 

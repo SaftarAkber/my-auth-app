@@ -24,12 +24,12 @@ export function TeacherCard({ t, compact }: { t: TeacherCardData; compact?: bool
   return (
     <Link
       href={`/u/${t.id}`}
-      className="group block overflow-hidden rounded-2xl border border-line bg-surface shadow-soft transition hover:-translate-y-0.5 hover:border-line-strong"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-soft transition hover:-translate-y-0.5 hover:border-line-strong"
     >
       <div className={compact ? "h-14" : "h-20"}>
         <CoverArt value={t.coverPhoto} seed={t.id} />
       </div>
-      <div className={cx("relative", compact ? "px-3.5 pb-3.5" : "px-4 pb-4")}>
+      <div className={cx("relative flex flex-1 flex-col", compact ? "px-3.5 pb-3.5" : "px-4 pb-4")}>
         <Avatar
           src={t.photo}
           name={t.name}
@@ -43,7 +43,8 @@ export function TeacherCard({ t, compact }: { t: TeacherCardData; compact?: bool
           {t.experienceYears != null && t.experienceYears > 0 && <span className="badge-muted"><Icon name="briefcase" size={12} /> {t.experienceYears} il</span>}
           {t.liveOnline && <span className="badge-info"><Icon name="live" size={12} /> Canlı</span>}
         </div>
-        {!compact && <span className="btn-primary btn-sm mt-3.5 w-full">Profilə bax</span>}
+        {/* Düymə həmişə kartın altında: məlumatı az/çox olan kartlarda eyni səviyyədə */}
+        {!compact && <><span className="min-h-3.5 flex-1" /><span className="btn-primary btn-sm w-full">Profilə bax</span></>}
       </div>
     </Link>
   );

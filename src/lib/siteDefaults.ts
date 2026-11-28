@@ -14,10 +14,10 @@ export interface SiteContent {
 }
 
 export const DEFAULT_SITE: SiteContent = {
-  brand: "EduFlow",
+  brand: "Tworing",
   heroTitle: "Test həll et, coin qazan.",
   heroText:
-    "EduFlow müəllimin qruplarını, video dərslərini və testlərini bir yerə yığır. Tələbə müəllimdən coin qazanır və mağazada xərcləyir.",
+    "Tworing müəllimin qruplarını, video dərslərini və testlərini bir yerə yığır. Tələbə müəllimdən coin qazanır və mağazada xərcləyir.",
   heroBtn: "Hesab yarat",
   features: [
     { title: "Qrup qur.", text: "Müəllim qrup yaradır, tələbə müraciət göndərir, müəllim qəbul edir." },
@@ -42,7 +42,7 @@ export const DEFAULT_SITE: SiteContent = {
 export function mergeSite(d: Partial<SiteContent> | null | undefined): SiteContent {
   const x = d ?? {};
   const merged = { ...DEFAULT_SITE, ...x, show: { ...DEFAULT_SITE.show, ...(x.show ?? {}) }, contact: { ...DEFAULT_SITE.contact, ...(x.contact ?? {}) } };
-  // Köhnə “© EduFlow” alt yazısı artıq footer-in avtomatik hüquq sətrinə daxildir
+  // Köhnə “© Tworing” alt yazısı artıq footer-in avtomatik hüquq sətrinə daxildir
   if (merged.footer.trim().startsWith("©")) merged.footer = DEFAULT_SITE.footer;
   return merged;
 }

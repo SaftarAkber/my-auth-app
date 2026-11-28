@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field, Icon, PasswordInput, Spinner } from "@/components/ui";
+import { LogoMark } from "@/components/Logo";
 
 /** Admin giriş formu: /admin və /dashboard ünvanlarında göstərilir. Adi /login admini qəbul etmir. */
 export default function AdminLogin() {
@@ -33,10 +34,8 @@ export default function AdminLogin() {
     <div className="relative z-10 grid min-h-screen place-items-center px-4 py-10">
       <div className="w-full max-w-md animate-fade-up">
         <div className="mb-6 flex items-center gap-2.5">
-          <span className="grid h-11 w-11 place-items-center rounded-full border border-line bg-white">
-            <span className="h-4 w-4 rounded-full bg-ink" />
-          </span>
-          <span className="text-2xl font-extrabold tracking-tight">EduFlow</span>
+          <LogoMark size={44} />
+          <span className="text-2xl font-extrabold tracking-tight">Tworing</span>
           <span className="badge-bad ml-1">Admin</span>
         </div>
 

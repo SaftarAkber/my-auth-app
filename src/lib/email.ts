@@ -19,9 +19,9 @@ export async function sendEmailOtp(
 ): Promise<boolean> {
   try {
     await getTransporter().sendMail({
-      from: `"EduFlow" <${process.env.GMAIL_USER}>`,
+      from: `"Tworing" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: "EduFlow — şifrə bərpa kodu",
+      subject: "Tworing — şifrə bərpa kodu",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #f9f9f9; border-radius: 12px;">
           <h2 style="color: #1a1a1a; margin-bottom: 8px;">🔐 Şifrənin bərpası</h2>

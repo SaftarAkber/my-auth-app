@@ -772,3 +772,27 @@ model AssignmentReward {
   @@id([assignmentId, studentId])
   @@map("assignment_rewards")
 }
+
+// Tələbə ana səhifəsinin yuxarısındakı karusel slaydları (admin idarə edir)
+model HeroSlide {
+  id          String    @id @default(cuid())
+  kind        String    @default("template") // "template" (hazır dizayn) | "image" (yüklənmiş afişa)
+  template    String?   // exam | contest | shop | live
+  tag         String?
+  title       String?
+  subtitle    String?
+  highlight   String?   // iri yazı: "30", "30 COIN", "-30%"
+  note        String?   // kiçik nişan: "12 YER QALIB"
+  imageUrl    String?
+  countdownAt DateTime? // canlı geri sayım bu ana qədər
+  timerPos    String    @default("bl") // şəkil üzərində taymerin yeri: bl | br | tl | tr
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive, order])
+  @@map("hero_slides")
+}

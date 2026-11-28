@@ -289,8 +289,8 @@ export function EmptyArt({ icon = "inbox" }: { icon?: IconName }) {
         <ellipse cx="62" cy="77" rx="54" ry="6" fill="rgb(var(--surface-2))" />
         <rect x="22" y="56" width="70" height="14" rx="3" fill="#fbbf24" />
         <rect x="22" y="56" width="70" height="4" rx="2" fill="#f59e0b" />
-        <rect x="28" y="42" width="60" height="14" rx="3" fill="#86efac" />
-        <rect x="80" y="42" width="5" height="14" fill="#4ade80" />
+        <rect x="28" y="42" width="60" height="14" rx="3" fill="#93b4d6" />
+        <rect x="80" y="42" width="5" height="14" fill="#6f95c0" />
         <rect x="32" y="28" width="54" height="14" rx="3" fill="rgb(var(--brand))" />
         <rect x="38" y="33" width="26" height="3" rx="1.5" fill="#fff" opacity=".7" />
         <g transform="rotate(24 103 40)">
@@ -300,7 +300,7 @@ export function EmptyArt({ icon = "inbox" }: { icon?: IconName }) {
           <polygon points="101.8,68 105.2,68 103.5,72" fill="#1f2937" />
         </g>
         <circle cx="16" cy="22" r="3" fill="#fbbf24" />
-        <circle cx="120" cy="14" r="2.5" fill="#86efac" />
+        <circle cx="120" cy="14" r="2.5" fill="#93b4d6" />
         <path d="M10 44l3 3m0-3l-3 3" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
       </svg>
       <span className="absolute -right-1 top-0 grid h-9 w-9 place-items-center rounded-full border-4 border-surface bg-tint text-brand-hover">
@@ -367,6 +367,47 @@ export function Tabs<T extends string>({
           </Fragment>
         );
       })}
+    </div>
+  );
+}
+
+/** Qovluq tabları: tablar bütün eni bərabər tutur, aktiv tab altındakı səhifə ilə bir parça olur.
+ *  Kənar tab aktivdirsə, o tərəfdə əyri çıxıntı olmur (panel küncü düz qalır). */
+export function FolderTabs<T extends string>({
+  tabs, value, onChange, children,
+}: { tabs: { id: T; label: string; count?: number; icon?: IconName }[]; value: T; onChange: (v: T) => void; children: React.ReactNode }) {
+  const bar = useRef<HTMLDivElement>(null);
+  const idx = Math.max(0, tabs.findIndex((t) => t.id === value));
+  useEffect(() => {
+    bar.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [value]);
+  return (
+    <div className="ftabs-wrap">
+      <div ref={bar} className="ftabs" role="tablist">
+        {tabs.map((t, i) => {
+          const icon = t.icon ?? TAB_ICON[t.id];
+          const on = i === idx;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              type="button"
+              aria-selected={on}
+              onClick={() => onChange(t.id)}
+              className={cx("ftab", on && "on", i === 0 && "first", i === tabs.length - 1 && "last")}
+            >
+              {icon && <Icon name={icon} size={20} />}
+              <span className="flex items-center gap-1">
+                {t.label}
+                {t.count !== undefined && <span className={cx("rounded-full px-1.5 text-[10px] leading-4", on ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className={cx("fpanel", idx === 0 && "first", idx === tabs.length - 1 && "last")} role="tabpanel">
+        {children}
+      </div>
     </div>
   );
 }
@@ -710,7 +751,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     setDialog(null);
   };
 
-  const toastIc: Record<ToastKind, string> = { success: "text-green-400", error: "text-red-400", info: "text-sky-300" };
+  const toastIc: Record<ToastKind, string> = { success: "text-emerald-300", error: "text-red-400", info: "text-sky-300" };
   const toastIcon: Record<ToastKind, IconName> = { success: "check", error: "alert", info: "info" };
 
   return (

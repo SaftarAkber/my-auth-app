@@ -8,6 +8,7 @@ import SiteFooter from "@/components/SiteFooter";
 import ItemCarousel from "@/components/ItemCarousel";
 import AuthMenu from "@/components/AuthMenu";
 import LangSwitch from "@/components/LangSwitch";
+import { LogoMark } from "@/components/Logo";
 
 /**
  * Giriş etməmiş ziyarətçilərin gördüyü ana səhifə. Əsas mətnlər adminin “Sayt” bölməsindən gəlir.
@@ -58,9 +59,7 @@ export default function Landing({ site, data, preview = false }: { site: SiteCon
       <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
           <span className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand">
-              <span className="h-3.5 w-3.5 rounded-full bg-white" />
-            </span>
+            <LogoMark size={36} />
             <span className="text-lg font-bold tracking-tight text-brand">{site.brand}</span>
           </span>
           <nav className="hidden h-full items-stretch lg:flex" aria-label="Bölmələr">

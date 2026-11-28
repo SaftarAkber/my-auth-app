@@ -266,7 +266,7 @@ export const UI: Record<string, [string, string, string?]> = {
   "Dəyiş": ["Изменить", "Change"],
   "Dəyişiklik doğrulama kodu ilə təsdiqlənir.": ["Изменение подтверждается кодом.", "The change is confirmed with a code."],
   "Dəyişiklik “Admin düzəlişi” kimi qeyd olunur": ["Изменение записывается как «Корректировка админа»", "The change is logged as “Admin adjustment”"],
-  "EduFlow müəllimin qruplarını, video dərslərini və testlərini bir yerə yığır. Tələbə müəllimdən coin qazanır və mağazada xərcləyir.": ["EduFlow собирает группы, видеоуроки и тесты учителя в одном месте. Студент получает монеты от учителя и тратит их в магазине.", "EduFlow brings a teacher's groups, video lessons and tests together. Students earn coins from teachers and spend them in the shop."],
+  "Tworing müəllimin qruplarını, video dərslərini və testlərini bir yerə yığır. Tələbə müəllimdən coin qazanır və mağazada xərcləyir.": ["Tworing собирает группы, видеоуроки и тесты учителя в одном месте. Студент получает монеты от учителя и тратит их в магазине.", "Tworing brings a teacher's groups, video lessons and tests together. Students earn coins from teachers and spend them in the shop."],
   "Email formatı yanlışdır": ["Неверный формат email", "Invalid email format"],
   "Email gönderildi": ["Email отправлен", "Email sent", "Email göndərildi"],
   "Email ünvanı": ["Адрес email", "Email address"],

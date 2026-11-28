@@ -11,7 +11,7 @@ import {
 } from "@/components/content";
 import MonthlyTable from "@/components/MonthlyTable";
 import {
-  Avatar, Empty, ErrorBox, Icon, SkeletonList, Tabs, useConfirm, useToast,
+  Avatar, Empty, ErrorBox, Icon, SkeletonList, FolderTabs, useConfirm, useToast,
 } from "@/components/ui";
 import GroupHeader from "@/components/GroupHeader";
 import TopicList from "@/components/topics/TopicList";
@@ -113,7 +113,7 @@ export default function StudentGroupPage() {
         )}
 
         <div className="mt-8">
-          <Tabs
+          <FolderTabs
             value={tab}
             onChange={setTab}
             tabs={[
@@ -125,7 +125,7 @@ export default function StudentGroupPage() {
               { id: "videos", label: "Videolar", count: g.videoPackages.length },
               { id: "members", label: "Üzvlər", count: g.members.length },
             ]}
-          />
+          >
 
           {tab === "feed" &&
             (g.posts.length === 0 ? (
@@ -191,6 +191,7 @@ export default function StudentGroupPage() {
                 ))}
               </div>
             ))}
+          </FolderTabs>
         </div>
       </div>
 

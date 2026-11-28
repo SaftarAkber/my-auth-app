@@ -1,4 +1,4 @@
-/* EduFlow service worker — yalnız telefon bildirişləri üçün (səhifələri keşləmir) */
+/* Tworing service worker — yalnız telefon bildirişləri üçün (səhifələri keşləmir) */
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -8,9 +8,9 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "EduFlow", body: event.data ? event.data.text() : "" };
+    data = { title: "Tworing", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "EduFlow";
+  const title = data.title || "Tworing";
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",

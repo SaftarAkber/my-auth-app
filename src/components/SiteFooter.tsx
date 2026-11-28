@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SiteContent } from "@/lib/siteDefaults";
 import { emailLink, instagramLink, whatsappLink, youtubeLink } from "@/lib/contactLinks";
+import { LogoMark } from "@/components/Logo";
 
 /** Giriş etməmişlər üçün səhifələrin (ana səhifə, haqqımızda, əlaqə) ortaq alt hissəsi. */
 
@@ -71,7 +72,7 @@ export default function SiteFooter({ site, preview = false }: { site: SiteConten
       <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div>
           <FL preview={preview} href="/" className="inline-flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand"><span className="h-3.5 w-3.5 rounded-full bg-white" /></span>
+            <LogoMark size={36} />
             <span className="text-lg font-bold tracking-tight text-brand">{site.brand}</span>
           </FL>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">{site.footer}</p>

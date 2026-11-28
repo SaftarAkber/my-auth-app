@@ -8,6 +8,8 @@ import { api } from "@/lib/api";
 import { cx, timeAgo } from "@/lib/format";
 import { LANGS, useLang, type DictKey } from "@/lib/i18n";
 import { Avatar, FullPageLoader, Icon, type IconName } from "@/components/ui";
+import { BRAND, LogoMark } from "@/components/Logo";
+import { Flag } from "@/components/Flags";
 
 type ShellRole = "STUDENT" | "TEACHER" | "ADMIN" | "ANY";
 
@@ -41,6 +43,7 @@ const NAV: Record<"STUDENT" | "TEACHER" | "ADMIN", NavItem[]> = {
     { href: "/admin/users", key: "users", icon: "users", match: ["/admin/users"] },
     { href: "/admin/content", key: "content", icon: "file", match: ["/admin/content"] },
     { href: "/admin/pins", key: "pins", icon: "pin", match: ["/admin/pins"] },
+    { href: "/admin/carousel", key: "carousel", icon: "image", match: ["/admin/carousel"] },
     { href: "/admin/deleted", key: "deleted", icon: "trash", match: ["/admin/deleted"] },
     { href: "/admin/site", key: "site", icon: "globe", match: ["/admin/site"] },
   ],
@@ -51,10 +54,8 @@ const HOME: Record<User["role"], string> = { STUDENT: "/student", TEACHER: "/tea
 function Logo() {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-brand">
-        <span className="h-3.5 w-3.5 rounded-full bg-white" />
-      </span>
-      <span className="hidden text-lg font-bold tracking-tight text-brand min-[420px]:inline">EduFlow</span>
+      <LogoMark size={36} />
+      <span className="hidden text-lg font-extrabold tracking-tight text-brand min-[420px]:inline lg:hidden xl:inline">{BRAND}</span>
     </span>
   );
 }
@@ -88,7 +89,7 @@ export const HIT_ICON: Record<string, IconName> = { groups: "users", tests: "fil
 function Wing({ side }: { side: "l" | "r" }) {
   return (
     <svg className={cx("search-wing", side === "r" && "-scale-x-100")} viewBox="0 0 64 42" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,0 C32,0 32,42 64,42 L64,0 Z" fill="rgb(var(--surface))" />
+      <path d="M0,0 C32,0 32,42 64,42 L64,0 Z" fill="rgb(var(--surface) / 0.86)" />
       <path d="M0,0.5 C32,0.5 32,41.5 64,41.5" fill="none" stroke="rgb(var(--line))" strokeWidth="1" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -275,32 +276,6 @@ function Search({ t }: { t: (k: DictKey) => string }) {
   );
 }
 
-/* ───── Üst panelin ikon düymələri ───── */
-function IconBtn({
-  icon, label, open, onClick, dot, children, href,
-}: {
-  icon?: IconName;
-  label: string;
-  open?: boolean;
-  onClick?: () => void;
-  dot?: boolean;
-  children?: React.ReactNode;
-  href?: string;
-}) {
-  const inner = (
-    <>
-      {children ?? (icon && <Icon name={icon} size={20} />)}
-      {dot && <span className="nb-dot" />}
-    </>
-  );
-  const cls = cx("ib", open && "open");
-  return href ? (
-    <Link href={href} className={cls} aria-label={label} title={label}>{inner}</Link>
-  ) : (
-    <button type="button" onClick={onClick} className={cls} aria-label={label} title={label} aria-expanded={open}>{inner}</button>
-  );
-}
-
 interface Notice { id: string; text: string; href: string; at: string }
 
 export default function AppShell({ role, children }: { role: ShellRole; children: React.ReactNode }) {
@@ -308,7 +283,7 @@ export default function AppShell({ role, children }: { role: ShellRole; children
   const router = useRouter();
   const pathname = usePathname();
   const { lang, setLang, t } = useLang();
-  const [menu, setMenu] = useState<"lang" | "bell" | "coin" | null>(null);
+  const [menu, setMenu] = useState<"lang" | "profile" | "notes" | null>(null);
   // Bildirimlər: "son baxış" vaxtı brauzerdə saxlanılır; ondan yeni olanlar oxunmamış sayılır
   const [seenTick, setSeenTick] = useState(0);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -379,18 +354,20 @@ export default function AppShell({ role, children }: { role: ShellRole; children
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-50">
-        <div className="topbar"><div className="topbar-in" ref={bar}>
-          <Link href={HOME[user.role]} aria-label="EduFlow" className="mr-3 shrink-0 lg:mr-6">
-            <Logo />
-          </Link>
+        <div className="topbar" ref={bar}><div className="topbar-in">
+          <div className="flex min-w-0 flex-1 basis-0 items-center">
+            <Link href={HOME[user.role]} aria-label="Tworing" className="shrink-0">
+              <Logo />
+            </Link>
+          </div>
 
           {/* Tək sıra menyu: ad həmişə görünür (yalnız geniş ekranda; telefonda alt panel) */}
-          <nav className="hidden h-full items-stretch lg:flex" aria-label="Əsas menyu">
+          <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Əsas menyu">
             {items.map((i) => (
               <Link key={i.href} href={i.href} className="tl" title={t(i.key)} aria-current={isActive(i) ? "page" : undefined}>
                 <Icon name={i.icon} size={19} />
-                {/* Orta enlikdə (1024–1280) yalnız ikon: menyu sığsın */}
-                <span className="max-xl:sr-only">{t(i.key)}</span>
+                {/* Admin menyusu (7 bölmə) orta enlikdə yalnız ikon; tələbə və müəllimdə ad həmişə görünür */}
+                <span className={user.role === "ADMIN" ? "max-xl:sr-only" : undefined}>{t(i.key)}</span>
                 {i.dot === "requests" && pending > 0 && (
                   <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">{pending}</span>
                 )}
@@ -398,22 +375,29 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             ))}
           </nav>
 
-          <div className="flex-1" />
-
-          <div className="flex items-center gap-0.5 min-[360px]:gap-1">
+          {/* Sağda yalnız bayraq (dil) və profil; menyu ortada simmetrik qalsın deyə sol və sağ eyni en */}
+          <div className="flex flex-1 basis-0 items-center justify-end gap-1">
             <div className="relative">
-              <IconBtn icon="globe" label={`${t("language")} · ${lang}`} open={menu === "lang"} onClick={() => setMenu(menu === "lang" ? null : "lang")} />
+              <button
+                type="button"
+                className={cx("ib", menu === "lang" && "open")}
+                aria-label={`${t("language")}: ${LANGS.find((l) => l.code === lang)?.label}`}
+                title={t("language")}
+                aria-expanded={menu === "lang"}
+                onClick={() => setMenu(menu === "lang" ? null : "lang")}
+              >
+                <Flag code={lang} />
+              </button>
               {menu === "lang" && (
                 <div className="pop-menu right-0 w-52 p-1.5" role="menu">
-                  {LANGS.map((l) => (
+                  {LANGS.filter((l) => l.code !== lang).map((l) => (
                     <button
                       key={l.code}
-                      role="menuitemradio"
-                      aria-checked={lang === l.code}
+                      role="menuitem"
                       onClick={() => { setLang(l.code); setMenu(null); }}
-                      className={cx("flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-semibold transition", lang === l.code ? "bg-tint text-brand" : "hover:bg-tint/60")}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition hover:bg-surface-2"
                     >
-                      {l.label}<span className="text-muted">{l.code}</span>
+                      <Flag code={l.code} /> {l.label}
                     </button>
                   ))}
                 </div>
@@ -421,21 +405,66 @@ export default function AppShell({ role, children }: { role: ShellRole; children
             </div>
 
             <div className="relative">
-              <IconBtn icon="bell" label={t("notifications")} open={menu === "bell"} dot={unread.length > 0} onClick={() => {
-                if (menu === "bell") { setMenu(null); return; }
-                setFresh(new Set(unread.map((n) => n.id)));
-                setMenu("bell");
-                loadNotes();
-                markSeen();
-              }} />
-              {menu === "bell" && (
-                <div className="pop-menu -right-16 w-[min(22rem,calc(100vw-1.5rem))] sm:right-0">
-                  <p className="border-b border-line px-4 py-3 text-sm font-bold">{t("notifications")}</p>
+              <button
+                type="button"
+                aria-label={t("profile")}
+                aria-expanded={menu === "profile" || menu === "notes"}
+                onClick={() => setMenu(menu === "profile" || menu === "notes" ? null : "profile")}
+                className={cx(
+                  "flex items-center gap-2 rounded-full border p-0.5 text-sm font-bold transition-colors xl:pr-2.5",
+                  onProfile || menu === "profile" || menu === "notes" ? "border-brand/40 bg-tint text-brand" : "border-line bg-surface/70 text-ink hover:bg-surface",
+                )}
+              >
+                <span className="relative">
+                  <Avatar src={user.photo} name={user.name} size={30} className="border border-line" />
+                  {unread.length > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-bad" />}
+                </span>
+                <span className="hidden max-w-[130px] truncate xl:inline">{user.name}</span>
+                <Icon name="down" size={14} className="hidden text-muted xl:block" />
+              </button>
+
+              {menu === "profile" && (
+                <div className="pop-menu right-0 w-64 p-1.5" role="menu">
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <Avatar src={user.photo} name={user.name} size={38} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-extrabold">{user.name}</span>
+                      <span className="block text-xs text-muted">{user.role === "TEACHER" ? "Müəllim" : user.role === "ADMIN" ? "Admin" : "Tələbə"}</span>
+                    </span>
+                  </div>
+                  <div className="mx-2 my-1 h-px bg-line" />
+                  <Link href={`/u/${user.id}`} role="menuitem" className="pm-item"><Icon name="user" size={17} /> Profilə bax</Link>
+                  {showCoin && (
+                    <Link href={`/u/${user.id}?tab=coins`} role="menuitem" className="pm-item">
+                      <Icon name="coin" size={17} /> Balansım
+                      <span className="ml-auto flex items-center gap-1.5 tabular-nums text-muted"><span className="coin-ic !h-3.5 !w-3.5" />{user.coinBalance.toLocaleString("az-AZ")}</span>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="pm-item"
+                    onClick={() => { setFresh(new Set(unread.map((n) => n.id))); setMenu("notes"); loadNotes(); markSeen(); }}
+                  >
+                    <Icon name="bell" size={17} /> {t("notifications")}
+                    {unread.length > 0 && <span className="ml-auto rounded-full bg-bad px-2 text-xs font-bold text-white">{unread.length}</span>}
+                  </button>
+                  <div className="mx-2 my-1 h-px bg-line" />
+                  <button type="button" role="menuitem" className="pm-item text-bad" onClick={logout}><Icon name="logout" size={17} /> {t("logout")}</button>
+                </div>
+              )}
+
+              {menu === "notes" && (
+                <div className="pop-menu right-0 w-[min(22rem,calc(100vw-1.5rem))]">
+                  <div className="flex items-center gap-2 border-b border-line px-2 py-2">
+                    <button type="button" className="btn-icon" aria-label="Geri" onClick={() => setMenu("profile")}><Icon name="left" size={17} /></button>
+                    <p className="text-sm font-extrabold">{t("notifications")}</p>
+                  </div>
                   <div className="max-h-96 overflow-y-auto">
                     {notes.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted">{t("noNotifications")}</p>}
                     {notes.map((n) => (
-                      <Link key={n.id} href={n.href} onClick={() => setMenu(null)} className={cx("block border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-tint/60", fresh.has(n.id) && "bg-tint")}>
-                        <p className="text-sm font-medium">{n.text}</p>
+                      <Link key={n.id} href={n.href} onClick={() => setMenu(null)} className={cx("block border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-surface-2", fresh.has(n.id) && "bg-tint")}>
+                        <p className="text-sm font-semibold">{n.text}</p>
                         <p className="mt-0.5 text-xs text-muted">{timeAgo(n.at)}</p>
                       </Link>
                     ))}
@@ -443,48 +472,6 @@ export default function AppShell({ role, children }: { role: ShellRole; children
                 </div>
               )}
             </div>
-
-            {showCoin && (
-              <Link
-                href={`/u/${user.id}?tab=coins`}
-                aria-label={`${t("coin")}: ${user.coinBalance}`}
-                title={t("coin")}
-                className="mx-1 hidden h-10 items-center gap-2 rounded border border-line bg-white px-3 text-sm font-bold tabular-nums transition-colors hover:bg-tint sm:flex"
-              >
-                <span className="coin-ic !h-4 !w-4" /> {user.coinBalance.toLocaleString("az-AZ")}
-              </Link>
-            )}
-            {showCoin && (
-              <div className="relative sm:hidden">
-                <IconBtn label={`${t("coin")}: ${user.coinBalance}`} open={menu === "coin"} onClick={() => setMenu(menu === "coin" ? null : "coin")}>
-                  <span className="coin-ic" />
-                </IconBtn>
-                {menu === "coin" && (
-                  <div className="pop-menu p-4" role="status">
-                    <p className="text-xs font-bold text-muted">{t("coin")}</p>
-                    <p className="mt-1 flex items-center gap-2 text-2xl font-extrabold tabular-nums">
-                      <span className="coin-ic" /> {user.coinBalance.toLocaleString("az-AZ")} coin
-                    </p>
-                    <Link href={`/u/${user.id}?tab=coins`} className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Tarixçə →</Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Link
-              href={`/u/${user.id}`}
-              aria-label={t("profile")}
-              aria-current={onProfile ? "page" : undefined}
-              className={cx(
-                "flex items-center gap-2 rounded-full border p-0.5 text-sm font-semibold transition-colors xl:pr-3",
-                onProfile ? "border-brand bg-tint text-brand" : "border-line bg-white text-ink hover:bg-tint hover:text-brand",
-              )}
-            >
-              <Avatar src={user.photo} name={user.name} size={30} className="border border-line" />
-              <span className="hidden max-w-[130px] truncate xl:inline">{user.name}</span>
-            </Link>
-
-            <IconBtn icon="logout" label={t("logout")} onClick={logout} />
           </div>
 
         </div></div>

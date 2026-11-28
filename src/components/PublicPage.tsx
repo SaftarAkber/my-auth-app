@@ -3,6 +3,7 @@ import type { SiteContent } from "@/lib/siteDefaults";
 import SiteFooter from "@/components/SiteFooter";
 import AuthMenu from "@/components/AuthMenu";
 import LangSwitch from "@/components/LangSwitch";
+import { LogoMark } from "@/components/Logo";
 
 /** Haqqımızda / Əlaqə kimi açıq səhifələrin çərçivəsi: yuxarı panel + məzmun + ortaq footer. */
 export default function PublicPage({ site, title, lead, children }: { site: SiteContent; title: string; lead?: string; children: React.ReactNode }) {
@@ -11,7 +12,7 @@ export default function PublicPage({ site, title, lead, children }: { site: Site
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand"><span className="h-3.5 w-3.5 rounded-full bg-white" /></span>
+            <LogoMark size={36} />
             <span className="text-lg font-bold tracking-tight text-brand">{site.brand}</span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">

@@ -10,6 +10,7 @@ import { PushPrompt } from "@/components/PushNotifications";
 import StudentAssignments from "@/components/StudentAssignments";
 import { CardSkeleton, TeacherCard, type TeacherCardData } from "@/components/ProfileCards";
 import StudentFeed from "@/components/StudentFeed";
+import HeroCarousel, { type HeroSlideData } from "@/components/HeroCarousel";
 
 interface Enrollment {
   id: string;
@@ -29,6 +30,7 @@ export default function StudentHome() {
   const enrollments = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<Attempt[]>("/api/attempts");
   const teachers = useFetch<{ teachers: TeacherCardData[] }>("/api/teacher/public?mine=1");
+  const hero = useFetch<{ slides: HeroSlideData[] }>("/api/hero");
 
   const { start, starting } = useStartTest();
   const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
@@ -49,6 +51,8 @@ export default function StudentHome() {
 
   return (
     <div className="page space-y-8">
+      {/* Elanlar karuseli: səhifənin ən yuxarısı, tam en */}
+      {(hero.data?.slides.length ?? 0) > 0 && <div className="-mx-4 sm:-mx-6 lg:-mx-8"><HeroCarousel slides={hero.data!.slides} /></div>}
       <PushPrompt />
       <StudentAssignments compact />
       <StatStrip
