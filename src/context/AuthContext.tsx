@@ -12,6 +12,9 @@ export interface User {
   photo: string | null;
   coverPhoto?: string | null;
   subjects?: string[];
+  experienceYears?: number | null;
+  liveOnline?: boolean;
+  showStudentCount?: boolean;
   coinBalance: number;
   createdAt?: string;
 }

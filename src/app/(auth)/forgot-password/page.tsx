@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, errMsg } from "@/lib/api";
 import { cx } from "@/lib/format";
-import { Field, Icon, PasswordInput, PhoneInput, Spinner, fullPhone } from "@/components/ui";
+import { Field, FloatInput, FloatPassword, FloatPhone, Icon, Spinner, fullPhone } from "@/components/ui";
 
 type Method = "whatsapp" | "email";
 
@@ -107,21 +107,11 @@ export default function ForgotPasswordPage() {
             ))}
           </div>
 
-          <Field label={method === "whatsapp" ? "Telefon nömrəsi" : "Email ünvanı"}>
-            {method === "whatsapp" ? (
-              <PhoneInput value={value} onChange={setValue} autoComplete="tel-national" required autoFocus />
-            ) : (
-            <input
-              className="input"
-              type="email"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="ad@mail.com"
-              required
-              autoFocus
-            />
-            )}
-          </Field>
+          {method === "whatsapp" ? (
+            <FloatPhone label="Telefon nömrəsi" value={value} onChange={setValue} autoComplete="tel-national" required autoFocus />
+          ) : (
+            <FloatInput label="Email ünvanı" type="email" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="email" required autoFocus />
+          )}
 
           <button className="btn-primary w-full py-3" disabled={busy}>
             {busy ? <Spinner /> : "Kodu göndər"}
@@ -145,9 +135,7 @@ export default function ForgotPasswordPage() {
             />
           </Field>
 
-          <Field label="Yeni şifrə">
-            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Ən azı 6 simvol" autoComplete="new-password" required />
-          </Field>
+          <FloatPassword label="Yeni şifrə (ən azı 6 simvol)" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
 
           <button className="btn-primary w-full py-3" disabled={busy || code.length !== 6}>
             {busy ? <Spinner /> : "Şifrəni dəyiş"}

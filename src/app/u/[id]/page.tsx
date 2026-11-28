@@ -42,9 +42,9 @@ interface TestCard {
   member: boolean;
 }
 interface Profile {
-  user: { id: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; bio: string | null; photo: string | null; coverPhoto: string | null; subjects?: string[]; createdAt: string };
+  user: { id: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; bio: string | null; photo: string | null; coverPhoto: string | null; subjects?: string[]; createdAt: string; experienceYears?: number | null; liveOnline?: boolean };
   isOwn: boolean;
-  stats: { students?: number; groups?: number; posts?: number; attempts?: number };
+  stats: { students?: string | null; groups?: number; posts?: number; attempts?: number };
   groups: GroupCard[];
   posts: (PostLite & { group: { id: string; name: string } })[];
   hiddenPosts: number;
@@ -144,6 +144,8 @@ function ProfileInner() {
               {user.role === "TEACHER" ? "Müəllim" : user.role === "ADMIN" ? "Admin" : "Tələbə"}
             </span>
             {isTeacher && <SubjectBadges subjects={user.subjects} />}
+            {isTeacher && user.experienceYears != null && user.experienceYears > 0 && <span className="badge-muted"><Icon name="briefcase" size={12} /> {user.experienceYears} il təcrübə</span>}
+            {isTeacher && user.liveOnline && <span className="badge-info"><Icon name="live" size={12} /> Canlı onlayn dərs</span>}
           </div>
           {user.bio ? (
             <p className="mt-2 line-clamp-4 max-w-3xl whitespace-pre-wrap">{user.bio}</p>
@@ -154,7 +156,7 @@ function ProfileInner() {
         <div className="flex divide-x divide-line overflow-x-auto border-t border-line">
           {isTeacher && (
             <>
-              <Stat n={data.stats.students ?? 0} l="tələbə" />
+              {data.stats.students != null && <Stat n={data.stats.students} l="tələbə" />}
               <Stat n={data.stats.groups ?? 0} l="qrup" />
               <Stat n={data.tests.length} l="açıq test" />
               <Stat n={data.videos.length} l="video" />
@@ -273,10 +275,10 @@ function ProfileInner() {
   );
 }
 
-function Stat({ n, l }: { n: number; l: string }) {
+function Stat({ n, l }: { n: number | string; l: string }) {
   return (
     <span className="min-w-[110px] flex-1 px-4 py-3 sm:px-6">
-      <b className="block text-xl font-extrabold tabular-nums tracking-tight">{n.toLocaleString("az-AZ")}</b>
+      <b className="block text-xl font-extrabold tabular-nums tracking-tight">{typeof n === "number" ? n.toLocaleString("az-AZ") : n}</b>
       <span className="text-xs font-semibold text-muted">{l}</span>
     </span>
   );

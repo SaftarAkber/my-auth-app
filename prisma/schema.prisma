@@ -44,6 +44,10 @@ model User {
   pushSubscriptions PushSubscription[]
   coinBalance Int    @default(0) 
   subjects   String[] @default([])   // müəllimin fənləri (ən çoxu 2)
+  // Müəllim profili: təcrübə ili, canlı onlayn dərs, tələbə sayını tələbələrə göstərmək
+  experienceYears  Int?
+  liveOnline       Boolean  @default(false)
+  showStudentCount Boolean  @default(true)
   coinTransactions CoinTransaction[]       // ⬅️ YENİ
   orders           Order[] 
   topics           Topic[]

@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
     const me = await getCurrentUser();
     if (!me) return unauthorized();
 
-    const q = (new URL(req.url).searchParams.get("q") ?? "").trim().slice(0, 60);
+    const sp = new URL(req.url).searchParams;
+    const q = (sp.get("q") ?? "").trim().slice(0, 60);
+    // all=1: "Bütün nəticələr" səhifəsi üçün hər bölmədən daha çox nəticə
+    const many = sp.get("all") === "1";
+    const n = (k: number) => (many ? 30 : k);
     if (q.length < 2) return NextResponse.json({ results: [] });
 
     const admin = me.role === "ADMIN";
@@ -20,12 +24,12 @@ export async function GET(req: NextRequest) {
       prisma.user.findMany({
         where: { name: contains, deletedAt: null, ...(admin ? {} : { role: { in: ["TEACHER", "STUDENT"] } }) },
         select: { id: true, name: true, role: true, photo: true, subjects: true },
-        take: 6,
+        take: n(6),
       }),
       prisma.group.findMany({
         where: { name: contains, ...(admin ? {} : { isActive: true }) },
         select: { id: true, name: true, teacherId: true, teacher: { select: { name: true } } },
-        take: 5,
+        take: n(5),
       }),
       prisma.testPackage.findMany({
         where: {
@@ -38,7 +42,7 @@ export async function GET(req: NextRequest) {
           group: { select: { teacherId: true, teacher: { select: { name: true } } } },
           testPackageGroups: { select: { group: { select: { teacherId: true, teacher: { select: { name: true } } } } }, take: 1 },
         },
-        take: 5,
+        take: n(5),
       }),
       prisma.video.findMany({
         where: {
@@ -46,7 +50,7 @@ export async function GET(req: NextRequest) {
           ...(admin ? {} : { isActive: true, isPublished: true, OR: [{ visibility: "PUBLIC" }, { pinOrder: { not: null } }] }),
         },
         select: { id: true, title: true, teacherId: true, teacher: { select: { name: true } } },
-        take: 5,
+        take: n(5),
       }),
       prisma.groupPost.findMany({
         where: { content: contains, ...(admin ? {} : { visibility: "PUBLIC" }) },
@@ -54,7 +58,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         // Bir neçə qrupa göndərilmiş paylaşımın nüsxələri bir dəfə göstərilir
         distinct: ["teacherId", "content"],
-        take: 5,
+        take: n(5),
       }),
     ]);
 

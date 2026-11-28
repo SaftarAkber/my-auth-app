@@ -15,7 +15,7 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     const { id } = await params;
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, role: true, bio: true, photo: true, coverPhoto: true, subjects: true, createdAt: true, deletedAt: true },
+      select: { id: true, name: true, role: true, bio: true, photo: true, coverPhoto: true, subjects: true, createdAt: true, deletedAt: true, experienceYears: true, liveOnline: true, showStudentCount: true },
     });
     if (!target) return notFound("Profil tapılmadı");
     // Silinmiş hesab tələbələrə görünmür (müəllim və admin baxa bilər)
@@ -134,12 +134,19 @@ export async function GET(_: NextRequest, { params }: Ctx) {
     }
     const packs = [...byPkg.values()];
 
-    const studentCount = await prisma.groupMember.count({ where: { group: { teacherId: target.id } } });
+    // Fərqli tələbələr (silinmiş hesablar sayılmır); müəllim gizlədibsə başqalarına göndərilmir
+    const studentCount = (await prisma.groupMember.findMany({
+      where: { group: { teacherId: target.id }, student: { deletedAt: null } },
+      select: { studentId: true },
+      distinct: ["studentId"],
+    })).length;
+    const countVisible = isOwn || isAdmin || target.showStudentCount;
+    const studentLabel = studentCount < 10 ? String(studentCount) : `${Math.floor(studentCount / 10) * 10}+`;
 
     return NextResponse.json({
       user: target,
       isOwn,
-      stats: { students: studentCount, groups: groups.length, posts: visible.length },
+      stats: { students: countVisible ? (isOwn || isAdmin ? String(studentCount) : studentLabel) : null, groups: groups.length, posts: visible.length },
       groups,
       posts: visible,
       hiddenPosts: collapsePosts(allPosts).length - visible.length,

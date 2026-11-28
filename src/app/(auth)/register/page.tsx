@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { cx } from "@/lib/format";
-import { Field, fullPhone, Icon, PasswordInput, PhoneInput, Spinner } from "@/components/ui";
+import { FloatInput, FloatPassword, FloatPhone, fullPhone, Icon, Spinner } from "@/components/ui";
 import { SubjectPicker } from "@/components/Subjects";
 
 export default function RegisterPage() {
@@ -97,27 +97,17 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <Field label="Ad və soyad">
-          <input className="input" value={form.name} onChange={set("name")} autoComplete="name" required placeholder="Ad Soyad" />
-        </Field>
+        <FloatInput label="Ad və soyad" value={form.name} onChange={set("name")} autoComplete="name" required />
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Telefon (WhatsApp)">
-            <PhoneInput value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} autoComplete="tel-national" />
-          </Field>
-          <Field label="Email">
-            <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="ad@mail.com" autoComplete="email" />
-          </Field>
+          <FloatPhone label="Telefon (WhatsApp)" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} autoComplete="tel-national" />
+          <FloatInput label="Email" type="email" value={form.email} onChange={set("email")} autoComplete="email" />
         </div>
         <p className="-mt-3 text-xs text-muted">Ən azı biri məcburidir. Şifrəni bərpa etmək üçün lazım olacaq.</p>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Şifrə">
-            <PasswordInput value={form.password} onChange={set("password")} placeholder="Ən azı 6 simvol" autoComplete="new-password" required />
-          </Field>
-          <Field label="Şifrə təkrarı">
-            <PasswordInput value={form.confirm} onChange={set("confirm")} placeholder="Təkrar daxil edin" autoComplete="new-password" required />
-          </Field>
+          <FloatPassword label="Şifrə (ən azı 6 simvol)" value={form.password} onChange={set("password")} autoComplete="new-password" required />
+          <FloatPassword label="Şifrə təkrarı" value={form.confirm} onChange={set("confirm")} autoComplete="new-password" required />
         </div>
 
         <button type="submit" className="btn-primary w-full py-3" disabled={busy}>

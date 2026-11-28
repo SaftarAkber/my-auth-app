@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cx } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
-import { Field, Icon, PasswordInput, PhoneInput, Spinner, fullPhone } from "@/components/ui";
+import { FloatInput, FloatPassword, FloatPhone, Icon, Spinner, fullPhone } from "@/components/ui";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -72,38 +72,18 @@ export default function LoginPage() {
         </div>
 
         {method === "phone" ? (
-          <Field label="Telefon nömrəsi">
-            <PhoneInput value={phone} onChange={setPhone} autoComplete="tel-national" required autoFocus />
-          </Field>
+          <FloatPhone label="Telefon nömrəsi" value={phone} onChange={setPhone} autoComplete="tel-national" required autoFocus />
         ) : (
-          <Field label="Email ünvanı">
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ad@mail.com"
-              autoComplete="email"
-              required
-              autoFocus
-            />
-          </Field>
+          <FloatInput label="Email ünvanı" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required autoFocus />
         )}
 
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="label !mb-0">Şifrə</span>
-            <Link href="/forgot-password" className="text-xs font-semibold text-brand hover:underline">
+          <FloatPassword label="Şifrə" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <div className="mt-2 text-right">
+            <Link href="/forgot-password" className="text-xs font-bold text-brand-hover hover:underline">
               Şifrəni unutmusunuz?
             </Link>
           </div>
-          <PasswordInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            autoComplete="current-password"
-            required
-          />
         </div>
 
         <button type="submit" className="btn-primary w-full py-3" disabled={busy}>

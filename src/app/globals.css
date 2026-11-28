@@ -11,25 +11,25 @@
 
 /* ───────────── Dizayn tokenləri (RGB kanalları, Tailwind alpha dəstəyi üçün) ───────────── */
 :root {
-  /* Qrafit + kəhrəba: qrafit əsas rəng, kəhrəba yalnız aktiv göstərici və kiçik vurğu üçün */
-  --bg: 246 246 243;
+  /* Parlaq yaşıl (Nunito ilə): yaşıl əsas rəng, status rəngləri dolu */
+  --bg: 247 249 245;
   --surface: 255 255 255;
-  --surface-2: 239 239 235;
-  --tint: 232 232 227;
-  --line: 224 224 218;
-  --line-strong: 198 198 190;
-  --ink: 20 22 27;
-  --muted: 90 94 105;
-  --brand: 39 43 54;
-  --brand-hover: 61 67 82;
-  --accent: 194 87 12;
-  --ok: 31 107 58;
-  --bad: 180 35 24;
-  --warn: 122 90 0;
-  --info: 61 67 82;
+  --surface-2: 240 244 239;
+  --tint: 220 252 231;
+  --line: 225 231 223;
+  --line-strong: 199 207 197;
+  --ink: 22 30 25;
+  --muted: 92 103 96;
+  --brand: 22 163 74;
+  --brand-hover: 21 128 61;
+  --accent: 22 163 74;
+  --ok: 22 163 74;
+  --bad: 220 38 38;
+  --warn: 217 119 6;
+  --info: 37 99 235;
   /* marka paleti */
   --sun: 247 184 1;
-  --iris: 112 118 132;
+  --iris: 22 163 74;
   --tiger: 241 135 1;
   --flame: 243 91 4;
   --shadow: 0 1px 2px rgb(20 22 27 / 0.06), 0 2px 8px rgb(20 22 27 / 0.05);
@@ -48,7 +48,6 @@ html.i18n-pending body {
 
 body {
   @apply bg-bg text-ink antialiased;
-  font-feature-settings: "cv11", "ss01";
   overflow-x: hidden;
 }
 
@@ -60,70 +59,94 @@ body {
 /* ───────────── Komponent sinifləri ───────────── */
 @layer components {
   .card {
-    @apply rounded-xl border border-line bg-surface;
+    @apply rounded-2xl border border-line bg-surface;
     box-shadow: var(--shadow);
   }
   .card-flat {
-    @apply rounded-xl border border-line bg-surface;
+    @apply rounded-2xl border border-line bg-surface;
   }
 
-  /* Düymələr: korporativ (az yumrulanmış, kölgəsiz); üzərinə gələndə fon və yazı rəngi dəyişir */
+  /* Düymələr: yumru hap; əsas yaşıl, ikinci dərəcəli çərçivəli; basanda bir az kiçilir */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded border border-transparent px-5 py-2.5 text-sm font-semibold
-      transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-transparent px-5 py-2.5 text-sm font-bold
+      transition-[background-color,color,border-color,transform] duration-150 active:scale-[.96] disabled:pointer-events-none disabled:opacity-50
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2;
   }
   .btn-primary {
     @apply btn bg-brand text-white hover:bg-brand-hover;
   }
   .btn-secondary {
-    @apply btn bg-surface-2 text-brand hover:bg-brand hover:text-white;
+    @apply btn border-line-strong bg-surface text-ink hover:border-ink/30 hover:bg-surface-2;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-brand hover:bg-tint;
+    @apply btn bg-transparent text-ink hover:bg-surface-2;
   }
   .btn-danger {
-    @apply btn bg-bad/10 text-bad hover:bg-bad hover:text-white;
+    @apply btn border-bad/40 bg-surface text-bad hover:bg-bad/10;
   }
   .btn-soft {
-    @apply btn border-line-strong bg-surface text-brand hover:bg-tint;
+    @apply btn border-line-strong bg-surface text-ink hover:bg-surface-2;
   }
   .btn-sm {
     @apply px-3.5 py-1.5 text-xs;
   }
   .btn-icon {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded text-muted transition-colors hover:bg-tint hover:text-brand;
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-[background-color,color,transform] hover:bg-surface-2 hover:text-ink active:scale-[.92];
   }
 
   .input {
-    @apply w-full rounded-md border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink
+    @apply w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink
       placeholder:text-muted/70 transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
   }
   .input:focus {
     border-color: rgb(var(--brand));
-    box-shadow: 0 0 0 3px rgb(var(--iris) / 0.25);
+    box-shadow: 0 0 0 3px rgb(var(--brand) / 0.22);
   }
   .label {
-    @apply mb-1.5 block text-sm font-semibold text-ink;
+    @apply mb-1.5 block text-sm font-bold text-ink;
   }
 
+  /* Üzən etiket (şəxsi məlumat formaları): ad sahənin içində, fokusda/doluyken yuxarı sürüşür */
+  .ff {
+    @apply relative block;
+  }
+  .ff > input,
+  .ff > .ff-box {
+    @apply w-full rounded-xl border border-line-strong bg-surface px-3.5 pb-2 pt-6 text-sm text-ink transition focus:outline-none;
+  }
+  .ff > input:focus,
+  .ff > .ff-box:focus-within {
+    border-color: rgb(var(--brand));
+    box-shadow: 0 0 0 3px rgb(var(--brand) / 0.22);
+  }
+  .ff > .ff-l {
+    @apply pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted transition-all duration-150;
+  }
+  .ff > input:focus ~ .ff-l,
+  .ff > input:not(:placeholder-shown) ~ .ff-l,
+  .ff.ff-up > .ff-l,
+  .ff > .ff-box:focus-within ~ .ff-l {
+    @apply top-2.5 translate-y-0 text-[11px] font-bold text-brand;
+  }
+
+  /* Nişanlar: məlumat çipləri boz, status nişanları dolu rəngli (ağ yazı) */
   .badge {
-    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold;
   }
   .badge-brand {
-    @apply badge bg-tint text-brand;
+    @apply badge bg-surface-2 text-muted;
   }
   .badge-ok {
-    @apply badge bg-ok/10 text-ok;
+    @apply badge bg-ok text-white;
   }
   .badge-bad {
-    @apply badge bg-bad/10 text-bad;
+    @apply badge bg-bad text-white;
   }
   .badge-warn {
-    @apply badge bg-sun/25 text-warn;
+    @apply badge bg-warn text-white;
   }
   .badge-info {
-    @apply badge bg-iris/15 text-brand;
+    @apply badge bg-info text-white;
   }
   .badge-muted {
     @apply badge bg-surface-2 text-muted;
@@ -144,7 +167,7 @@ body {
 
 /* ───────────── Navbar ───────────── */
 .topbar {
-  @apply sticky top-0 z-50 border-b border-line bg-white;
+  @apply relative border-b border-line bg-white;
 }
 .topbar-in {
   @apply flex h-16 w-full items-center gap-2 px-4 lg:px-8;
@@ -164,21 +187,10 @@ body {
   transition: color 0.15s, background-color 0.15s;
 }
 .tl:hover {
-  color: rgb(var(--brand));
-  background: rgb(var(--tint) / 0.5);
+  color: rgb(var(--ink));
 }
 .tl[aria-current="page"] {
   color: rgb(var(--brand));
-}
-.tl[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  left: 0.55rem;
-  right: 0.55rem;
-  bottom: -1px;
-  height: 3px;
-  border-radius: 3px 3px 0 0;
-  background: rgb(var(--accent));
 }
 .ib {
   position: relative;
@@ -187,7 +199,7 @@ body {
   height: 40px;
   flex: none;
   place-items: center;
-  border-radius: 4px;
+  border-radius: 9999px;
   color: rgb(var(--muted));
   transition: color 0.15s, background-color 0.15s;
 }
@@ -200,8 +212,8 @@ body {
 }
 .ib:hover,
 .ib.open {
-  color: rgb(var(--brand));
-  background: rgb(var(--tint));
+  color: rgb(var(--ink));
+  background: rgb(var(--surface-2));
 }
 .nb-dot {
   @apply absolute right-[9px] top-[8px] h-[10px] w-[10px] rounded-full border-2 border-white bg-bad;
@@ -240,18 +252,10 @@ body {
 
 /* 2) Yeni səhifə açılanda brauzer onu ekranın yuxarısına çəkir; sabit panelin altında qalmasın */
 html {
-  scroll-padding-top: 4.5rem;
+  scroll-padding-top: 7rem;
 }
 main > * {
-  scroll-margin-top: 4.5rem;
-}
-@media (max-width: 767px) {
-  html {
-    scroll-padding-top: 8.5rem;
-  }
-  main > * {
-    scroll-margin-top: 8.5rem;
-  }
+  scroll-margin-top: 7rem;
 }
 
 /* 3) iPhone 16px-dən kiçik şriftli xanaya toxunanda səhifəni yaxınlaşdırır */
@@ -434,3 +438,81 @@ main > * {
 .range-thumb::-moz-range-thumb { pointer-events: auto; width: 16px; height: 16px; border-radius: 9999px; background: rgb(var(--surface)); border: 2px solid rgb(var(--brand)); cursor: pointer; }
 .range-thumb::-webkit-slider-runnable-track { background: transparent; }
 .range-thumb::-moz-range-track { background: transparent; }
+
+/* ───────────── Yeni dizayn (2026-11): pəncərə, bildiriş, tablar ───────────── */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+.animate-sheet { animation: sheet-up .26s cubic-bezier(.22, .8, .24, 1) both; }
+.animate-toast { animation: toast-in .22s cubic-bezier(.22, .8, .24, 1) both; }
+@media (min-width: 640px) {
+  .sm\:animate-pop { animation: pop .18s ease both; }
+}
+/* Telefonda pəncərə düymələri tam en */
+@media (max-width: 639px) {
+  .modal-foot > * { flex: 1 1 0; }
+}
+
+/* İkonlu tablar */
+.tabs-ic {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid rgb(var(--line));
+  border-radius: 16px;
+  background: rgb(var(--surface));
+  padding: 4px;
+}
+.tabs-ic::-webkit-scrollbar { display: none; }
+.tab-ic {
+  display: flex;
+  min-width: 68px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+  border-radius: 12px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgb(var(--muted));
+  transition: background-color .15s, color .15s;
+}
+.tab-ic:hover { color: rgb(var(--ink)); background: rgb(var(--surface-2)); }
+.tab-ic.on { background: rgb(var(--tint)); color: rgb(var(--brand-hover)); }
+
+/* Bitişik axtarış bloku (panelin ortasından aşağı asılır) */
+.search-tab { pointer-events: auto; position: relative; display: flex; height: 42px; width: min(440px, calc(100% - 12px)); }
+.search-wing { height: 42px; width: 64px; flex: none; display: block; }
+.search-body { flex: 1; min-width: 0; margin: 0 -1px; height: 42px; background: rgb(var(--surface)); border-bottom: 1px solid rgb(var(--line)); padding: 0 2px; display: flex; align-items: flex-start; padding-top: 5px; }
+.search-pill { display: flex; width: 100%; height: 30px; align-items: center; gap: 7px; border-radius: 9999px; background: rgb(var(--surface-2)); padding: 0 6px 0 11px; transition: box-shadow .15s, background-color .15s; }
+.search-pill:focus-within { background: rgb(var(--surface)); box-shadow: 0 0 0 1.5px rgb(var(--brand)), 0 0 0 4px rgb(var(--brand) / .15); }
+@media (max-width: 639px) {
+  .search-wing { width: 38px; }
+  .search-tab { width: calc(100% - 8px); }
+}
+.search-pop { position: absolute; left: 50%; top: calc(100% + 8px); translate: -50% 0; width: min(380px, calc(100vw - 16px)); border: 1px solid rgb(var(--line)); border-radius: 16px; background: rgb(var(--surface)); padding: 4px; box-shadow: var(--hard-lg); z-index: 60; }
+.search-scroll { max-height: 236px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.search-scroll::-webkit-scrollbar { display: none; }
+.search-gh { position: sticky; top: 0; z-index: 1; background: rgb(var(--surface)); padding: 6px 10px 2px; font-size: 11px; font-weight: 800; color: rgb(var(--muted)); }
+.search-item { display: flex; width: 100%; align-items: center; gap: 9px; border-radius: 10px; padding: 5px 8px; line-height: 1.3; transition: background-color .12s; }
+.search-item:hover { background: rgb(var(--surface-2)); }
+.search-ic { display: grid; width: 26px; height: 26px; flex: none; place-items: center; border-radius: 8px; background: rgb(var(--surface-2)); color: rgb(var(--muted)); }
+
+/* Telefonda alt menyu: üzən hap */
+.bottom-pill { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 50; margin: 0 auto; display: flex; max-width: 28rem; justify-content: space-around; align-items: center; border: 1px solid rgb(var(--line)); border-radius: 9999px; background: rgb(var(--surface)); padding: 5px; box-shadow: 0 8px 24px rgb(20 30 25 / .12); }
+.bp-item { position: relative; display: grid; width: 44px; height: 44px; place-items: center; border-radius: 9999px; color: rgb(var(--muted)); transition: background-color .15s, color .15s, transform .15s; }
+.bp-item:active { transform: scale(.92); }
+.bp-item.on { background: rgb(var(--brand)); color: #fff; }
+
+/* Filtr hap düymələri (Müəllimlər səhifəsi) */
+.fpill { display: inline-flex; align-items: center; gap: 6px; height: 36px; border: 1px solid rgb(var(--line-strong)); border-radius: 9999px; background: rgb(var(--surface)); padding: 0 14px; font-size: 13px; font-weight: 700; color: rgb(var(--ink)); transition: background-color .15s, border-color .15s, transform .15s; }
+.fpill:hover { background: rgb(var(--surface-2)); }
+.fpill:active { transform: scale(.96); }
+.fpill.on { border-color: rgb(var(--brand)); background: rgb(var(--tint)); color: rgb(var(--brand-hover)); }
+.fpop { position: absolute; left: 0; top: calc(100% + 6px); z-index: 40; width: 230px; border: 1px solid rgb(var(--line)); border-radius: 14px; background: rgb(var(--surface)); padding: 6px; box-shadow: var(--hard-lg); }
+.fopt { display: flex; width: 100%; align-items: center; gap: 9px; border-radius: 8px; padding: 7px 9px; font-size: 13px; font-weight: 600; text-align: left; }
+.fopt:hover:not(:disabled) { background: rgb(var(--surface-2)); }

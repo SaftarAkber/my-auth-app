@@ -8,7 +8,7 @@ import TestTaker, { useStartTest, type AttemptStart } from "@/components/TestTak
 import { Avatar, Empty, Icon, SkeletonList, StatStrip } from "@/components/ui";
 import { PushPrompt } from "@/components/PushNotifications";
 import StudentAssignments from "@/components/StudentAssignments";
-import { SubjectBadges } from "@/components/Subjects";
+import { CardSkeleton, TeacherCard, type TeacherCardData } from "@/components/ProfileCards";
 import StudentFeed from "@/components/StudentFeed";
 
 interface Enrollment {
@@ -25,19 +25,10 @@ interface Attempt {
   finishedAt: string | null;
   package: { id: string; name: string };
 }
-interface Teacher {
-  id: string;
-  subjects?: string[];
-  name: string;
-  bio: string | null;
-  photo: string | null;
-  _count: { groups: number };
-}
-
 export default function StudentHome() {
   const enrollments = useFetch<{ enrollments: Enrollment[] }>("/api/enrollment/my");
   const attempts = useFetch<Attempt[]>("/api/attempts");
-  const teachers = useFetch<{ teachers: Teacher[] }>("/api/teacher/public");
+  const teachers = useFetch<{ teachers: TeacherCardData[] }>("/api/teacher/public?mine=1");
 
   const { start, starting } = useStartTest();
   const [taking, setTaking] = useState<{ name: string; data: AttemptStart } | null>(null);
@@ -104,7 +95,7 @@ export default function StudentHome() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold">Qruplarım</h2>
-          <Link href="/student/teacher" className="text-sm font-semibold text-brand hover:underline">Qrup tap →</Link>
+          <Link href="/student/teacher" className="text-sm font-bold text-brand-hover hover:underline">Hamısı →</Link>
         </div>
         {enrollments.loading ? (
           <SkeletonList rows={2} />
@@ -113,7 +104,7 @@ export default function StudentHome() {
             icon="users"
             title="Hələ heç bir qrupa qoşulmamısınız"
             text="Müəllimin səhifəsinə keçib qrupa müraciət göndərin."
-            action={<Link href="/student/teacher" className="btn-primary">Müəllimlərə bax</Link>}
+            action={<Link href="/student/teachers" className="btn-primary">Müəllimlərə bax</Link>}
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -141,33 +132,22 @@ export default function StudentHome() {
         )}
       </section>
 
-      <div>
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Müəllimlər</h2>
-          {teachers.loading ? (
-            <SkeletonList rows={2} />
-          ) : (teachers.data?.teachers ?? []).length === 0 ? (
-            <Empty icon="grad" title="Müəllim tapılmadı" />
-          ) : (
-            <div className="flex flex-wrap gap-3">
-              {teachers.data!.teachers.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/u/${t.id}`}
-                  className="card group flex items-center gap-3 py-2.5 pl-2.5 pr-4 transition hover:bg-tint"
-                >
-                  <Avatar src={t.photo} name={t.name} size={56} className="bg-tint" />
-                  <span className="flex min-h-[56px] flex-col justify-between py-0.5">
-                    <span className="text-sm font-bold leading-tight group-hover:underline">{t.name}</span>
-                    <span className="flex flex-wrap gap-1.5"><SubjectBadges subjects={t.subjects} /></span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-      </div>
+      {/* Müəllimlərim: profil kartları alt-alta, ilk 5; qalanı "Daha çox bax" ilə ayrı səhifədə (filtrlərlə) */}
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Müəllimlərim</h2>
+        {teachers.loading && !teachers.data ? (
+          <div className="space-y-3">{[0, 1].map((i) => <CardSkeleton key={i} compact />)}</div>
+        ) : (teachers.data?.teachers ?? []).length === 0 ? (
+          <p className="text-sm text-muted">Qrupa qoşulanda müəllimləriniz burada görünəcək.</p>
+        ) : (
+          <div className="space-y-3">
+            {teachers.data!.teachers.slice(0, 5).map((t) => <TeacherCard key={t.id} t={t} compact />)}
+          </div>
+        )}
+        <Link href="/student/teachers" className="btn-secondary mt-3 w-full">
+          Daha çox bax <Icon name="right" size={16} />
+        </Link>
+      </section>
       </div>
       </div>
     </div>

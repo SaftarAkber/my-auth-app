@@ -29,7 +29,7 @@ export async function GET() {
       const requests = await prisma.enrollmentRequest.findMany({
         where: { studentId: currentUser.id },
         include: {
-          group: { select: { id: true, name: true, description: true, schedule: true } },
+          group: { select: { id: true, name: true, description: true, schedule: true, photo: true, coverPhoto: true, _count: { select: { members: true } } } },
           teacher: { select: { id: true, name: true, photo: true } },
         },
         orderBy: { createdAt: "desc" },

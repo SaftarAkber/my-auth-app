@@ -74,7 +74,7 @@ export default function StudentFeed() {
           icon="message"
           title="Hələ paylaşım yoxdur"
           text="Qoşulduğunuz qrupların müəllimləri paylaşım edəndə burada görünəcək."
-          action={<Link href="/student/teacher" className="btn-secondary">Müəllimlərə bax</Link>}
+          action={<Link href="/student/teachers" className="btn-secondary">Müəllimlərə bax</Link>}
         />
       ) : (
         <div className="space-y-4">

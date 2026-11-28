@@ -58,6 +58,12 @@ const ICONS = {
   star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   grad: '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>',
   info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  news: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
+  checklist: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  live: '<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>',
+  filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
   inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
 } as const;
 
@@ -173,7 +179,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted sm:text-base">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -275,15 +281,42 @@ export function QuickActions({ items }: { items: { href: string; icon: IconName;
   );
 }
 
+/** Boş səhifə: kiçik rəngli səhnə (kitablar, qələm) + mövzunun ikonu, başlıq, qısa yazı və düymə */
+export function EmptyArt({ icon = "inbox" }: { icon?: IconName }) {
+  return (
+    <span className="relative mb-3 inline-block" aria-hidden="true">
+      <svg width="132" height="84" viewBox="0 0 132 84">
+        <ellipse cx="62" cy="77" rx="54" ry="6" fill="rgb(var(--surface-2))" />
+        <rect x="22" y="56" width="70" height="14" rx="3" fill="#fbbf24" />
+        <rect x="22" y="56" width="70" height="4" rx="2" fill="#f59e0b" />
+        <rect x="28" y="42" width="60" height="14" rx="3" fill="#86efac" />
+        <rect x="80" y="42" width="5" height="14" fill="#4ade80" />
+        <rect x="32" y="28" width="54" height="14" rx="3" fill="rgb(var(--brand))" />
+        <rect x="38" y="33" width="26" height="3" rx="1.5" fill="#fff" opacity=".7" />
+        <g transform="rotate(24 103 40)">
+          <rect x="99" y="12" width="9" height="50" rx="2" fill="#60a5fa" />
+          <rect x="99" y="12" width="9" height="7" rx="2" fill="#f472b6" />
+          <polygon points="99,62 108,62 103.5,72" fill="#fde68a" />
+          <polygon points="101.8,68 105.2,68 103.5,72" fill="#1f2937" />
+        </g>
+        <circle cx="16" cy="22" r="3" fill="#fbbf24" />
+        <circle cx="120" cy="14" r="2.5" fill="#86efac" />
+        <path d="M10 44l3 3m0-3l-3 3" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      <span className="absolute -right-1 top-0 grid h-9 w-9 place-items-center rounded-full border-4 border-surface bg-tint text-brand-hover">
+        <Icon name={icon} size={16} stroke={2.4} />
+      </span>
+    </span>
+  );
+}
+
 export function Empty({
   icon = "inbox", title, text, action,
 }: { icon?: IconName; title: string; text?: string; action?: React.ReactNode }) {
   return (
-    <div className="card-flat flex flex-col items-center justify-center border-dashed border-line-strong bg-white/70 px-6 py-14 text-center">
-      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-tint text-brand">
-        <Icon name={icon} size={26} />
-      </span>
-      <h3 className="text-base font-bold">{title}</h3>
+    <div className="card-flat flex flex-col items-center justify-center px-6 py-12 text-center">
+      <EmptyArt icon={icon} />
+      <h3 className="text-base font-extrabold">{title}</h3>
       {text && <p className="mt-1 max-w-sm text-sm text-muted">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -299,36 +332,41 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
   );
 }
 
+/** Tab id-sinə görə ikon (ikon verilməyibsə) */
+const TAB_ICON: Record<string, IconName> = {
+  feed: "news", posts: "news", topics: "book", members: "users", students: "users", tests: "file", packages: "file",
+  assignments: "checklist", monthly: "trophy", analysis: "chart", results: "chart", videos: "video", requests: "inbox",
+  coins: "coin", settings: "settings", about: "info", groups: "users", attempts: "clock", history: "clock", lessons: "video",
+  bank: "folder", leaderboard: "trophy", comments: "message", likes: "thumb", orders: "bag", products: "bag", shop: "bag",
+};
+
+/** İkonlu tablar: üstdə ikon, altda kiçik ad; ağ zolaq, aktiv tab açıq yaşıl fonda; çox tab olanda barmaqla sürüşür */
 export function Tabs<T extends string>({
   tabs, value, onChange,
-}: { tabs: { id: T; label: string; count?: number; own?: boolean }[]; value: T; onChange: (v: T) => void }) {
+}: { tabs: { id: T; label: string; count?: number; own?: boolean; icon?: IconName }[]; value: T; onChange: (v: T) => void }) {
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = bar.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [value]);
   return (
-    // Scroll yoxdur: mobildə düymələr sığmayanda alt sətrə keçir (sürüşən zolaq deyil, sabit menyu);
-    // genişlikdə alt xətli tablar
-    <div className="mb-5 flex flex-wrap gap-1.5 sm:gap-x-1 sm:gap-y-0 sm:border-b sm:border-line" role="tablist">
-      {tabs.map((t, i) => (
-        <Fragment key={t.id}>
-          {/* Yalnız sahibin gördüyü tablar xətlə ayrılır */}
-          {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-2 my-2.5 hidden w-px shrink-0 bg-line-strong sm:block" aria-hidden />}
-          <button
-            role="tab"
-            onClick={() => onChange(t.id)}
-            aria-selected={value === t.id}
-            className={cx(
-              "flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors",
-              "sm:-mb-px sm:min-h-0 sm:gap-2 sm:rounded-none sm:border-0 sm:border-b-[3px] sm:bg-transparent sm:px-4 sm:py-3 sm:text-sm",
-              value === t.id
-                ? "border-brand bg-brand text-white sm:border-accent sm:text-brand"
-                : "border-line bg-surface text-muted hover:bg-tint/60 hover:text-brand sm:border-transparent",
-            )}
-          >
-            {t.label}
-            {t.count !== undefined && (
-              <span className={cx("rounded-full px-1.5 text-xs font-bold sm:px-2", value === t.id ? "bg-white/20 text-white sm:bg-brand" : "bg-surface-2 text-muted")}>{t.count}</span>
-            )}
-          </button>
-        </Fragment>
-      ))}
+    <div ref={bar} className="tabs-ic mb-5" role="tablist">
+      {tabs.map((t, i) => {
+        const icon = t.icon ?? TAB_ICON[t.id];
+        const on = value === t.id;
+        return (
+          <Fragment key={t.id}>
+            {t.own && !tabs[i - 1]?.own && i > 0 && <span className="mx-1 my-2 w-px shrink-0 bg-line" aria-hidden />}
+            <button role="tab" type="button" onClick={() => onChange(t.id)} aria-selected={on} className={cx("tab-ic", on && "on")}>
+              {icon && <Icon name={icon} size={20} />}
+              <span className="flex items-center gap-1">
+                {t.label}
+                {t.count !== undefined && <span className={cx("rounded-full px-1.5 text-[10px] leading-4", on ? "bg-brand text-white" : "bg-surface-2 text-muted")}>{t.count}</span>}
+              </span>
+            </button>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -342,6 +380,46 @@ export function Field({
       {label && <span className="label">{label}</span>}
       {children}
       {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
+    </label>
+  );
+}
+
+/** Üzən etiketli sahə (giriş, qeydiyyat, profil məlumatları) */
+export function FloatInput({ label, className, ...rest }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className={cx("ff", className)}>
+      <input {...rest} placeholder=" " />
+      <span className="ff-l">{label}</span>
+    </label>
+  );
+}
+
+export function FloatPassword({ label, className, ...rest }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <label className={cx("ff", className)}>
+      <input {...rest} type={show ? "text" : "password"} placeholder=" " className="!pr-11" />
+      <span className="ff-l">{label}</span>
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:text-ink"
+        aria-label={show ? "Şifrəni gizlət" : "Şifrəni göstər"}
+      >
+        <Icon name={show ? "eyeOff" : "eye"} size={18} />
+      </button>
+    </label>
+  );
+}
+
+export function FloatPhone({
+  label, value, onChange, className, ...rest
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className={cx("ff ff-up", className)}>
+      <PhoneInput {...rest} value={value} onChange={onChange} className="ff-box !pb-2 !pt-6" />
+      <span className="ff-l">{label}</span>
     </label>
   );
 }
@@ -382,7 +460,7 @@ export function ChipSelect({
             key={o.id}
             onClick={() => onChange(on ? value.filter((v) => v !== o.id) : [...value, o.id])}
             className={cx(
-              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors",
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors",
               on ? "border-brand bg-tint text-brand" : "border-line-strong bg-white text-muted hover:bg-tint/60 hover:text-brand",
             )}
           >
@@ -435,7 +513,7 @@ export function PhoneInput({
   }
   const shown = intl ? value : value.replace(/^(\d{2})(\d{0,3})(\d{0,2})(\d{0,2}).*/, (_, a, b, c, d) => [a, b, c, d].filter(Boolean).join(" "));
   return (
-    <div className={cx("input flex items-center gap-2 focus-within:[border-color:rgb(var(--brand))] focus-within:[box-shadow:0_0_0_3px_rgb(var(--iris)/0.25)]", className)}>
+    <div className={cx("input flex items-center gap-2 focus-within:[border-color:rgb(var(--brand))] focus-within:[box-shadow:0_0_0_3px_rgb(var(--brand)/0.22)]", className)}>
       {!intl && <span className="select-none font-semibold text-muted">+994</span>}
       <input
         {...rest}
@@ -529,6 +607,9 @@ export function Modal({
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
+  const sheet = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; dy: number } | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -542,21 +623,52 @@ export function Modal({
   }, [open, onClose]);
 
   if (!open || typeof document === "undefined") return null;
-  const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];
+  const width = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" }[size];
+
+  // Telefonda: aşağıdan qalxan vərəq; tutacaqdan və ya başlıqdan aşağı çəkəndə bağlanır
+  const isPhone = () => window.matchMedia("(max-width: 639px)").matches;
+  const down = (e: React.PointerEvent) => {
+    if (!isPhone() || (e.target as HTMLElement).closest("button")) return;
+    drag.current = { y: e.clientY, dy: 0 };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const move = (e: React.PointerEvent) => {
+    if (!drag.current || !sheet.current) return;
+    drag.current.dy = Math.max(0, e.clientY - drag.current.y);
+    sheet.current.style.transition = "none";
+    sheet.current.style.transform = `translateY(${drag.current.dy}px)`;
+  };
+  const up = () => {
+    if (!drag.current || !sheet.current) return;
+    const far = drag.current.dy > 110;
+    drag.current = null;
+    sheet.current.style.transition = "transform .2s ease";
+    sheet.current.style.transform = far ? "translateY(100%)" : "";
+    if (far) setTimeout(onClose, 180);
+  };
 
   // Portal: yuxarı səviyyəli qatda açılır ki, naviqasiya paneli pəncərənin üstünə çıxmasın
   return createPortal(
     <div className="fixed inset-0 z-[500] flex items-end justify-center sm:items-center sm:p-8" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
-      <div className={cx("card relative flex max-h-[calc(100dvh-4.5rem)] w-full animate-pop flex-col rounded-b-none sm:max-h-[calc(100dvh-4rem)] sm:rounded-b-2xl", width)}>
-        {title && (
-          <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
-            <h2 className="text-lg font-bold">{title}</h2>
-            <button className="btn-icon -mr-2" onClick={onClose} aria-label="Bağla"><Icon name="x" /></button>
-          </div>
+      <div className="absolute inset-0 bg-ink/50 animate-[fade-in_.15s_ease]" onClick={onClose} />
+      <div
+        ref={sheet}
+        className={cx(
+          "relative flex max-h-[calc(100dvh-3rem)] w-full flex-col rounded-t-[22px] border border-line bg-surface shadow-hard-lg animate-sheet sm:max-h-[calc(100dvh-4rem)] sm:animate-pop sm:rounded-[22px]",
+          width,
         )}
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-4">{footer}</div>}
+      >
+        <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} className="touch-none sm:touch-auto">
+          <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden />
+          {title && (
+            <div className="flex items-center justify-between gap-3 border-b border-line px-5 pb-3.5 pt-2.5 sm:pt-4">
+              <h2 className="text-lg font-extrabold">{title}</h2>
+              <button className="btn-icon -mr-2" onClick={onClose} aria-label="Bağla"><Icon name="x" /></button>
+            </div>
+          )}
+        </div>
+        <div className="overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
+        {footer && <div className="modal-foot flex justify-end gap-2 border-t border-line px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -598,24 +710,22 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     setDialog(null);
   };
 
-  const toastStyle: Record<ToastKind, string> = {
-    success: "border-ok/40 text-ok",
-    error: "border-bad/40 text-bad",
-    info: "border-info/40 text-info",
-  };
+  const toastIc: Record<ToastKind, string> = { success: "text-green-400", error: "text-red-400", info: "text-sky-300" };
   const toastIcon: Record<ToastKind, IconName> = { success: "check", error: "alert", info: "info" };
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[200] flex flex-col items-center gap-2 px-4 lg:bottom-6">
+      {/* Bildiriş: yuxarı ortada tünd hap */}
+      <div className="pointer-events-none fixed inset-x-0 top-3 z-[600] flex flex-col items-center gap-2 px-4" aria-live="polite">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={cx("card pointer-events-auto flex max-w-md animate-pop items-center gap-3 px-4 py-3 text-sm font-medium", toastStyle[t.kind])}
+            role={t.kind === "error" ? "alert" : "status"}
+            className="pointer-events-auto flex max-w-md animate-toast items-center gap-2.5 rounded-full bg-[#1f2937] px-4 py-2.5 text-sm font-semibold text-white shadow-hard-lg"
           >
-            <Icon name={toastIcon[t.kind]} />
-            <span className="text-ink">{t.text}</span>
+            <Icon name={toastIcon[t.kind]} size={17} stroke={2.6} className={toastIc[t.kind]} />
+            <span>{t.text}</span>
           </div>
         ))}
       </div>

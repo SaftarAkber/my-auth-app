@@ -1,0 +1,3 @@
+ALTER TABLE "users" ADD COLUMN "experienceYears" INTEGER;
+ALTER TABLE "users" ADD COLUMN "liveOnline" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "users" ADD COLUMN "showStudentCount" BOOLEAN NOT NULL DEFAULT true;

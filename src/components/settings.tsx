@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, errMsg } from "@/lib/api";
-import { Field, Icon, ImageUpload, Modal, PasswordInput, Spinner, useToast } from "@/components/ui";
+import { Field, FloatInput, Icon, ImageUpload, Modal, PasswordInput, Spinner, Toggle, useToast } from "@/components/ui";
 import { COVER_PRESETS, COVER_RATIO, CoverArt, PRESET_PREFIX, splitCover, withCoverPos } from "@/components/covers";
 import { cx } from "@/lib/format";
 import { SubjectPicker } from "@/components/Subjects";
@@ -17,6 +17,9 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
   const [photo, setPhoto] = useState<string | null>(user?.photo ?? null);
   const [cover, setCover] = useState<string | null>(user?.coverPhoto ?? null);
   const [subjects, setSubjects] = useState<string[]>(user?.subjects ?? []);
+  const [exp, setExp] = useState(user?.experienceYears != null ? String(user.experienceYears) : "");
+  const [live, setLive] = useState(!!user?.liveOnline);
+  const [showCount, setShowCount] = useState(user?.showStudentCount ?? true);
   const [busy, setBusy] = useState(false);
   const isTeacher = user?.role === "TEACHER";
 
@@ -27,7 +30,7 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
     try {
       await api("/api/auth/me", {
         method: "PATCH",
-        body: { name, bio, photo: photo ?? "", ...(withCover ? { coverPhoto: cover ?? "" } : {}), ...(isTeacher ? { subjects } : {}) },
+        body: { name, bio, photo: photo ?? "", ...(withCover ? { coverPhoto: cover ?? "" } : {}), ...(isTeacher ? { subjects, experienceYears: exp.trim() === "" ? null : Number(exp), liveOnline: live, showStudentCount: showCount } : {}) },
       });
       await refreshUser();
       toast.success("Profil yeniləndi");
@@ -98,13 +101,20 @@ export function ProfileEditor({ open, onClose, withCover }: { open: boolean; onC
           </div>
         )}
         <ImageUpload label="Profil şəkli" value={photo} onChange={setPhoto} shape="round" />
-        <Field label="Ad və soyad">
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-        </Field>
+        <FloatInput label="Ad və soyad" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
         {isTeacher && (
           <div>
             <span className="label">Tədris etdiyiniz fənlər</span>
             <SubjectPicker value={subjects} onChange={setSubjects} />
+          </div>
+        )}
+        {isTeacher && (
+          <div className="space-y-3">
+            <Field label="Təcrübə (il)" hint="Neçə ildir dərs keçirsiniz? Boş qoysanız, profilinizdə göstərilmir.">
+              <input className="input max-w-[140px]" type="number" inputMode="numeric" min={0} max={60} value={exp} onChange={(e) => setExp(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="məs. 5" />
+            </Field>
+            <Toggle checked={live} onChange={setLive} label="Canlı onlayn dərs keçirirəm" hint="Tələbələr müəllim axtarışında “Canlı dərs” filtri ilə sizi tapa bilər" />
+            <Toggle checked={showCount} onChange={setShowCount} label="Tələbə sayımı göstər" hint="Söndürsəniz, tələbə sayınız heç yerdə görünmür (0 da yazılmır)" />
           </div>
         )}
         <Field label="Haqqında" hint="Qısa təqdimat — ən çoxu 4 sətir, profilinizdə görünür">
